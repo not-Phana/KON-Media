@@ -10,6 +10,7 @@ import {
   analyzeMediaUrl,
   queueDownload,
   cancelTask,
+  dismissTask,
   fetchActiveTasks,
   fetchHistory,
   clearHistory,
@@ -69,6 +70,8 @@ export default function App() {
         );
         // Refresh persistent history
         fetchHistory().then(setHistory).catch(() => {});
+      } else if (event.type === "task_dismissed") {
+        setActiveTasks((prev) => prev.filter((t) => t.id !== event.data.id));
       }
     });
 
@@ -109,6 +112,16 @@ export default function App() {
       await cancelTask(taskId);
     } catch (err) {
       console.error("Cancel failed:", err);
+    }
+  };
+
+  // Handle task dismiss from active view
+  const handleDismissTask = async (taskId) => {
+    try {
+      await dismissTask(taskId);
+      setActiveTasks((prev) => prev.filter((t) => t.id !== taskId));
+    } catch (_) {
+      setActiveTasks((prev) => prev.filter((t) => t.id !== taskId));
     }
   };
 
@@ -178,6 +191,7 @@ export default function App() {
           tasks={activeTasks}
           onCancelTask={handleCancelTask}
           onOpenFile={handleOpenFile}
+          onDismissTask={handleDismissTask}
         />
 
         {/* Local Download History */}

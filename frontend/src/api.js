@@ -47,6 +47,17 @@ export async function cancelTask(taskId) {
   return data;
 }
 
+export async function dismissTask(taskId) {
+  const res = await fetch(`${API_BASE}/tasks/${taskId}/dismiss`, {
+    method: "POST",
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Dismiss failed");
+  }
+  return data;
+}
+
 export async function fetchActiveTasks() {
   const res = await fetch(`${API_BASE}/tasks`);
   if (!res.ok) throw new Error("Failed to fetch active tasks");
@@ -127,6 +138,13 @@ export function subscribeToEvents(onEvent, onError) {
     try {
       const parsed = JSON.parse(e.data);
       if (onEvent) onEvent({ type: "task_completed", data: parsed });
+    } catch (_) {}
+  });
+
+  es.addEventListener("task_dismissed", (e) => {
+    try {
+      const parsed = JSON.parse(e.data);
+      if (onEvent) onEvent({ type: "task_dismissed", data: parsed });
     } catch (_) {}
   });
 

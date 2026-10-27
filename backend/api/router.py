@@ -129,6 +129,15 @@ async def cancel_download_task(task_id: str):
     return {"task_id": task_id, "status": "cancelled"}
 
 
+@router.post("/tasks/{task_id}/dismiss")
+async def dismiss_download_task(task_id: str):
+    """Dismiss a finished, failed, or cancelled task from active monitor."""
+    success = task_manager.dismiss_task(task_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Task not found in active monitor.")
+    return {"task_id": task_id, "status": "dismissed"}
+
+
 @router.get("/events")
 async def sse_event_stream(request: Request):
     """Server-Sent Events endpoint streaming real-time download progress."""
@@ -199,7 +208,8 @@ async def update_settings(req: SettingsUpdateRequest):
 async def open_download_file(req: OpenFolderRequest):
     """Safely open Windows File Explorer with the downloaded file highlighted."""
     p = Path(req.file_path)
-    success = open_in_file_explorer(p)
+    configured_dir = Path(settings_store.get_settings().get("downloads_dir", str(DOWNLOADS_DIR)))
+    success = open_in_file_explorer(p, allowed_root=configured_dir)
     if not success:
         raise HTTPException(
             status_code=400,

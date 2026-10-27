@@ -82,17 +82,17 @@ def get_unique_destination_path(directory: Path, filename: str) -> Path:
         counter += 1
 
 
-def open_in_file_explorer(file_path: Path) -> bool:
+def open_in_file_explorer(file_path: Path, allowed_root: Path = None) -> bool:
     """Open Windows File Explorer with the specific downloaded file selected.
 
-    Restricts operations to files strictly inside the allowed DOWNLOADS_DIR
+    Restricts operations to files strictly inside the allowed downloads directory
     to prevent arbitrary filesystem traversal.
     """
     try:
         resolved_file = file_path.resolve()
-        resolved_root = DOWNLOADS_DIR.resolve()
+        resolved_root = (allowed_root or DOWNLOADS_DIR).resolve()
 
-        # Security check: must reside inside DOWNLOADS_DIR
+        # Security check: must reside inside allowed directory
         if not resolved_file.is_relative_to(resolved_root):
             raise PermissionError("Access denied: path outside allowed downloads directory.")
 

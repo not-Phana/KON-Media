@@ -121,6 +121,19 @@ def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) 
                     "type": "video",
                 })
 
+            # If no parsed resolutions (e.g. direct media URL), provide original quality fallback
+            if not video_options:
+                ext = (info.get("ext") or "mp4").lower()
+                filesize = info.get("filesize") or info.get("filesize_approx")
+                video_options.append({
+                    "format_id": "best",
+                    "label": f"Original Quality ({ext.upper()})",
+                    "height": None,
+                    "ext": ext,
+                    "filesize": filesize,
+                    "type": "video",
+                })
+
             # Define standard audio quality options
             audio_options = [
                 {
@@ -220,7 +233,14 @@ def execute_download(
         "no_color": True,
     }
 
+    has_ffmpeg = bool(shutil.which("ffmpeg"))
+
     if media_type == "audio":
+        if not has_ffmpeg:
+            raise MediaEngineError(
+                "FFmpeg is not installed or not in PATH. Converting audio to MP3 requires FFmpeg. "
+                "Please install FFmpeg (e.g. 'winget install ffmpeg') or download the video directly."
+            )
         ydl_opts["format"] = "bestaudio/best"
         ydl_opts["postprocessors"] = [{
             "key": "FFmpegExtractAudio",
@@ -229,7 +249,8 @@ def execute_download(
         }]
     else:
         ydl_opts["format"] = format_selector or "bestvideo+bestaudio/best"
-        ydl_opts["merge_output_format"] = "mp4"
+        if has_ffmpeg:
+            ydl_opts["merge_output_format"] = "mp4"
 
     if abort_event and abort_event.is_set():
         raise DownloadCancelledError("Download was cancelled by user.")

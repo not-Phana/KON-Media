@@ -1,7 +1,7 @@
 import React from "react";
-import { Loader2, CheckCircle2, AlertCircle, XCircle, Ban, ArrowDown, FolderOpen } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, XCircle, Ban, ArrowDown, FolderOpen, X } from "lucide-react";
 
-export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile }) {
+export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile, onDismissTask }) {
   if (!tasks || tasks.length === 0) return null;
 
   const formatBytes = (bytes) => {
@@ -114,6 +114,16 @@ export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile }) 
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
                       <span>Folder</span>
+                    </button>
+                  )}
+
+                  {!isOngoing && onDismissTask && (
+                    <button
+                      onClick={() => onDismissTask(task.id)}
+                      className="text-[#6B7280] hover:text-[#F3F4F6] p-1.5 cursor-pointer"
+                      title="Dismiss from queue"
+                    >
+                      <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>

@@ -60,6 +60,23 @@ async def test_settings_and_history_endpoints():
 
 
 @pytest.mark.asyncio
+async def test_dismiss_task_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Dismiss non-existent task
+        resp = await client.post("/api/tasks/nonexistent_id/dismiss")
+        assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_open_folder_outside_path_rejected():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/open-folder", json={"file_path": "C:/Windows/System32/cmd.exe"})
+        assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_spa_root_serving():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

@@ -59,6 +59,33 @@ def test_extract_media_info_format_grouping():
         assert result["audio_formats"][0]["bitrate"] == "320k"
 
 
+def test_extract_media_info_direct_stream_fallback():
+    mock_direct_info = {
+        "title": "sample_video",
+        "uploader": None,
+        "duration": None,
+        "thumbnail": None,
+        "extractor": "Generic",
+        "webpage_url": "https://example.com/sample.mp4",
+        "ext": "mp4",
+        "formats": [
+            {"format_id": "mp4", "height": None, "vcodec": None, "acodec": None}
+        ],
+    }
+
+    with patch("backend.engine.media_engine.yt_dlp.YoutubeDL") as MockYDL:
+        mock_instance = MagicMock()
+        mock_instance.extract_info.return_value = mock_direct_info
+        mock_instance.__enter__.return_value = mock_instance
+        mock_instance.__exit__.return_value = None
+        MockYDL.return_value = mock_instance
+
+        result = extract_media_info("https://example.com/sample.mp4")
+        assert len(result["video_formats"]) == 1
+        assert result["video_formats"][0]["format_id"] == "best"
+        assert "Original Quality" in result["video_formats"][0]["label"]
+
+
 def test_download_cancellation():
     abort_event = threading.Event()
     abort_event.set()  # Pre-abort
@@ -71,3 +98,14 @@ def test_download_cancellation():
             output_path_template="dummy.%(ext)s",
             abort_event=abort_event,
         )
+
+
+def test_missing_ffmpeg_audio_error():
+    with patch("shutil.which", return_value=None):
+        with pytest.raises(MediaEngineError, match="FFmpeg is not installed"):
+            execute_download(
+                url="https://example.com/audio",
+                format_selector="bestaudio/best",
+                media_type="audio",
+                output_path_template="dummy.%(ext)s",
+            )

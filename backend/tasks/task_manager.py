@@ -135,9 +135,21 @@ class TaskManager:
         task["completed_at"] = datetime.now(timezone.utc).isoformat()
         self.broadcast("task_updated", task)
 
+        configured_dir = self.settings_store.get_settings().get("downloads_dir")
+        dest_dir = Path(configured_dir) if configured_dir else DOWNLOADS_DIR
         # Clean up partial downloads
-        cleanup_partial_files(task_id, DOWNLOADS_DIR)
+        cleanup_partial_files(task_id, dest_dir)
         return True
+
+    def dismiss_task(self, task_id: str) -> bool:
+        """Remove a completed, failed, or cancelled task from active monitor."""
+        if task_id in self.tasks:
+            del self.tasks[task_id]
+            if task_id in self.abort_events:
+                del self.abort_events[task_id]
+            self.broadcast("task_dismissed", {"id": task_id})
+            return True
+        return False
 
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         return self.tasks.get(task_id)
@@ -154,8 +166,12 @@ class TaskManager:
         task["status"] = "downloading"
         self.broadcast("task_updated", task)
 
+        configured_dir = self.settings_store.get_settings().get("downloads_dir")
+        dest_dir = Path(configured_dir) if configured_dir else DOWNLOADS_DIR
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
         # Define temporary output path pattern using task_id prefix
-        out_template = str(DOWNLOADS_DIR / f"{task_id}.%(ext)s")
+        out_template = str(dest_dir / f"{task_id}.%(ext)s")
 
         def on_progress(p: Dict[str, Any]) -> None:
             if abort_event and abort_event.is_set():
@@ -181,7 +197,7 @@ class TaskManager:
             )
 
             # Locate downloaded file with task_id prefix
-            matching_files = glob.glob(str(DOWNLOADS_DIR / f"{task_id}.*"))
+            matching_files = glob.glob(str(dest_dir / f"{task_id}.*"))
             # Filter out temporary leftover files
             valid_files = [
                 f for f in matching_files
@@ -196,10 +212,25 @@ class TaskManager:
 
             # Determine unique destination filename using sanitized title
             target_filename = sanitize_filename(task["title"], actual_ext)
-            final_dest = get_unique_destination_path(DOWNLOADS_DIR, target_filename)
+            final_dest = get_unique_destination_path(dest_dir, target_filename)
 
-            # Rename to friendly unique filename
-            source_file.rename(final_dest)
+            # Rename with retry loop to handle transient Windows file locks
+            renamed = False
+            import time
+            for attempt in range(5):
+                try:
+                    source_file.rename(final_dest)
+                    renamed = True
+                    break
+                except PermissionError:
+                    time.sleep(0.2)
+            if not renamed:
+                import shutil
+                shutil.copy2(source_file, final_dest)
+                try:
+                    source_file.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
             # Verification: Check file exists and size > 0
             if not final_dest.exists() or final_dest.stat().st_size == 0:
@@ -219,12 +250,12 @@ class TaskManager:
         except DownloadCancelledError:
             task["status"] = "cancelled"
             task["completed_at"] = datetime.now(timezone.utc).isoformat()
-            cleanup_partial_files(task_id, DOWNLOADS_DIR)
+            cleanup_partial_files(task_id, dest_dir)
             self.broadcast("task_updated", task)
 
         except Exception as e:
             task["status"] = "failed"
             task["error"] = str(e)
             task["completed_at"] = datetime.now(timezone.utc).isoformat()
-            cleanup_partial_files(task_id, DOWNLOADS_DIR)
+            cleanup_partial_files(task_id, dest_dir)
             self.broadcast("task_updated", task)
