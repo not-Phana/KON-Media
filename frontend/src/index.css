@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #17191D;
+    --surface-card: #202329;
+    --surface-elevated: #272B32;
+    --surface-recessed: #131418;
+    --border-subtle: #2D323B;
+    --border-strong: #383D46;
+    --text-primary: #F3F4F6;
+    --text-secondary: #A5ABB5;
+    --text-muted: #6B7280;
+    --accent-primary: #8BC5B0;
+    --accent-hover: #9CD4C0;
+    --status-success: #72C69A;
+    --status-warning: #E8BE72;
+    --status-error: #EF8585;
+    --status-info: #70B2D9;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Tactile Neumorphic & Dashboard Utilities */
+.neu-card {
+  background-color: #202329;
+  border: 1px solid #2D323B;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
+  border-radius: 14px;
+}
+
+.neu-recessed {
+  background-color: #131418;
+  border: 1px solid #2D323B;
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.55), inset -2px -2px 6px rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+.neu-raised {
+  background-color: #272B32;
+  border: 1px solid #383D46;
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.45), -3px -3px 8px rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-raised:hover:not(:disabled) {
+  box-shadow: 6px 6px 14px rgba(0, 0, 0, 0.55), -4px -4px 10px rgba(255, 255, 255, 0.06);
+  border-color: #4A515E;
+}
+
+.neu-raised:active:not(:disabled) {
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.6), inset -2px -2px 5px rgba(255, 255, 255, 0.03);
+  transform: translateY(1px);
+}
+
+.neu-accent {
+  background-color: #8BC5B0;
+  color: #17191D;
+  font-weight: 600;
+  border: 1px solid #9CD4C0;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.4), -2px -2px 6px rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-accent:hover:not(:disabled) {
+  background-color: #9CD4C0;
+  box-shadow: 4px 4px 14px rgba(139, 197, 176, 0.3), -2px -2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.neu-accent:active:not(:disabled) {
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.45);
+  transform: translateY(1px);
+}
+
+.neu-pill-active {
+  background-color: #272B32;
+  border: 1px solid #8BC5B0;
+  color: #8BC5B0;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.neu-pill-inactive {
+  background-color: #1A1C22;
+  border: 1px solid #2D323B;
+  color: #A5ABB5;
+}
+
+.neu-pill-inactive:hover {
+  color: #F3F4F6;
+  border-color: #383D46;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #17191D;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2D323B;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #383D46;
+}

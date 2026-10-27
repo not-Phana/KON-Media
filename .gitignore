@@ -1,0 +1,25 @@
+# Virtual Environment & Caches
+.venv/
+.cache/
+__pycache__/
+*.pyc
+
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+.npm/
+
+# Local state & media files
+downloads/
+app_state/
+*.log
+
+# Research candidates (segregated)
+research/
+
+# OS specific
+Thumbs.db
+Desktop.ini
+.DS_Store
