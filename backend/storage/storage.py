@@ -100,6 +100,7 @@ class SettingsStore:
             "downloads_dir": str(DOWNLOADS_DIR),
             "max_concurrent_downloads": 2,
             "default_media_type": "video",
+            "ffmpeg_path": "",
         }
         self.store = AtomicJsonStore(state_dir / "settings.json", default_value=default_settings)
 

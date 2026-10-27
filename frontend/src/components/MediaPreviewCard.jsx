@@ -1,20 +1,31 @@
 import React, { useState } from "react";
-import { Video, Music, Download, Clock, User, Globe, Check, X } from "lucide-react";
+import { Video, Music, Download, Clock, User, AlertTriangle, X, ShieldAlert } from "lucide-react";
 
 export default function MediaPreviewCard({ mediaInfo, onStartDownload, onDismiss }) {
   const [mediaType, setMediaType] = useState("video");
+
+  // If FFmpeg is not available, prefer a format that doesn't require merging
+  const defaultFormat =
+    (mediaInfo?.video_formats?.find((f) => !f.requires_ffmpeg) || mediaInfo?.video_formats?.[0]);
+
   const [selectedFormatId, setSelectedFormatId] = useState(
-    mediaInfo?.video_formats?.[0]?.format_id || "bestvideo+bestaudio/best"
+    defaultFormat?.format_id || "best"
   );
   const [selectedAudioBitrate, setSelectedAudioBitrate] = useState("320k");
 
   if (!mediaInfo) return null;
 
+  const isVideo = mediaType === "video";
+  const selectedFormat = isVideo
+    ? mediaInfo.video_formats?.find((f) => f.format_id === selectedFormatId)
+    : null;
+
+  const ffmpegAvailable = Boolean(mediaInfo.ffmpeg_available);
+  const isBlockedByMissingFfmpeg =
+    !ffmpegAvailable && (isVideo ? selectedFormat?.requires_ffmpeg : true);
+
   const handleDownload = () => {
-    const isVideo = mediaType === "video";
-    const selectedFormat = isVideo
-      ? mediaInfo.video_formats?.find((f) => f.format_id === selectedFormatId)
-      : null;
+    if (isBlockedByMissingFfmpeg) return;
 
     onStartDownload({
       url: mediaInfo.webpage_url,
@@ -118,6 +129,7 @@ export default function MediaPreviewCard({ mediaInfo, onStartDownload, onDismiss
                   mediaInfo.video_formats.map((fmt) => {
                     const isSelected = selectedFormatId === fmt.format_id;
                     const sizeMb = fmt.filesize ? `${Math.round(fmt.filesize / 1024 / 1024)} MB` : null;
+                    const needsFFmpeg = fmt.requires_ffmpeg && !ffmpegAvailable;
 
                     return (
                       <button
@@ -130,7 +142,14 @@ export default function MediaPreviewCard({ mediaInfo, onStartDownload, onDismiss
                             : "bg-[#1A1C22] border-[#2D323B] text-[#A5ABB5] hover:border-[#383D46]"
                         }`}
                       >
-                        <span className="text-xs font-semibold">{fmt.label}</span>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-semibold">{fmt.label}</span>
+                          {needsFFmpeg && (
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-[#2D281E] text-[#E8BE72] font-mono">
+                              FFmpeg Req.
+                            </span>
+                          )}
+                        </div>
                         {sizeMb && <span className="text-[10px] text-[#6B7280] font-mono mt-0.5">~{sizeMb}</span>}
                       </button>
                     );
@@ -165,15 +184,31 @@ export default function MediaPreviewCard({ mediaInfo, onStartDownload, onDismiss
             )}
           </div>
 
+          {/* Missing FFmpeg Warning Banner */}
+          {isBlockedByMissingFfmpeg && (
+            <div className="p-3 rounded-lg bg-[#2D281E] border border-[#E8BE72]/40 text-[#E8BE72] text-xs flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold m-0">FFmpeg Required for this format</p>
+                <p className="m-0 mt-0.5 text-[11px] text-[#F3F4F6]/80">
+                  {isVideo
+                    ? "This resolution requires merging separate video and audio streams. Configure FFmpeg in Settings to unlock it, or choose a (Direct) format above."
+                    : "Audio extraction and conversion to MP3 requires FFmpeg. Configure FFmpeg in Settings, or download the direct video format."}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Action Trigger */}
           <div className="pt-2 flex justify-end">
             <button
               type="button"
               onClick={handleDownload}
-              className="neu-accent px-5 py-2.5 flex items-center gap-2 text-xs font-semibold cursor-pointer"
+              disabled={isBlockedByMissingFfmpeg}
+              className="neu-accent px-5 py-2.5 flex items-center gap-2 text-xs font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-4 h-4" />
-              <span>Start Download</span>
+              <span>{isBlockedByMissingFfmpeg ? "FFmpeg Required" : "Start Download"}</span>
             </button>
           </div>
         </div>

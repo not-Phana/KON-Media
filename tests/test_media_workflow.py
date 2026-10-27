@@ -102,7 +102,7 @@ def test_download_cancellation():
 
 def test_missing_ffmpeg_audio_error():
     with patch("shutil.which", return_value=None):
-        with pytest.raises(MediaEngineError, match="FFmpeg is not installed"):
+        with pytest.raises(MediaEngineError, match=r"FFmpeg is not (available|installed)"):
             execute_download(
                 url="https://example.com/audio",
                 format_selector="bestaudio/best",

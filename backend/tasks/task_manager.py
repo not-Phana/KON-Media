@@ -170,6 +170,8 @@ class TaskManager:
         dest_dir = Path(configured_dir) if configured_dir else DOWNLOADS_DIR
         dest_dir.mkdir(parents=True, exist_ok=True)
 
+        configured_ffmpeg = self.settings_store.get_settings().get("ffmpeg_path")
+
         # Define temporary output path pattern using task_id prefix
         out_template = str(dest_dir / f"{task_id}.%(ext)s")
 
@@ -194,6 +196,7 @@ class TaskManager:
                 progress_callback=on_progress,
                 abort_event=abort_event,
                 audio_bitrate=task["audio_bitrate"],
+                ffmpeg_location=configured_ffmpeg,
             )
 
             # Locate downloaded file with task_id prefix

@@ -120,3 +120,17 @@ flowchart TD
 * **Service Binding**: Binds exclusively to `127.0.0.1` (loopback only) to ensure no exposure across the local area network or internet.
 * **Path Resilience**: Normalizes all file paths using `pathlib.Path`, properly handling Windows drive letters (`E:\...`), backslashes, and long path constraints.
 * **Process Cleanup**: Uses Python subprocess and thread management with explicit timeout handling to prevent orphaned zombie processes.
+
+---
+
+## 7. FFmpeg Integration & Post-Processing Architecture
+
+### 7.1 Architecture Principles
+* **Non-Invasive Path Configuration**: Rather than modifying the system-wide Windows PATH environment variable, KON Media natively provides yt-dlp with the exact path to FFmpeg via `ydl_opts["ffmpeg_location"]`.
+* **Flexible Executable Resolution**: Supports either automatic PATH detection (via `shutil.which`) or user-configured custom paths on Drive E: (e.g. `E:\Code\make thing\tools\ffmpeg\bin\ffmpeg.exe` or `E:\Code\make thing\tools\ffmpeg\bin`).
+* **Active Binary Validation**: Candidate executables are verified by executing `ffmpeg -version` in an isolated subprocess with a 5-second timeout, checking exit code and stdout.
+* **Format-Aware FFmpeg Guarding**:
+  * Video streams with separate audio (DASH streams where `acodec == "none"`) require FFmpeg for merging (`format_id+bestaudio/best`).
+  * Pre-merged direct single-stream formats (`acodec != "none"` or archive direct links) are flagged with `requires_ffmpeg: false` and work without FFmpeg.
+  * Audio extraction to MP3 requires FFmpeg post-processing (`FFmpegExtractAudio`).
+  * If FFmpeg is unavailable, formats requiring FFmpeg are clearly indicated in the UI, and the download button alerts the user with setup instructions rather than failing abruptly during execution.

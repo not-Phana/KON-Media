@@ -13,6 +13,7 @@ import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 import yt_dlp
+from backend.engine.ffmpeg_manager import validate_ffmpeg_path
 try:
     from yt_dlp.version import __version__ as ytdlp_version
 except ImportError:
@@ -31,24 +32,17 @@ class DownloadCancelledError(Exception):
     pass
 
 
-def get_engine_health() -> Dict[str, Any]:
+def get_engine_health(custom_ffmpeg_path: Optional[str] = None) -> Dict[str, Any]:
     """Inspect and return the health status of yt-dlp and FFmpeg."""
-    ffmpeg_path = shutil.which("ffmpeg")
-    ffmpeg_version = None
-    if ffmpeg_path:
-        try:
-            res = subprocess.run([ffmpeg_path, "-version"], capture_output=True, text=True, timeout=5)
-            first_line = res.stdout.splitlines()[0] if res.stdout else ""
-            ffmpeg_version = first_line.strip()
-        except Exception:
-            ffmpeg_version = "available"
-
+    ffmpeg_status = validate_ffmpeg_path(custom_ffmpeg_path)
     return {
         "ytdlp_available": True,
         "ytdlp_version": ytdlp_version,
-        "ffmpeg_available": bool(ffmpeg_path),
-        "ffmpeg_path": ffmpeg_path,
-        "ffmpeg_version": ffmpeg_version,
+        "ffmpeg_available": ffmpeg_status["available"],
+        "ffmpeg_path": ffmpeg_status["path"],
+        "ffmpeg_version": ffmpeg_status["version"],
+        "ffmpeg_source": ffmpeg_status["source"],
+        "ffmpeg_error": ffmpeg_status["error"],
     }
 
 
@@ -65,8 +59,13 @@ def format_duration(seconds: Optional[int | float]) -> str:
     return f"{minutes:02d}:{rem_seconds:02d}"
 
 
-def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) -> Dict[str, Any]:
+def extract_media_info(
+    url: str,
+    abort_event: Optional[threading.Event] = None,
+    ffmpeg_location: Optional[str] = None,
+) -> Dict[str, Any]:
     """Analyze a media URL without downloading, extracting supported formats and metadata."""
+    ffmpeg_status = validate_ffmpeg_path(ffmpeg_location)
     ydl_opts = {
         "skip_download": True,
         "extract_flat": False,
@@ -74,6 +73,9 @@ def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) 
         "no_warnings": True,
         "no_color": True,
     }
+
+    if ffmpeg_status["available"]:
+        ydl_opts["ffmpeg_location"] = ffmpeg_status["path"]
 
     if abort_event and abort_event.is_set():
         raise DownloadCancelledError("Download was cancelled by user.")
@@ -98,27 +100,32 @@ def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) 
                 if not height or vcodec == "none":
                     continue
 
-                label = f"{height}p"
-                if label in seen_resolutions:
+                label_base = f"{height}p"
+                if label_base in seen_resolutions:
                     continue
-                seen_resolutions.add(label)
+                seen_resolutions.add(label_base)
 
                 format_id = f.get("format_id")
-                # If audio is not included in this video stream, request bestaudio merge
+                # If audio is not included in this video stream, requires ffmpeg to merge with bestaudio
                 if acodec == "none":
                     format_selector = f"{format_id}+bestaudio/best"
+                    requires_ffmpeg = True
+                    label = f"{height}p MP4"
                 else:
                     format_selector = str(format_id)
+                    requires_ffmpeg = False
+                    label = f"{height}p MP4 (Direct)"
 
                 filesize = f.get("filesize") or f.get("filesize_approx")
 
                 video_options.append({
                     "format_id": format_selector,
-                    "label": f"{height}p MP4",
+                    "label": label,
                     "height": height,
                     "ext": "mp4",
                     "filesize": filesize,
                     "type": "video",
+                    "requires_ffmpeg": requires_ffmpeg,
                 })
 
             # If no parsed resolutions (e.g. direct media URL), provide original quality fallback
@@ -132,9 +139,10 @@ def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) 
                     "ext": ext,
                     "filesize": filesize,
                     "type": "video",
+                    "requires_ffmpeg": False,
                 })
 
-            # Define standard audio quality options
+            # Define standard audio quality options (all audio extractions require FFmpeg)
             audio_options = [
                 {
                     "format_id": "bestaudio/best",
@@ -142,6 +150,7 @@ def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) 
                     "bitrate": "320k",
                     "ext": "mp3",
                     "type": "audio",
+                    "requires_ffmpeg": True,
                 },
                 {
                     "format_id": "bestaudio/best",
@@ -149,6 +158,7 @@ def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) 
                     "bitrate": "192k",
                     "ext": "mp3",
                     "type": "audio",
+                    "requires_ffmpeg": True,
                 },
                 {
                     "format_id": "bestaudio/best",
@@ -156,6 +166,7 @@ def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) 
                     "bitrate": "128k",
                     "ext": "mp3",
                     "type": "audio",
+                    "requires_ffmpeg": True,
                 },
             ]
 
@@ -169,6 +180,7 @@ def extract_media_info(url: str, abort_event: Optional[threading.Event] = None) 
                 "webpage_url": info.get("webpage_url", url),
                 "video_formats": video_options,
                 "audio_formats": audio_options,
+                "ffmpeg_available": ffmpeg_status["available"],
             }
 
     except yt_dlp.utils.DownloadError as e:
@@ -188,6 +200,7 @@ def execute_download(
     progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     abort_event: Optional[threading.Event] = None,
     audio_bitrate: str = "320k",
+    ffmpeg_location: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute a media download with real-time progress callbacks and cancellation checks."""
 
@@ -233,13 +246,17 @@ def execute_download(
         "no_color": True,
     }
 
-    has_ffmpeg = bool(shutil.which("ffmpeg"))
+    ffmpeg_status = validate_ffmpeg_path(ffmpeg_location)
+    has_ffmpeg = ffmpeg_status["available"]
+
+    if has_ffmpeg and ffmpeg_status.get("path"):
+        ydl_opts["ffmpeg_location"] = ffmpeg_status["path"]
 
     if media_type == "audio":
         if not has_ffmpeg:
             raise MediaEngineError(
-                "FFmpeg is not installed or not in PATH. Converting audio to MP3 requires FFmpeg. "
-                "Please install FFmpeg (e.g. 'winget install ffmpeg') or download the video directly."
+                "FFmpeg is not available. Converting audio to MP3 requires FFmpeg. "
+                "Please configure an FFmpeg location in Settings or install FFmpeg via 'winget install Gyan.FFmpeg'."
             )
         ydl_opts["format"] = "bestaudio/best"
         ydl_opts["postprocessors"] = [{
@@ -248,6 +265,13 @@ def execute_download(
             "preferredquality": audio_bitrate.replace("k", ""),
         }]
     else:
+        # If multi-stream merging requested (e.g. format_id+bestaudio) and FFmpeg is not available
+        if "+" in (format_selector or "") and not has_ffmpeg:
+            raise MediaEngineError(
+                "The requested format requires merging separate video and audio streams with FFmpeg, but FFmpeg is not available. "
+                "Please configure an FFmpeg location in Settings or select a direct single-stream format."
+            )
+
         ydl_opts["format"] = format_selector or "bestvideo+bestaudio/best"
         if has_ffmpeg:
             ydl_opts["merge_output_format"] = "mp4"

@@ -158,6 +158,8 @@ export default function App() {
     try {
       const updated = await saveSettings(newSettings);
       setSettings(updated);
+      const h = await fetchHealth().catch(() => null);
+      if (h) setHealth(h);
     } catch (err) {
       console.error("Save settings failed:", err);
     }

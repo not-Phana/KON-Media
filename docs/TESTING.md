@@ -93,7 +93,35 @@ npm run build
 
 **Output**:
 * `dist/index.html` (0.49 kB)
-* `dist/assets/index-Bu2e2FRM.css` (23.85 kB)
-* `dist/assets/index-CQsSpLhQ.js` (255.89 kB)
-* Compilation time: **535 ms** (zero warnings, zero errors).
+* `dist/assets/index-vyOu95f2.css` (24.66 kB)
+* `dist/assets/index-6kZ-as_R.js` (261.92 kB)
+* Compilation time: **549 ms** (zero warnings, zero errors).
 * Browser document title: `KON Media — Personal Desktop Media Workspace`.
+
+---
+
+## 5. Phase 2A: FFmpeg Integration Test Suite
+
+Automated tests in `tests/test_ffmpeg.py` verify all aspects of FFmpeg path resolution, validation, format tagging, yt-dlp option forwarding, and UI guardrails:
+
+```powershell
+.\.venv\Scripts\python -m pytest -v
+```
+
+**Results (42 passing tests)**:
+* `tests/test_ffmpeg.py::test_ffmpeg_auto_detection_found` PASSED
+* `tests/test_ffmpeg.py::test_ffmpeg_auto_detection_not_found` PASSED
+* `tests/test_ffmpeg.py::test_ffmpeg_custom_path_nonexistent` PASSED
+* `tests/test_ffmpeg.py::test_ffmpeg_custom_path_dir_missing_exe` PASSED
+* `tests/test_ffmpeg.py::test_ffmpeg_custom_path_dir_with_exe` PASSED
+* `tests/test_ffmpeg.py::test_ffmpeg_custom_path_direct_exe` PASSED
+* `tests/test_ffmpeg.py::test_ffmpeg_execution_timeout` PASSED
+* `tests/test_ffmpeg.py::test_ffmpeg_execution_permission_error` PASSED
+* `tests/test_ffmpeg.py::test_ffmpeg_execution_nonzero_exit` PASSED
+* `tests/test_ffmpeg.py::test_extract_media_info_format_requires_ffmpeg_tagging` PASSED
+* `tests/test_ffmpeg.py::test_execute_download_ffmpeg_location_passed` PASSED
+* `tests/test_ffmpeg.py::test_execute_download_blocks_merge_when_missing_ffmpeg` PASSED
+* `tests/test_api.py::test_api_validate_ffmpeg_endpoint` PASSED
+* `tests/test_api.py::test_api_health_includes_ffmpeg_details` PASSED
+* `tests/test_ffmpeg.py::test_settings_store_handles_ffmpeg_path` PASSED
+* Plus 27 baseline unit and integration tests across API, storage, file manager, and URL guard.

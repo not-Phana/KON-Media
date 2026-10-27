@@ -97,6 +97,15 @@ export async function saveSettings(settings) {
   return res.json();
 }
 
+export async function validateFFmpeg(ffmpegPath) {
+  const res = await fetch(`${API_BASE}/settings/validate-ffmpeg`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ffmpeg_path: ffmpegPath }),
+  });
+  return res.json();
+}
+
 export async function openFileInExplorer(filePath) {
   const res = await fetch(`${API_BASE}/open-folder`, {
     method: "POST",

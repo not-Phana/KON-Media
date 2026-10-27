@@ -16,6 +16,7 @@ from backend.engine.media_engine import (
     get_engine_health,
     MediaEngineError,
 )
+from backend.engine.ffmpeg_manager import validate_ffmpeg_path
 from backend.security.url_guard import validate_media_url, SecurityValidationError
 from backend.storage.file_manager import open_in_file_explorer
 from backend.storage.storage import HistoryStore, SettingsStore
@@ -55,12 +56,18 @@ class SettingsUpdateRequest(BaseModel):
     downloads_dir: Optional[str] = None
     max_concurrent_downloads: Optional[int] = None
     default_media_type: Optional[str] = None
+    ffmpeg_path: Optional[str] = None
+
+
+class ValidateFFmpegRequest(BaseModel):
+    ffmpeg_path: Optional[str] = None
 
 
 @router.get("/health")
 async def health_check():
     """System health check and dependency detection."""
-    engine_status = get_engine_health()
+    configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
+    engine_status = get_engine_health(custom_ffmpeg_path=configured_ffmpeg)
     disk_usage = shutil.disk_usage(DOWNLOADS_DIR)
 
     return {
@@ -82,9 +89,10 @@ async def analyze_url(req: AnalyzeRequest):
     except SecurityValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # 2. Extract media info asynchronously
+    # 2. Extract media info asynchronously using configured FFmpeg location
     try:
-        info = await asyncio.to_thread(extract_media_info, validated_url)
+        configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
+        info = await asyncio.to_thread(extract_media_info, validated_url, None, configured_ffmpeg)
         return info
     except MediaEngineError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -202,6 +210,12 @@ async def update_settings(req: SettingsUpdateRequest):
     updates = req.model_dump(exclude_unset=True)
     updated = settings_store.update_settings(updates)
     return updated
+
+
+@router.post("/settings/validate-ffmpeg")
+async def validate_custom_ffmpeg(req: ValidateFFmpegRequest):
+    """Test and validate an FFmpeg path without saving it."""
+    return validate_ffmpeg_path(req.ffmpeg_path)
 
 
 @router.post("/open-folder")

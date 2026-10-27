@@ -32,13 +32,13 @@ export default function Header({ health, onOpenSettings }) {
           {health?.engine?.ffmpeg_available ? (
             <>
               <CheckCircle2 className="w-3.5 h-3.5 text-[#72C69A]" />
-              <span>FFmpeg: <strong className="text-[#F3F4F6]">Ready</strong></span>
+              <span>FFmpeg: <strong className="text-[#F3F4F6]">{health.engine.ffmpeg_source === 'custom' ? 'Configured' : 'Ready'}</strong></span>
             </>
           ) : (
             <>
               <AlertTriangle className="w-3.5 h-3.5 text-[#E8BE72]" />
-              <span title="Install ffmpeg to enable 1080p+ merging and MP3 conversion">
-                FFmpeg: <strong className="text-[#E8BE72]">Not in PATH</strong>
+              <span title={health?.engine?.ffmpeg_error || "Install FFmpeg or configure custom path in Settings"}>
+                FFmpeg: <strong className="text-[#E8BE72]">Not Found</strong>
               </span>
             </>
           )}
