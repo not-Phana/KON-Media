@@ -93,35 +93,41 @@ npm run build
 
 **Output**:
 * `dist/index.html` (0.49 kB)
-* `dist/assets/index-vyOu95f2.css` (24.66 kB)
-* `dist/assets/index-6kZ-as_R.js` (261.92 kB)
-* Compilation time: **549 ms** (zero warnings, zero errors).
+* `dist/assets/index-DoXEDl-2.css` (25.48 kB)
+* `dist/assets/index-DNGEwZO0.js` (266.59 kB)
+* Compilation time: **505 ms** (zero warnings, zero errors).
 * Browser document title: `KON Media — Personal Desktop Media Workspace`.
 
 ---
 
 ## 5. Phase 2A: FFmpeg Integration Test Suite
 
-Automated tests in `tests/test_ffmpeg.py` verify all aspects of FFmpeg path resolution, validation, format tagging, yt-dlp option forwarding, and UI guardrails:
+Automated tests in `tests/test_ffmpeg.py` verify all aspects of FFmpeg path resolution, validation, format tagging, yt-dlp option forwarding, and UI guardrails.
+
+---
+
+## 6. Phase 2B: Spotify Source Handling & Audio Test Suite
+
+Automated tests in `tests/test_spotify_source.py` verify source classification, spoofing protection, DRM explanations, link launching, and legitimate audio downloads:
 
 ```powershell
 .\.venv\Scripts\python -m pytest -v
 ```
 
-**Results (42 passing tests)**:
-* `tests/test_ffmpeg.py::test_ffmpeg_auto_detection_found` PASSED
-* `tests/test_ffmpeg.py::test_ffmpeg_auto_detection_not_found` PASSED
-* `tests/test_ffmpeg.py::test_ffmpeg_custom_path_nonexistent` PASSED
-* `tests/test_ffmpeg.py::test_ffmpeg_custom_path_dir_missing_exe` PASSED
-* `tests/test_ffmpeg.py::test_ffmpeg_custom_path_dir_with_exe` PASSED
-* `tests/test_ffmpeg.py::test_ffmpeg_custom_path_direct_exe` PASSED
-* `tests/test_ffmpeg.py::test_ffmpeg_execution_timeout` PASSED
-* `tests/test_ffmpeg.py::test_ffmpeg_execution_permission_error` PASSED
-* `tests/test_ffmpeg.py::test_ffmpeg_execution_nonzero_exit` PASSED
-* `tests/test_ffmpeg.py::test_extract_media_info_format_requires_ffmpeg_tagging` PASSED
-* `tests/test_ffmpeg.py::test_execute_download_ffmpeg_location_passed` PASSED
-* `tests/test_ffmpeg.py::test_execute_download_blocks_merge_when_missing_ffmpeg` PASSED
-* `tests/test_api.py::test_api_validate_ffmpeg_endpoint` PASSED
-* `tests/test_api.py::test_api_health_includes_ffmpeg_details` PASSED
-* `tests/test_ffmpeg.py::test_settings_store_handles_ffmpeg_path` PASSED
-* Plus 27 baseline unit and integration tests across API, storage, file manager, and URL guard.
+**Results (57 passing tests across entire suite)**:
+* `tests/test_spotify_source.py::test_spotify_hostname_legitimate` PASSED
+* `tests/test_spotify_source.py::test_spotify_hostname_deceptive_and_spoofed` PASSED
+* `tests/test_spotify_source.py::test_detect_spotify_source_track` PASSED
+* `tests/test_spotify_source.py::test_detect_spotify_source_album` PASSED
+* `tests/test_spotify_source.py::test_detect_spotify_source_playlist` PASSED
+* `tests/test_spotify_source.py::test_detect_spotify_source_other_content` PASSED
+* `tests/test_spotify_source.py::test_detect_spotify_source_rejection_of_deceptive_urls` PASSED
+* `tests/test_spotify_source.py::test_extract_media_info_spotify_source` PASSED
+* `tests/test_spotify_source.py::test_execute_download_spotify_rejected` PASSED
+* `tests/test_spotify_source.py::test_api_analyze_spotify_returns_structured_guidance` PASSED
+* `tests/test_spotify_source.py::test_api_download_spotify_rejected_with_400` PASSED
+* `tests/test_spotify_source.py::test_api_open_url_spotify_success` PASSED
+* `tests/test_spotify_source.py::test_api_open_url_rejects_unauthorized_and_deceptive` PASSED
+* `tests/test_spotify_source.py::test_extract_media_info_direct_audio_format_available` PASSED
+* `tests/test_spotify_source.py::test_execute_download_direct_audio_without_ffmpeg` PASSED
+* Plus 42 passing tests from Phase 1 and Phase 2A.

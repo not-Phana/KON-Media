@@ -134,3 +134,21 @@ flowchart TD
   * Pre-merged direct single-stream formats (`acodec != "none"` or archive direct links) are flagged with `requires_ffmpeg: false` and work without FFmpeg.
   * Audio extraction to MP3 requires FFmpeg post-processing (`FFmpegExtractAudio`).
   * If FFmpeg is unavailable, formats requiring FFmpeg are clearly indicated in the UI, and the download button alerts the user with setup instructions rather than failing abruptly during execution.
+
+---
+
+## 8. Spotify Source Recognition & Audio Architecture
+
+### 8.1 Source Recognition & Spoofing Protection
+* **Strict Hostname Verification**: Validates hostnames against legitimate Spotify endpoints (`open.spotify.com`, `play.spotify.com`, `spotify.com`, `spotify.link`) using dot-prefix domain boundaries. Prevents substring and sub-level domain spoofing (e.g. `open.spotify.com.attacker.com` or `not-spotify.com`).
+* **Content Classification**: Analyzes URL path structures to identify tracks (`/track/<id>`), albums (`/album/<id>`), playlists (`/playlist/<id>` and `/user/<uid>/playlist/<id>`), artists, episodes, shows, and internationalized paths (`/intl-<country>/...`).
+* **Canonicalization**: Generates clean, secure web URLs for opening without tracking queries.
+
+### 8.2 DRM Clarification vs. Media Transcoding
+* **Clear Platform Boundaries**: Spotify music streams are protected by Digital Rights Management (DRM). KON Media respects platform access controls and does not attempt circumvention.
+* **Separation from FFmpeg**: When a Spotify URL is analyzed, the application explicitly identifies it as an unsupported DRM-protected stream rather than generating generic errors or suggesting FFmpeg installation.
+* **Helpful Guidance & Link Action**: The UI provides clear information explaining that offline listening is supported inside the official Spotify application, accompanied by an `Open in Spotify` action button verified through the `/api/open-url` endpoint.
+
+### 8.3 Legitimate Audio Downloads
+* **Direct Audio Retention**: Continues supporting authorized, accessible direct audio streams (e.g. Archive.org, user recordings, CC audio, podcasts) with an `Original Audio (Direct)` option that operates without requiring FFmpeg.
+* **High-Fidelity MP3 Transcoding**: Provides optional MP3 extraction (320 kbps, 192 kbps, 128 kbps) powered by FFmpeg when available.

@@ -119,6 +119,19 @@ export async function openFileInExplorer(filePath) {
   return data;
 }
 
+export async function openExternalUrl(url) {
+  const res = await fetch(`${API_BASE}/open-url`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Could not open external URL");
+  }
+  return data;
+}
+
 export function subscribeToEvents(onEvent, onError) {
   const es = new EventSource(`${API_BASE}/events`);
 

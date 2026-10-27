@@ -17,7 +17,11 @@ from backend.engine.media_engine import (
     MediaEngineError,
 )
 from backend.engine.ffmpeg_manager import validate_ffmpeg_path
-from backend.security.url_guard import validate_media_url, SecurityValidationError
+from backend.security.url_guard import (
+    validate_media_url,
+    SecurityValidationError,
+    detect_spotify_source,
+)
 from backend.storage.file_manager import open_in_file_explorer
 from backend.storage.storage import HistoryStore, SettingsStore
 from backend.tasks.task_manager import TaskManager
@@ -50,6 +54,10 @@ class DownloadRequest(BaseModel):
 
 class OpenFolderRequest(BaseModel):
     file_path: str = Field(..., description="Absolute path of the file to open in explorer")
+
+
+class OpenExternalUrlRequest(BaseModel):
+    url: str = Field(..., description="External URL to open in default browser")
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -108,6 +116,18 @@ async def start_download(req: DownloadRequest):
     except SecurityValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    # Reject Spotify URLs (protected DRM music streams)
+    spotify_match = detect_spotify_source(validated_url)
+    if spotify_match:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Spotify music streams are protected by Digital Rights Management (DRM) "
+                "and cannot be exported as MP3 files. To listen offline, use the official "
+                "Spotify desktop or mobile application."
+            ),
+        )
+
     task_id = task_manager.create_task(
         url=validated_url,
         title=req.title or "Media Download",
@@ -120,6 +140,29 @@ async def start_download(req: DownloadRequest):
     )
 
     return {"task_id": task_id, "status": "queued"}
+
+
+@router.post("/open-url")
+async def open_external_url(req: OpenExternalUrlRequest):
+    """Safely open an authorized external service URL (such as Spotify) in the system browser."""
+    try:
+        validated_url = validate_media_url(req.url)
+    except SecurityValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    spotify_match = detect_spotify_source(validated_url)
+    if not spotify_match:
+        raise HTTPException(
+            status_code=400,
+            detail="Only recognized external service URLs (such as Spotify) can be opened through this action."
+        )
+
+    try:
+        import webbrowser
+        opened = await asyncio.to_thread(webbrowser.open, validated_url)
+        return {"status": "opened", "url": validated_url, "success": opened}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to open URL in browser: {e}")
 
 
 @router.get("/tasks")

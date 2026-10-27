@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 import yt_dlp
 from backend.engine.ffmpeg_manager import validate_ffmpeg_path
+from backend.security.url_guard import detect_spotify_source
 try:
     from yt_dlp.version import __version__ as ytdlp_version
 except ImportError:
@@ -66,6 +67,37 @@ def extract_media_info(
 ) -> Dict[str, Any]:
     """Analyze a media URL without downloading, extracting supported formats and metadata."""
     ffmpeg_status = validate_ffmpeg_path(ffmpeg_location)
+
+    # 1. Recognize Spotify sources upfront before attempting extraction
+    spotify_match = detect_spotify_source(url)
+    if spotify_match:
+        return {
+            "title": spotify_match["title"],
+            "uploader": "Spotify",
+            "duration": None,
+            "duration_formatted": "N/A",
+            "thumbnail": None,
+            "extractor": "Spotify",
+            "webpage_url": spotify_match["canonical_url"],
+            "video_formats": [],
+            "audio_formats": [],
+            "ffmpeg_available": ffmpeg_status["available"],
+            "supported": False,
+            "is_unsupported_source": True,
+            "source": "spotify",
+            "content_type": spotify_match["content_type"],
+            "open_in_spotify_url": spotify_match["canonical_url"],
+            "message": (
+                "Spotify music streams are protected by Digital Rights Management (DRM) "
+                "and cannot be exported as MP3 or offline audio files."
+            ),
+            "guidance": (
+                "To download music for offline playback, please use the official Spotify "
+                "desktop or mobile application. Spotify's supported offline-download functionality "
+                "operates exclusively inside Spotify."
+            ),
+        }
+
     ydl_opts = {
         "skip_download": True,
         "extract_flat": False,
@@ -170,6 +202,29 @@ def extract_media_info(
                 },
             ]
 
+            # If the source is direct audio (or has pre-encoded direct audio streams), offer direct audio download without FFmpeg
+            ext = (info.get("ext") or "mp4").lower()
+            is_direct_audio = (
+                info.get("vcodec") in (None, "none")
+                and ext in ("mp3", "wav", "m4a", "flac", "ogg", "opus", "aac")
+            ) or any(
+                f.get("vcodec") in (None, "none")
+                and f.get("acodec") not in (None, "none")
+                and f.get("ext") in ("mp3", "m4a", "wav", "flac", "ogg")
+                for f in raw_formats
+            )
+
+            if is_direct_audio:
+                audio_ext = ext if ext in ("mp3", "wav", "m4a", "flac", "ogg", "opus", "aac") else "mp3"
+                audio_options.insert(0, {
+                    "format_id": "bestaudio/best",
+                    "label": f"Original Audio ({audio_ext.upper()}) (Direct)",
+                    "bitrate": "original",
+                    "ext": audio_ext,
+                    "type": "audio",
+                    "requires_ffmpeg": False,
+                })
+
             return {
                 "title": info.get("title", "Untitled Media"),
                 "uploader": info.get("uploader") or info.get("channel") or "Unknown Creator",
@@ -238,6 +293,15 @@ def execute_download(
                     "eta": 0,
                 })
 
+    # 1. Guard against Spotify URLs (protected DRM streams)
+    spotify_match = detect_spotify_source(url)
+    if spotify_match:
+        raise MediaEngineError(
+            "Spotify music streams are protected by Digital Rights Management (DRM) "
+            "and cannot be exported as MP3 files. To listen offline, use the official "
+            "Spotify desktop or mobile application."
+        )
+
     ydl_opts: Dict[str, Any] = {
         "outtmpl": output_path_template,
         "progress_hooks": [ProgressHook()],
@@ -253,17 +317,20 @@ def execute_download(
         ydl_opts["ffmpeg_location"] = ffmpeg_status["path"]
 
     if media_type == "audio":
-        if not has_ffmpeg:
-            raise MediaEngineError(
-                "FFmpeg is not available. Converting audio to MP3 requires FFmpeg. "
-                "Please configure an FFmpeg location in Settings or install FFmpeg via 'winget install Gyan.FFmpeg'."
-            )
-        ydl_opts["format"] = "bestaudio/best"
-        ydl_opts["postprocessors"] = [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-            "preferredquality": audio_bitrate.replace("k", ""),
-        }]
+        if audio_bitrate == "original" or format_selector == "best":
+            ydl_opts["format"] = "bestaudio/best"
+        else:
+            if not has_ffmpeg:
+                raise MediaEngineError(
+                    "FFmpeg is not available. Converting audio to MP3 requires FFmpeg. "
+                    "Please configure an FFmpeg location in Settings or install FFmpeg via 'winget install Gyan.FFmpeg'."
+                )
+            ydl_opts["format"] = "bestaudio/best"
+            ydl_opts["postprocessors"] = [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": audio_bitrate.replace("k", ""),
+            }]
     else:
         # If multi-stream merging requested (e.g. format_id+bestaudio) and FFmpeg is not available
         if "+" in (format_selector or "") and not has_ffmpeg:
