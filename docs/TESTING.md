@@ -131,3 +131,28 @@ Automated tests in `tests/test_spotify_source.py` verify source classification, 
 * `tests/test_spotify_source.py::test_extract_media_info_direct_audio_format_available` PASSED
 * `tests/test_spotify_source.py::test_execute_download_direct_audio_without_ffmpeg` PASSED
 * Plus 42 passing tests from Phase 1 and Phase 2A.
+
+---
+
+## 7. Phase 2C: Automated Real-World Downloads & Socket Guard Tests
+
+Automated tests in `tests/test_real_downloads.py` verify live network downloads, frame headers, connect-time socket guards, redirect SSRF interception, and partial file cleanup:
+
+```powershell
+.\.venv\Scripts\python -m pytest -v
+```
+
+**Results (61 passing tests across entire suite)**:
+* `tests/test_real_downloads.py::test_socket_guard_scope_blocks_private_destinations` PASSED
+* `tests/test_real_downloads.py::test_redirect_handler_guard_blocks_ssrf_redirects` PASSED
+* `tests/test_real_downloads.py::test_cleanup_partial_files_removes_intermediate_and_parts` PASSED
+* `tests/test_real_downloads.py::test_real_live_download_direct_audio` PASSED
+* Plus 57 passing tests across API, FFmpeg integration, Spotify source classification, and storage.
+
+### Real-World Download Verification Summary:
+* **Target**: `https://archive.org/download/testmp3testfile/mpthreetest.mp3` (Public Domain Audio)
+* **Execution**: Direct audio stream download without FFmpeg dependency (`audio_bitrate="original"`).
+* **Result**:
+  * Output file written to disk with exact size `198,658 bytes`.
+  * Header validation: Confirmed valid MPEG-1 Audio Layer III frame sync word (`b'\xff\xfa'`).
+  * No post-processing errors; completed within 3.5 seconds.

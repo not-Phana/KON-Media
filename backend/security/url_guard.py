@@ -8,8 +8,10 @@ Guarantees that user-submitted media URLs:
 5. Are well-formed and free of dangerous shell control characters.
 """
 
+import contextlib
 import ipaddress
 import socket
+import threading
 from urllib.parse import urlsplit
 from typing import Any, Dict, Optional
 
@@ -96,17 +98,59 @@ def validate_media_url(url: str) -> str:
     return cleaned_url
 
 
+def is_ip_allowed(ip: ipaddress.IPv4Address | ipaddress.IPv6Address | str) -> bool:
+    """Check whether an IP address is public and allowed, or in a restricted network."""
+    try:
+        if isinstance(ip, str):
+            ip = ipaddress.ip_address(ip)
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        for network in _BLOCKED_NETWORKS:
+            if ip in network:
+                return False
+        return True
+    except Exception:
+        return False
+
+
 def _check_ip_allowed(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> None:
     """Ensure the given IP address does not fall within any blocked ranges."""
-    # Convert IPv4-mapped IPv6 address to IPv4
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
-        ip = ip.ipv4_mapped
+    if not is_ip_allowed(ip):
+        raise SecurityValidationError(
+            f"Destination IP address {ip} is in a restricted local or private range."
+        )
 
-    for network in _BLOCKED_NETWORKS:
-        if ip in network:
-            raise SecurityValidationError(
-                f"Destination IP address {ip} is in a restricted local or private range."
-            )
+
+# =====================================================================
+# Connect-Time Socket Guard for SSRF & DNS Rebinding Protection
+# =====================================================================
+
+_real_getaddrinfo = socket.getaddrinfo
+_thread_guard = threading.local()
+
+
+def _guarded_getaddrinfo(host, *args, **kwargs):
+    results = _real_getaddrinfo(host, *args, **kwargs)
+    if not getattr(_thread_guard, "active", False):
+        return results
+
+    allowed = [r for r in results if is_ip_allowed(r[4][0])]
+    if not allowed:
+        raise socket.gaierror(f"Refusing to connect to non-global address for host {host!r}")
+    return allowed
+
+
+socket.getaddrinfo = _guarded_getaddrinfo
+
+
+@contextlib.contextmanager
+def socket_guard_scope():
+    """Apply the connect-time address guard for the calling thread while the block runs."""
+    _thread_guard.active = True
+    try:
+        yield
+    finally:
+        _thread_guard.active = False
 
 
 def is_spotify_hostname(hostname: Optional[str]) -> bool:
@@ -202,3 +246,48 @@ def detect_spotify_source(url: str) -> Optional[Dict[str, Any]]:
         "web_url": cleaned_url,
         "canonical_url": canonical_url,
     }
+
+
+_REDIRECT_GUARD_INSTALLED = False
+
+
+def install_network_security_guards() -> None:
+    """Install runtime guards into urllib and yt-dlp to validate HTTP redirects against SSRF and private networks.
+
+    Guarantees that an initial URL cannot redirect to loopback interfaces, cloud metadata,
+    or internal RFC1918 private subnets.
+    """
+    global _REDIRECT_GUARD_INSTALLED
+    if _REDIRECT_GUARD_INSTALLED:
+        return
+
+    import urllib.request
+
+    # 1. Standard library urllib redirect guard
+    orig_urllib_redirect = urllib.request.HTTPRedirectHandler.redirect_request
+
+    def secure_urllib_redirect(self, req, fp, code, msg, headers, newurl):
+        validate_media_url(newurl)
+        return orig_urllib_redirect(self, req, fp, code, msg, headers, newurl)
+
+    urllib.request.HTTPRedirectHandler.redirect_request = secure_urllib_redirect
+
+    # 2. yt-dlp internal urllib redirect guard
+    try:
+        import yt_dlp.networking._urllib as ytdlp_urllib
+        if hasattr(ytdlp_urllib, "RedirectHandler"):
+            orig_ytdlp_redirect = ytdlp_urllib.RedirectHandler.redirect_request
+
+            def secure_ytdlp_redirect(self, req, fp, code, msg, headers, newurl):
+                validate_media_url(newurl)
+                return orig_ytdlp_redirect(self, req, fp, code, msg, headers, newurl)
+
+            ytdlp_urllib.RedirectHandler.redirect_request = secure_ytdlp_redirect
+    except Exception:
+        pass
+
+    _REDIRECT_GUARD_INSTALLED = True
+
+
+# Automatically activate redirect protections upon module load
+install_network_security_guards()

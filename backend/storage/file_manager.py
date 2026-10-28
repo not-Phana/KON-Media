@@ -116,10 +116,22 @@ def open_in_file_explorer(file_path: Path, allowed_root: Path = None) -> bool:
 
 
 def cleanup_partial_files(file_prefix: str, directory: Path) -> None:
-    """Safely remove leftover partial or temporary files for a given job."""
+    """Safely remove leftover partial or temporary files for a given job.
+
+    Removes any intermediate output matching '{file_prefix}.*' or partial files
+    ending in '.part', '.ytdl', '.temp'.
+    """
     try:
-        if not directory.exists():
+        if not directory.exists() or not file_prefix:
             return
+        # Remove any task-prefixed temporary outputs
+        for item in directory.glob(f"{file_prefix}.*"):
+            if item.is_file():
+                try:
+                    item.unlink(missing_ok=True)
+                except OSError:
+                    pass
+        # Remove any trailing partial markers
         for item in directory.glob(f"{file_prefix}*"):
             if item.is_file() and (item.suffix in (".part", ".ytdl", ".temp") or item.name.endswith(".temp")):
                 try:

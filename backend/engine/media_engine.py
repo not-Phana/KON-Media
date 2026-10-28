@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 import yt_dlp
 from backend.engine.ffmpeg_manager import validate_ffmpeg_path
-from backend.security.url_guard import detect_spotify_source
+from backend.security.url_guard import detect_spotify_source, socket_guard_scope
 try:
     from yt_dlp.version import __version__ as ytdlp_version
 except ImportError:
@@ -113,10 +113,11 @@ def extract_media_info(
         raise DownloadCancelledError("Download was cancelled by user.")
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            if not info:
-                raise MediaEngineError("Source returned no media information.")
+        with socket_guard_scope():
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                if not info:
+                    raise MediaEngineError("Source returned no media information.")
 
             # Process available formats
             raw_formats = info.get("formats", [])
@@ -347,10 +348,11 @@ def execute_download(
         raise DownloadCancelledError("Download was cancelled by user.")
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.download([url])
-            if result != 0:
-                raise MediaEngineError(f"yt-dlp returned non-zero code: {result}")
+        with socket_guard_scope():
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                result = ydl.download([url])
+                if result != 0:
+                    raise MediaEngineError(f"yt-dlp returned non-zero code: {result}")
 
         return {"success": True}
 

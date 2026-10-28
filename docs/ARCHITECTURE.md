@@ -152,3 +152,15 @@ flowchart TD
 ### 8.3 Legitimate Audio Downloads
 * **Direct Audio Retention**: Continues supporting authorized, accessible direct audio streams (e.g. Archive.org, user recordings, CC audio, podcasts) with an `Original Audio (Direct)` option that operates without requiring FFmpeg.
 * **High-Fidelity MP3 Transcoding**: Provides optional MP3 extraction (320 kbps, 192 kbps, 128 kbps) powered by FFmpeg when available.
+
+---
+
+## 9. Connect-Time Socket Guard & Redirect SSRF Defense
+
+### 9.1 Three-Layer SSRF & DNS Rebinding Defense
+1. **Ingress Validation (`validate_media_url`)**: Inspects scheme, resolves hostname to IP addresses, and checks all against loopback, private RFC1918 subnets, and cloud metadata.
+2. **HTTP Redirect Guard (`RedirectHandler.redirect_request`)**: Hooks internal redirect handlers in standard library `urllib` and `yt-dlp`. Re-validates every `301/302/303/307/308` redirect target before following, preventing redirect-based bypasses.
+3. **Connect-Time Socket Guard (`socket_guard_scope`)**: Thread-scoped connect-time address interceptor that re-verifies every resolved IP at the exact moment of socket creation during media analysis and downloading. Prevents DNS rebinding and manifest-derived internal network probes.
+
+### 9.2 Complete Intermediate Output Cleanup
+* **`cleanup_partial_files`**: Automatically removes any intermediate task-prefixed output files (`{task_id}.*`) and `.part` / `.temp` files if a download task fails, cancels, or encounters network interruption, guaranteeing zero leftover orphaned files in the downloads directory.
