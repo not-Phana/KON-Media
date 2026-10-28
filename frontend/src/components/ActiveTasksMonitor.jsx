@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle, XCircle, Ban, ArrowDown, FolderOpen, X } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, XCircle, Ban, ArrowDown, FolderOpen, X, Download } from "lucide-react";
+import { getDownloadUrl } from "../api";
 
 export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile, onDismissTask }) {
   const [openingTaskId, setOpeningTaskId] = useState(null);
@@ -127,6 +128,18 @@ export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile, on
                       <FolderOpen className="w-3.5 h-3.5" />
                       <span>{openingTaskId === task.id ? "Opening..." : "Folder"}</span>
                     </button>
+                  )}
+
+                  {task.status === "completed" && task.filename && (
+                    <a
+                      href={getDownloadUrl(task.filename)}
+                      download={task.filename}
+                      className="neu-raised flex items-center gap-1.5 px-2.5 py-1 text-xs text-[#F3F4F6] hover:text-[#8BC5B0] cursor-pointer no-underline"
+                      title="Save to browser / device"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Save</span>
+                    </a>
                   )}
 
                   {!isOngoing && onDismissTask && (

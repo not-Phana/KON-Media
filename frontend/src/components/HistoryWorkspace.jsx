@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { History, FolderOpen, Trash2, Video, Music, Calendar, HardDrive } from "lucide-react";
+import { History, FolderOpen, Trash2, Video, Music, Calendar, HardDrive, Download } from "lucide-react";
+import { getDownloadUrl } from "../api";
 
 export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, onClearAll }) {
   const [showConfirmClear, setShowConfirmClear] = useState(false);
@@ -132,8 +133,20 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
                     title="Open in Windows File Explorer"
                   >
                     <FolderOpen className="w-3.5 h-3.5 text-[#8BC5B0]" />
-                    <span>{openingItemId === item.id ? "Opening..." : "Open in Folder"}</span>
+                    <span>{openingItemId === item.id ? "Opening..." : "Folder"}</span>
                   </button>
+                )}
+
+                {item.filename && (
+                  <a
+                    href={getDownloadUrl(item.filename)}
+                    download={item.filename}
+                    className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#F3F4F6] hover:text-[#8BC5B0] cursor-pointer no-underline"
+                    title="Save to browser / device"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#8BC5B0]" />
+                    <span>Save</span>
+                  </a>
                 )}
 
                 <button

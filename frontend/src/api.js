@@ -119,6 +119,14 @@ export async function openFileInExplorer(filePath) {
   return data;
 }
 
+export function getDownloadUrl(filename) {
+  return `${API_BASE}/downloads/${encodeURIComponent(filename)}`;
+}
+
+export function getStreamUrl(filename) {
+  return `${API_BASE}/stream/${encodeURIComponent(filename)}`;
+}
+
 export async function openExternalUrl(url) {
   const res = await fetch(`${API_BASE}/open-url`, {
     method: "POST",

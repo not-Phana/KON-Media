@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel, Field
 
 from backend.config import DOWNLOADS_DIR
@@ -322,4 +322,43 @@ async def open_download_file(req: OpenFolderRequest):
             status_code=400,
             detail="Could not open file in Explorer. Path may be invalid or outside downloads directory."
         )
-    return {"status": "opened"}
+    return {
+        "status": "opened",
+        "path": str(target.resolve()),
+        "directory": str(configured_dir.resolve()),
+    }
+
+
+@router.get("/downloads/{filename:path}")
+async def download_file_to_browser(filename: str):
+    """Serve a downloaded media file directly to the browser for saving."""
+    configured_dir = Path(settings_store.get_settings().get("downloads_dir", str(DOWNLOADS_DIR)))
+    target = (configured_dir / filename).resolve()
+    if not target.is_relative_to(configured_dir.resolve()):
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if not target.exists() or not target.is_file():
+        raise HTTPException(status_code=404, detail="File not found on disk.")
+
+    return FileResponse(
+        path=str(target),
+        filename=target.name,
+        media_type="application/octet-stream",
+    )
+
+
+@router.get("/stream/{filename:path}")
+async def stream_media_file(filename: str):
+    """Stream a downloaded media file directly for in-browser playback."""
+    import mimetypes
+    configured_dir = Path(settings_store.get_settings().get("downloads_dir", str(DOWNLOADS_DIR)))
+    target = (configured_dir / filename).resolve()
+    if not target.is_relative_to(configured_dir.resolve()):
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if not target.exists() or not target.is_file():
+        raise HTTPException(status_code=404, detail="File not found on disk.")
+
+    mime, _ = mimetypes.guess_type(str(target))
+    return FileResponse(
+        path=str(target),
+        media_type=mime or "video/mp4",
+    )

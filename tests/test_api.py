@@ -83,3 +83,33 @@ async def test_spa_root_serving():
         resp = await client.get("/")
         assert resp.status_code == 200
         assert "<html" in resp.text.lower()
+
+
+@pytest.mark.asyncio
+async def test_downloads_endpoint_and_security(tmp_path):
+    from backend.config import DOWNLOADS_DIR
+    transport = ASGITransport(app=app)
+
+    # Path traversal attempt
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/downloads/..%2F..%2Fwindows%2Fwin.ini")
+        assert resp.status_code in (400, 403, 404)
+
+        # Create a real test file in configured downloads directory
+        sample_file = DOWNLOADS_DIR / "sample_test_serve.txt"
+        DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+        sample_file.write_text("KON Media Download Content")
+
+        try:
+            resp = await client.get("/api/downloads/sample_test_serve.txt")
+            assert resp.status_code == 200
+            assert resp.text == "KON Media Download Content"
+            assert "attachment" in resp.headers.get("content-disposition", "")
+
+            # Stream endpoint
+            stream_resp = await client.get("/api/stream/sample_test_serve.txt")
+            assert stream_resp.status_code == 200
+            assert stream_resp.text == "KON Media Download Content"
+        finally:
+            if sample_file.exists():
+                sample_file.unlink()

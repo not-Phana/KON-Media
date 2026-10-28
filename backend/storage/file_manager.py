@@ -82,8 +82,70 @@ def get_unique_destination_path(directory: Path, filename: str) -> Path:
         counter += 1
 
 
+def _launch_on_interactive_desktop(cmd: str) -> bool:
+    """Launch a process targeting the interactive user desktop WinSta0\\Default."""
+    import ctypes
+    from ctypes import wintypes
+
+    class STARTUPINFO(ctypes.Structure):
+        _fields_ = [
+            ("cb", wintypes.DWORD),
+            ("lpReserved", wintypes.LPWSTR),
+            ("lpDesktop", wintypes.LPWSTR),
+            ("lpTitle", wintypes.LPWSTR),
+            ("dwX", wintypes.DWORD),
+            ("dwY", wintypes.DWORD),
+            ("dwXSize", wintypes.DWORD),
+            ("dwYSize", wintypes.DWORD),
+            ("dwXCountChars", wintypes.DWORD),
+            ("dwYCountChars", wintypes.DWORD),
+            ("dwFillAttribute", wintypes.DWORD),
+            ("dwFlags", wintypes.DWORD),
+            ("wShowWindow", wintypes.WORD),
+            ("cbReserved2", wintypes.WORD),
+            ("lpReserved2", ctypes.POINTER(wintypes.BYTE)),
+            ("hStdInput", wintypes.HANDLE),
+            ("hStdOutput", wintypes.HANDLE),
+            ("hStdError", wintypes.HANDLE),
+        ]
+
+    class PROCESS_INFORMATION(ctypes.Structure):
+        _fields_ = [
+            ("hProcess", wintypes.HANDLE),
+            ("hThread", wintypes.HANDLE),
+            ("dwProcessId", wintypes.DWORD),
+            ("dwThreadId", wintypes.DWORD),
+        ]
+
+    try:
+        si = STARTUPINFO()
+        si.cb = ctypes.sizeof(STARTUPINFO)
+        si.lpDesktop = r"WinSta0\Default"
+
+        pi = PROCESS_INFORMATION()
+
+        success = ctypes.windll.kernel32.CreateProcessW(
+            None, cmd, None, None, False, 0, None, None, ctypes.byref(si), ctypes.byref(pi)
+        )
+        if success:
+            if pi.hProcess:
+                ctypes.windll.kernel32.CloseHandle(pi.hProcess)
+            if pi.hThread:
+                ctypes.windll.kernel32.CloseHandle(pi.hThread)
+            return True
+    except Exception:
+        pass
+
+    # Fallback to subprocess.Popen
+    try:
+        subprocess.Popen(cmd)
+        return True
+    except Exception:
+        return False
+
+
 def open_in_file_explorer(file_path: Path, allowed_root: Path = None) -> bool:
-    """Open Windows File Explorer with the specific downloaded file selected,
+    """Open Windows File Explorer on the interactive desktop with the specific file selected,
     or open the directory if the target is a directory or the file was moved.
 
     Restricts operations to paths strictly inside the allowed downloads directory
@@ -99,28 +161,16 @@ def open_in_file_explorer(file_path: Path, allowed_root: Path = None) -> bool:
 
         # Case 1: Target is an existing directory (e.g. downloads root)
         if resolved_path.is_dir():
-            if hasattr(os, "startfile"):
-                os.startfile(str(resolved_path))
-            else:
-                subprocess.Popen(f'explorer.exe "{resolved_path}"')
-            return True
+            return _launch_on_interactive_desktop(f'explorer.exe "{resolved_path}"')
 
         # Case 2: Target is an existing file -> use explorer /select,"<path>"
         if resolved_path.exists() and resolved_path.is_file():
-            # In Windows, explorer.exe requires /select,"<path>" with quotes strictly around the path.
-            # Passing a list to Popen causes list2cmdline to quote "/select,<path>", which silently fails.
-            cmd = f'explorer.exe /select,"{resolved_path}"'
-            subprocess.Popen(cmd)
-            return True
+            return _launch_on_interactive_desktop(f'explorer.exe /select,"{resolved_path}"')
 
         # Case 3: Target file was deleted or moved -> open the parent directory or allowed root
         fallback_dir = resolved_path.parent if resolved_path.parent.exists() else resolved_root
         if fallback_dir.exists():
-            if hasattr(os, "startfile"):
-                os.startfile(str(fallback_dir))
-            else:
-                subprocess.Popen(f'explorer.exe "{fallback_dir}"')
-            return True
+            return _launch_on_interactive_desktop(f'explorer.exe "{fallback_dir}"')
 
         return False
     except Exception:

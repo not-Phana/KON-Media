@@ -32,6 +32,7 @@ export default function App() {
 
   const [activeTasks, setActiveTasks] = useState([]);
   const [history, setHistory] = useState([]);
+  const [toast, setToast] = useState(null);
 
   // Load initial health, settings, tasks, and history
   const loadInitialData = useCallback(async () => {
@@ -128,9 +129,24 @@ export default function App() {
   // Handle folder opening in Windows File Explorer
   const handleOpenFile = async (filePath) => {
     try {
-      await openFileInExplorer(filePath);
+      const res = await openFileInExplorer(filePath);
+      const targetPath = res.path || filePath || "Downloads folder";
+      try {
+        await navigator.clipboard.writeText(targetPath);
+        setToast({
+          message: `Opening folder. Path copied to clipboard: ${targetPath}`,
+          type: "success",
+        });
+      } catch (_) {
+        setToast({ message: `Opening: ${targetPath}`, type: "info" });
+      }
+      setTimeout(() => setToast(null), 5000);
     } catch (err) {
-      alert(`Could not open explorer: ${err.message}`);
+      setToast({
+        message: `Could not open folder: ${err.message}`,
+        type: "error",
+      });
+      setTimeout(() => setToast(null), 5000);
     }
   };
 
@@ -225,6 +241,21 @@ export default function App() {
         onSaveSettings={handleSaveSettings}
         onOpenFile={handleOpenFile}
       />
+
+      {/* Interactive Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md p-4 rounded-xl neu-card border border-[#383D46] shadow-2xl flex items-center justify-between gap-3 animate-fade-in bg-[#1A1C22]">
+          <span className="text-xs text-[#F3F4F6] font-mono leading-relaxed">
+            {toast.message}
+          </span>
+          <button
+            onClick={() => setToast(null)}
+            className="text-[#6B7280] hover:text-[#F3F4F6] p-1 cursor-pointer shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }
