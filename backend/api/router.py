@@ -312,10 +312,11 @@ async def validate_custom_ffmpeg(req: ValidateFFmpegRequest):
 
 @router.post("/open-folder")
 async def open_download_file(req: OpenFolderRequest):
-    """Safely open Windows File Explorer with the downloaded file highlighted."""
-    p = Path(req.file_path)
+    """Safely open Windows File Explorer with the downloaded file or downloads directory."""
+    raw_path = (req.file_path or "").strip()
     configured_dir = Path(settings_store.get_settings().get("downloads_dir", str(DOWNLOADS_DIR)))
-    success = open_in_file_explorer(p, allowed_root=configured_dir)
+    target = Path(raw_path) if raw_path else configured_dir
+    success = open_in_file_explorer(target, allowed_root=configured_dir)
     if not success:
         raise HTTPException(
             status_code=400,

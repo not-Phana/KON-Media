@@ -83,33 +83,45 @@ def get_unique_destination_path(directory: Path, filename: str) -> Path:
 
 
 def open_in_file_explorer(file_path: Path, allowed_root: Path = None) -> bool:
-    """Open Windows File Explorer with the specific downloaded file selected.
+    """Open Windows File Explorer with the specific downloaded file selected,
+    or open the directory if the target is a directory or the file was moved.
 
-    Restricts operations to files strictly inside the allowed downloads directory
+    Restricts operations to paths strictly inside the allowed downloads directory
     to prevent arbitrary filesystem traversal.
     """
     try:
-        resolved_file = file_path.resolve()
+        resolved_path = file_path.resolve()
         resolved_root = (allowed_root or DOWNLOADS_DIR).resolve()
 
-        # Security check: must reside inside allowed directory
-        if not resolved_file.is_relative_to(resolved_root):
+        # Security check: must reside inside allowed directory (or be the root itself)
+        if not (resolved_path == resolved_root or resolved_path.is_relative_to(resolved_root)):
             raise PermissionError("Access denied: path outside allowed downloads directory.")
 
-        if resolved_file.exists():
-            # Use explorer.exe /select,"<path>" to highlight the file
-            subprocess.Popen(
-                ["explorer.exe", f"/select,{str(resolved_file)}"],
-                shell=False
-            )
+        # Case 1: Target is an existing directory (e.g. downloads root)
+        if resolved_path.is_dir():
+            if hasattr(os, "startfile"):
+                os.startfile(str(resolved_path))
+            else:
+                subprocess.Popen(f'explorer.exe "{resolved_path}"')
             return True
-        elif resolved_root.exists():
-            # If the file itself was moved/deleted, open the downloads directory
-            subprocess.Popen(
-                ["explorer.exe", str(resolved_root)],
-                shell=False
-            )
+
+        # Case 2: Target is an existing file -> use explorer /select,"<path>"
+        if resolved_path.exists() and resolved_path.is_file():
+            # In Windows, explorer.exe requires /select,"<path>" with quotes strictly around the path.
+            # Passing a list to Popen causes list2cmdline to quote "/select,<path>", which silently fails.
+            cmd = f'explorer.exe /select,"{resolved_path}"'
+            subprocess.Popen(cmd)
             return True
+
+        # Case 3: Target file was deleted or moved -> open the parent directory or allowed root
+        fallback_dir = resolved_path.parent if resolved_path.parent.exists() else resolved_root
+        if fallback_dir.exists():
+            if hasattr(os, "startfile"):
+                os.startfile(str(fallback_dir))
+            else:
+                subprocess.Popen(f'explorer.exe "{fallback_dir}"')
+            return True
+
         return False
     except Exception:
         return False

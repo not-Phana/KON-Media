@@ -1,8 +1,19 @@
-import React from "react";
+import React, { useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, XCircle, Ban, ArrowDown, FolderOpen, X } from "lucide-react";
 
 export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile, onDismissTask }) {
+  const [openingTaskId, setOpeningTaskId] = useState(null);
+
   if (!tasks || tasks.length === 0) return null;
+
+  const handleOpenFolder = async (filePath, taskId) => {
+    setOpeningTaskId(taskId);
+    try {
+      await onOpenFile(filePath);
+    } finally {
+      setTimeout(() => setOpeningTaskId(null), 1200);
+    }
+  };
 
   const formatBytes = (bytes) => {
     if (!bytes || bytes <= 0) return "0 B";
@@ -108,12 +119,13 @@ export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile, on
 
                   {task.status === "completed" && task.file_path && (
                     <button
-                      onClick={() => onOpenFile(task.file_path)}
-                      className="neu-raised flex items-center gap-1 px-2.5 py-1 text-xs text-[#8BC5B0] cursor-pointer"
-                      title="Show in Folder"
+                      onClick={() => handleOpenFolder(task.file_path, task.id)}
+                      disabled={openingTaskId === task.id}
+                      className="neu-raised flex items-center gap-1.5 px-2.5 py-1 text-xs text-[#8BC5B0] hover:text-white cursor-pointer disabled:opacity-50"
+                      title="Show in Windows File Explorer"
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
-                      <span>Folder</span>
+                      <span>{openingTaskId === task.id ? "Opening..." : "Folder"}</span>
                     </button>
                   )}
 

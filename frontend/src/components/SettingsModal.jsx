@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { X, Save, Folder, Layers, Check, Film, CheckCircle2, AlertTriangle, Loader2, HelpCircle } from "lucide-react";
+import { X, Save, Folder, FolderOpen, Layers, Check, Film, CheckCircle2, AlertTriangle, Loader2, HelpCircle } from "lucide-react";
 import { validateFFmpeg } from "../api";
 
-export default function SettingsModal({ isOpen, onClose, currentSettings, onSaveSettings }) {
+export default function SettingsModal({ isOpen, onClose, currentSettings, onSaveSettings, onOpenFile }) {
   const [downloadsDir, setDownloadsDir] = useState("");
   const [maxConcurrent, setMaxConcurrent] = useState(2);
   const [defaultMediaType, setDefaultMediaType] = useState("video");
   const [ffmpegPath, setFfmpegPath] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+  const [isOpeningFolder, setIsOpeningFolder] = useState(false);
 
   // FFmpeg validation state
   const [isValidating, setIsValidating] = useState(false);
@@ -25,6 +26,16 @@ export default function SettingsModal({ isOpen, onClose, currentSettings, onSave
   }, [currentSettings, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleOpenFolder = async () => {
+    if (!onOpenFile) return;
+    setIsOpeningFolder(true);
+    try {
+      await onOpenFile(downloadsDir);
+    } finally {
+      setTimeout(() => setIsOpeningFolder(false), 1200);
+    }
+  };
 
   const handleTestFFmpeg = async () => {
     setIsValidating(true);
@@ -88,6 +99,16 @@ export default function SettingsModal({ isOpen, onClose, currentSettings, onSave
                 className="w-full bg-transparent border-none outline-none text-xs text-[#F3F4F6] font-mono"
                 required
               />
+              <button
+                type="button"
+                onClick={handleOpenFolder}
+                disabled={isOpeningFolder}
+                className="neu-button px-2.5 py-1 text-xs text-[#8BC5B0] hover:text-white flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                title="Open downloads folder in Windows File Explorer"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>{isOpeningFolder ? "Opening..." : "Open"}</span>
+              </button>
             </div>
             <p className="text-[11px] text-[#6B7280]">
               All downloads will save to this folder on your machine.

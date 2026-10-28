@@ -63,3 +63,28 @@ def test_open_in_file_explorer_path_traversal_protection():
     # Attempting to open a path outside DOWNLOADS_DIR must fail for security
     outside_path = Path("C:/Windows/System32/calc.exe")
     assert open_in_file_explorer(outside_path) is False
+
+
+def test_open_in_file_explorer_file_selection(tmp_path):
+    # Verify open_in_file_explorer formats explorer /select,"<path>" command string without improper quoting
+    from unittest.mock import patch
+    test_file = tmp_path / "My Media File.mp4"
+    test_file.write_text("test")
+
+    with patch("subprocess.Popen") as mock_popen:
+        success = open_in_file_explorer(test_file, allowed_root=tmp_path)
+        assert success is True
+        mock_popen.assert_called_once()
+        cmd = mock_popen.call_args[0][0]
+        # Must start with explorer.exe /select, and path in quotes (not /select inside quotes)
+        assert cmd.startswith("explorer.exe /select,")
+        assert f'"{test_file.resolve()}"' in cmd
+        assert not cmd.startswith('explorer.exe "/select,')
+
+
+def test_open_in_file_explorer_directory_launch(tmp_path):
+    from unittest.mock import patch
+    with patch("os.startfile", create=True) as mock_startfile:
+        success = open_in_file_explorer(tmp_path, allowed_root=tmp_path)
+        assert success is True
+        mock_startfile.assert_called_once_with(str(tmp_path.resolve()))

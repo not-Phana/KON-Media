@@ -169,7 +169,11 @@ export default function App() {
     <div className="min-h-screen bg-[#17191D] text-[#F3F4F6] flex flex-col justify-between">
       <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Global Application Header */}
-        <Header health={health} onOpenSettings={() => setIsSettingsOpen(true)} />
+        <Header
+          health={health}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenFile={handleOpenFile}
+        />
 
         {/* URL Input & Ingress Bar */}
         <UrlInputBar
@@ -219,6 +223,7 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         currentSettings={settings}
         onSaveSettings={handleSaveSettings}
+        onOpenFile={handleOpenFile}
       />
     </div>
   );

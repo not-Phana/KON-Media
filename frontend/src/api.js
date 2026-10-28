@@ -110,7 +110,7 @@ export async function openFileInExplorer(filePath) {
   const res = await fetch(`${API_BASE}/open-folder`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file_path: filePath }),
+    body: JSON.stringify({ file_path: filePath || "" }),
   });
   const data = await res.json();
   if (!res.ok) {

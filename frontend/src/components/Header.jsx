@@ -1,8 +1,8 @@
 import React from "react";
-import { HardDrive, Settings, CheckCircle2, AlertTriangle } from "lucide-react";
+import { HardDrive, Settings, CheckCircle2, AlertTriangle, FolderOpen } from "lucide-react";
 import KonLogo from "./KonLogo";
 
-export default function Header({ health, onOpenSettings }) {
+export default function Header({ health, onOpenSettings, onOpenFile }) {
   return (
     <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-6 border-b border-[#2D323B]">
       <div>
@@ -50,6 +50,16 @@ export default function Header({ health, onOpenSettings }) {
             <span>Disk Free: <strong className="text-[#F3F4F6]">{health.disk_free_gb} GB</strong></span>
           </div>
         )}
+
+        {/* Open Downloads Folder */}
+        <button
+          onClick={() => onOpenFile && onOpenFile()}
+          className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#F3F4F6] cursor-pointer hover:text-[#8BC5B0]"
+          title="Open Downloads Folder in Windows File Explorer"
+        >
+          <FolderOpen className="w-3.5 h-3.5 text-[#8BC5B0]" />
+          <span>Folder</span>
+        </button>
 
         {/* Settings Button */}
         <button

@@ -3,6 +3,16 @@ import { History, FolderOpen, Trash2, Video, Music, Calendar, HardDrive } from "
 
 export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, onClearAll }) {
   const [showConfirmClear, setShowConfirmClear] = useState(false);
+  const [openingItemId, setOpeningItemId] = useState(null);
+
+  const handleOpenFolder = async (filePath, itemId) => {
+    setOpeningItemId(itemId);
+    try {
+      await onOpenFile(filePath);
+    } finally {
+      setTimeout(() => setOpeningItemId(null), 1200);
+    }
+  };
 
   const formatBytes = (bytes) => {
     if (!bytes || bytes <= 0) return "--";
@@ -116,12 +126,13 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
               <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                 {item.file_path && (
                   <button
-                    onClick={() => onOpenFile(item.file_path)}
-                    className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#F3F4F6] hover:text-[#8BC5B0] cursor-pointer"
+                    onClick={() => handleOpenFolder(item.file_path, item.id)}
+                    disabled={openingItemId === item.id}
+                    className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#F3F4F6] hover:text-[#8BC5B0] cursor-pointer disabled:opacity-50"
                     title="Open in Windows File Explorer"
                   >
                     <FolderOpen className="w-3.5 h-3.5 text-[#8BC5B0]" />
-                    <span>Open in Folder</span>
+                    <span>{openingItemId === item.id ? "Opening..." : "Open in Folder"}</span>
                   </button>
                 )}
 
