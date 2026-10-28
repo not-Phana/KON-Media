@@ -118,8 +118,13 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
                       </span>
                     )}
                     <span className="px-1.5 py-0.2 rounded bg-[#131418] text-[#8BC5B0]">
-                      {item.ext?.toUpperCase() || "MEDIA"}
+                      {(item.actual_ext || item.ext || (item.filename ? item.filename.split('.').pop() : "MEDIA")).toUpperCase()}
                     </span>
+                    {item.has_video && item.has_audio && (
+                      <span className="px-1.5 py-0.2 rounded bg-[#17221C] text-[#72C69A] border border-[#72C69A]/30">
+                        Sound Verified
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

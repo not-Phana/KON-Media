@@ -143,3 +143,56 @@ def test_real_live_download_direct_audio(tmp_path):
     is_mpeg_audio = header_bytes[0] == 0xFF and (header_bytes[1] & 0xE0) == 0xE0
     is_id3 = header_bytes[:3] == b"ID3"
     assert is_mpeg_audio or is_id3, f"Downloaded file does not have valid MP3/ID3 header: {header_bytes!r}"
+
+
+
+def test_real_ffmpeg_stream_merging_and_inspection(tmp_path):
+    """Verify that bundled FFmpeg merges a separate video stream and audio stream into a valid file with sound."""
+    import subprocess
+    from backend.engine.ffmpeg_manager import validate_ffmpeg_path, inspect_media_streams
+
+    status = validate_ffmpeg_path()
+    assert status["available"] is True, "FFmpeg must be available for stream merging test"
+    ffmpeg_exe = status["path"]
+
+    v_only = tmp_path / "test_video_only.mp4"
+    a_only = tmp_path / "test_audio_only.m4a"
+    merged = tmp_path / "test_merged_with_sound.mp4"
+
+    # 1. Synthesize 1s video-only H.264 stream (no audio)
+    res_v = subprocess.run(
+        [ffmpeg_exe, "-y", "-f", "lavfi", "-i", "testsrc=size=320x240:rate=10", "-t", "1", "-c:v", "libx264", "-an", str(v_only)],
+        capture_output=True,
+    )
+    assert res_v.returncode == 0
+
+    # 2. Synthesize 1s audio-only AAC stream (no video)
+    res_a = subprocess.run(
+        [ffmpeg_exe, "-y", "-f", "lavfi", "-i", "sine=frequency=1000:duration=1", "-c:a", "aac", "-vn", str(a_only)],
+        capture_output=True,
+    )
+    assert res_a.returncode == 0
+
+    # Inspect separate streams
+    v_info = inspect_media_streams(v_only)
+    assert v_info["has_video"] is True
+    assert v_info["has_audio"] is False
+
+    a_info = inspect_media_streams(a_only)
+    assert a_info["has_video"] is False
+    assert a_info["has_audio"] is True
+
+    # 3. Perform lossless stream copy container remux (merging video and audio)
+    res_m = subprocess.run(
+        [ffmpeg_exe, "-y", "-i", str(v_only), "-i", str(a_only), "-c:v", "copy", "-c:a", "copy", str(merged)],
+        capture_output=True,
+    )
+    assert res_m.returncode == 0
+
+    # Deep stream inspection of merged file
+    merged_info = inspect_media_streams(merged)
+    assert merged_info["has_video"] is True, "Merged file must contain video stream"
+    assert merged_info["has_audio"] is True, "Merged file must contain audio stream"
+    assert merged_info["video_codec"] == "h264"
+    assert merged_info["audio_codec"] == "aac"
+    assert merged.stat().st_size > 0

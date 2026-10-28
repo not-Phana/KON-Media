@@ -143,3 +143,94 @@ def _test_ffmpeg_executable(exe_path: str, source: str) -> Dict[str, Any]:
             "source": source,
             "error": f"Execution error: {e}",
         }
+
+
+def inspect_media_streams(file_path: str | Path, custom_ffmpeg_path: Optional[str] = None) -> Dict[str, Any]:
+    """Inspect a media file using FFmpeg to verify actual video and audio streams.
+
+    Returns:
+    {
+        "inspected": bool,
+        "has_video": bool,
+        "has_audio": bool,
+        "video_codec": Optional[str],
+        "audio_codec": Optional[str],
+        "streams": List[str],
+        "container": Optional[str],
+        "error": Optional[str],
+    }
+    """
+    path_obj = Path(file_path)
+    if not path_obj.exists() or path_obj.stat().st_size == 0:
+        return {
+            "inspected": False,
+            "has_video": False,
+            "has_audio": False,
+            "video_codec": None,
+            "audio_codec": None,
+            "streams": [],
+            "container": None,
+            "error": "File does not exist or is empty.",
+        }
+
+    status = validate_ffmpeg_path(custom_ffmpeg_path)
+    if not status["available"] or not status.get("path"):
+        ext = path_obj.suffix.lstrip(".").lower()
+        return {
+            "inspected": False,
+            "has_video": ext in ("mp4", "webm", "mkv", "avi", "mov", "flv"),
+            "has_audio": ext in ("mp3", "m4a", "ogg", "opus", "wav", "flac", "aac"),
+            "video_codec": None,
+            "audio_codec": None,
+            "streams": [],
+            "container": ext,
+            "error": "FFmpeg not available for deep inspection.",
+        }
+
+    try:
+        import re
+        res = subprocess.run(
+            [status["path"], "-i", str(path_obj)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            shell=False,
+        )
+        combined_output = (res.stderr or "") + (res.stdout or "")
+
+        video_match = re.search(r"Stream #\d+:\d+(?:\[0x[0-9a-fA-F]+\])?(?:\([a-zA-Z]+\))?: Video:\s*([a-zA-Z0-9_-]+)", combined_output, re.IGNORECASE)
+        audio_match = re.search(r"Stream #\d+:\d+(?:\[0x[0-9a-fA-F]+\])?(?:\([a-zA-Z]+\))?: Audio:\s*([a-zA-Z0-9_-]+)", combined_output, re.IGNORECASE)
+
+        has_video = video_match is not None
+        has_audio = audio_match is not None
+        video_codec = video_match.group(1).lower() if video_match else None
+        audio_codec = audio_match.group(1).lower() if audio_match else None
+
+        streams = []
+        for line in combined_output.splitlines():
+            s_line = line.strip()
+            if s_line.startswith("Stream #") and ("Video:" in s_line or "Audio:" in s_line):
+                streams.append(s_line)
+
+        return {
+            "inspected": True,
+            "has_video": has_video,
+            "has_audio": has_audio,
+            "video_codec": video_codec,
+            "audio_codec": audio_codec,
+            "streams": streams,
+            "container": path_obj.suffix.lstrip(".").lower(),
+            "error": None,
+        }
+    except Exception as e:
+        ext = path_obj.suffix.lstrip(".").lower()
+        return {
+            "inspected": False,
+            "has_video": ext in ("mp4", "webm", "mkv", "avi", "mov"),
+            "has_audio": ext in ("mp3", "m4a", "ogg", "opus", "wav", "flac"),
+            "video_codec": None,
+            "audio_codec": None,
+            "streams": [],
+            "container": ext,
+            "error": f"FFmpeg inspection failed: {e}",
+        }

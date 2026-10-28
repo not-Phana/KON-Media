@@ -21,6 +21,7 @@ from backend.engine.media_engine import (
     DownloadCancelledError,
     MediaEngineError,
 )
+from backend.engine.ffmpeg_manager import inspect_media_streams
 from backend.storage.file_manager import (
     sanitize_filename,
     get_unique_destination_path,
@@ -80,6 +81,7 @@ class TaskManager:
         audio_bitrate: str = "320k",
         thumbnail: Optional[str] = None,
         duration: Optional[int | float] = None,
+        merge_output_format: Optional[str] = None,
     ) -> str:
         """Create and queue a new media download task."""
         task_id = uuid.uuid4().hex[:12]
@@ -96,7 +98,10 @@ class TaskManager:
             "audio_bitrate": audio_bitrate,
             "thumbnail": thumbnail,
             "duration": duration,
+            "merge_output_format": merge_output_format,
             "status": "queued",
+            "stage": "queued",
+            "stage_label": "Queued",
             "percentage": 0.0,
             "speed": 0,
             "eta": None,
@@ -180,6 +185,8 @@ class TaskManager:
                 raise DownloadCancelledError()
 
             task["status"] = p.get("state", "downloading")
+            task["stage"] = p.get("stage", "downloading")
+            task["stage_label"] = p.get("stage_label", "Downloading media...")
             task["percentage"] = p.get("percentage", 0.0)
             task["downloaded_bytes"] = p.get("downloaded_bytes", 0)
             task["total_bytes"] = p.get("total_bytes", 0)
@@ -197,6 +204,7 @@ class TaskManager:
                 abort_event=abort_event,
                 audio_bitrate=task["audio_bitrate"],
                 ffmpeg_location=configured_ffmpeg,
+                merge_output_format=task.get("merge_output_format"),
             )
 
             # Locate downloaded file with task_id prefix
@@ -239,11 +247,22 @@ class TaskManager:
             if not final_dest.exists() or final_dest.stat().st_size == 0:
                 raise MediaEngineError("Final media file verification failed (empty or missing file).")
 
+            # Deep stream verification using inspect_media_streams
+            stream_info = inspect_media_streams(final_dest, configured_ffmpeg)
+
             task["status"] = "completed"
+            task["stage"] = "completed"
+            task["stage_label"] = "Completed"
             task["percentage"] = 100.0
             task["file_path"] = str(final_dest)
             task["filename"] = final_dest.name
             task["filesize"] = final_dest.stat().st_size
+            task["ext"] = actual_ext.lstrip(".")
+            task["actual_ext"] = actual_ext.lstrip(".")
+            task["has_video"] = stream_info.get("has_video", False)
+            task["has_audio"] = stream_info.get("has_audio", False)
+            task["video_codec"] = stream_info.get("video_codec")
+            task["audio_codec"] = stream_info.get("audio_codec")
             task["completed_at"] = datetime.now(timezone.utc).isoformat()
 
             # Record in persistent history

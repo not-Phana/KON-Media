@@ -153,6 +153,22 @@ export async function matchSpotifyTrack(url, title) {
   return data;
 }
 
+export async function validateStreamPairing(videoStream, audioStream) {
+  const res = await fetch(`${API_BASE}/validate-pairing`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      video_stream: videoStream,
+      audio_stream: audioStream,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Stream pairing validation failed");
+  }
+  return data;
+}
+
 export function subscribeToEvents(onEvent, onError) {
   const es = new EventSource(`${API_BASE}/events`);
 

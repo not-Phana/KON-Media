@@ -7,12 +7,15 @@ import {
   User,
   AlertTriangle,
   X,
-  ShieldAlert,
   ExternalLink,
   Info,
-  Search,
   Sparkles,
   CheckCircle2,
+  Sliders,
+  ChevronDown,
+  FileVideo,
+  FileAudio,
+  ShieldAlert,
 } from "lucide-react";
 import { openExternalUrl, matchSpotifyTrack } from "../api";
 
@@ -27,9 +30,14 @@ export default function MediaPreviewCard({
   const [matchError, setMatchError] = useState(null);
   const [mediaType, setMediaType] = useState("video");
   const [isOpeningSpotify, setIsOpeningSpotify] = useState(false);
+  const [isAdditionalOpen, setIsAdditionalOpen] = useState(false);
 
   // Active media info is the matched source if available, otherwise original mediaInfo
   const activeInfo = localMatch || mediaInfo;
+
+  // Selected streams for stream pairing
+  const [selectedVideoStreamId, setSelectedVideoStreamId] = useState("");
+  const [selectedAudioStreamId, setSelectedAudioStreamId] = useState("");
 
   // Reset local match if mediaInfo prop changes to a new URL
   useEffect(() => {
@@ -44,7 +52,7 @@ export default function MediaPreviewCard({
       activeInfo?.is_unsupported_source ||
       activeInfo?.supported === false);
 
-  // Selected formats
+  // Selected formats for quick options
   const defaultVideoFormat =
     activeInfo?.video_formats?.find((f) => !f.requires_ffmpeg) ||
     activeInfo?.video_formats?.[0];
@@ -67,6 +75,12 @@ export default function MediaPreviewCard({
     }
     if (defaultAudioFormat?.bitrate) {
       setSelectedAudioBitrate(defaultAudioFormat.bitrate);
+    }
+    if (activeInfo?.video_streams?.length > 0) {
+      setSelectedVideoStreamId(String(activeInfo.video_streams[0].format_id));
+    }
+    if (activeInfo?.audio_streams?.length > 0) {
+      setSelectedAudioStreamId(String(activeInfo.audio_streams[0].format_id));
     }
   }, [activeInfo?.webpage_url, activeInfo?.is_alternative_match]);
 
@@ -98,85 +112,60 @@ export default function MediaPreviewCard({
       e.preventDefault();
       setIsOpeningSpotify(true);
       try {
-        const url = activeInfo.open_in_spotify_url || activeInfo.webpage_url;
-        window.open(url, "_blank", "noopener,noreferrer");
-        await openExternalUrl(url).catch(() => {});
+        await openExternalUrl(activeInfo.open_in_spotify_url || activeInfo.webpage_url);
+      } catch (err) {
+        window.open(activeInfo.open_in_spotify_url || activeInfo.webpage_url, "_blank");
       } finally {
-        setTimeout(() => setIsOpeningSpotify(false), 1000);
+        setIsOpeningSpotify(false);
       }
     };
 
     return (
       <div className="neu-card p-6 space-y-5 border border-[#383D46]">
-        {/* Header */}
+        {/* Title & Dismiss */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#1DB954]/15 text-[#1DB954] border border-[#1DB954]/30 flex items-center gap-1.5">
-                <Music className="w-3 h-3" />
-                Spotify Source
+              <span className="px-2.5 py-0.5 rounded text-[11px] font-mono bg-[#1E2922] text-[#1DB954] border border-[#1DB954]/30 font-semibold">
+                Spotify {activeInfo.content_type?.toUpperCase() || "SOURCE"}
               </span>
-              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-[#272B32] text-[#E8BE72] border border-[#383D46]">
-                DRM-Protected Stream
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-[#2C1D20] text-[#EF8585] border border-[#EF8585]/30">
+                DRM Protected
               </span>
             </div>
-            <h2 className="text-lg font-semibold text-[#F3F4F6] truncate m-0">
-              {activeInfo.title || "Spotify Music"}
+            <h2 className="text-lg font-semibold text-[#F3F4F6] truncate m-0" title={activeInfo.title}>
+              {activeInfo.title}
             </h2>
-            <p className="text-xs text-[#A5ABB5] mt-1 m-0 truncate">
-              {activeInfo.webpage_url}
+            <p className="flex items-center gap-1.5 text-xs text-[#A5ABB5] mt-1 m-0">
+              <User className="w-3.5 h-3.5" />
+              <span>{activeInfo.uploader}</span>
             </p>
           </div>
 
           <button
             onClick={onDismiss}
-            className="text-[#6B7280] hover:text-[#F3F4F6] p-1.5 rounded-lg hover:bg-[#272B32] transition-colors cursor-pointer"
+            className="text-[#6B7280] hover:text-[#F3F4F6] p-1 cursor-pointer"
             title="Dismiss preview"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Media Presentation: Artwork + Details */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start p-4 rounded-xl bg-[#14161A] border border-[#272B32]">
-          {activeInfo.thumbnail ? (
-            <img
-              src={activeInfo.thumbnail}
-              alt={activeInfo.title}
-              className="w-24 h-24 rounded-lg object-cover border border-[#383D46] shadow-sm shrink-0"
-              crossOrigin="anonymous"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="w-24 h-24 rounded-lg bg-[#202329] border border-[#383D46] flex items-center justify-center text-[#1DB954] shrink-0">
-              <Music className="w-8 h-8 opacity-60" />
-            </div>
-          )}
-          <div className="flex-1 text-center sm:text-left space-y-1">
-            <h3 className="text-sm font-semibold text-[#F3F4F6] m-0">
-              {activeInfo.title}
-            </h3>
-            <p className="text-xs text-[#A5ABB5] m-0">
-              Source: <span className="text-[#F3F4F6]">{activeInfo.uploader || "Spotify"}</span>
-            </p>
-            <p className="text-[11px] text-[#6B7280] m-0 pt-1">
-              Metadata verified via official Spotify oEmbed API
-            </p>
-          </div>
-        </div>
-
-        {/* Guidance Box */}
-        <div className="p-4 rounded-xl bg-[#17191E] border border-[#2D323B] space-y-3">
+        {/* Info & DRM Disclosure Box */}
+        <div className="p-4 rounded-xl bg-[#131418] border border-[#2D323B] space-y-3">
           <div className="flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-[#E8BE72] shrink-0 mt-0.5" />
-            <div className="space-y-1.5 text-xs">
-              <p className="font-semibold text-[#F3F4F6] m-0">
-                Direct Stream Protected by Copyright DRM
+            <div className="w-8 h-8 rounded-lg bg-[#272B32] border border-[#383D46] flex items-center justify-center text-[#8BC5B0] shrink-0 mt-0.5">
+              <ShieldAlert className="w-4 h-4 text-[#E8BE72]" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <h3 className="text-xs font-semibold text-[#F3F4F6] m-0">
+                DRM-Protected Stream
+              </h3>
+              <p className="text-xs text-[#A5ABB5] m-0 leading-relaxed">
+                {activeInfo.message}
               </p>
-              <p className="text-[#A5ABB5] leading-relaxed m-0">
-                Spotify streams are encrypted with Digital Rights Management and cannot be exported directly.
-                KON Media provides an authorized public source matcher to locate matching legal media (e.g. YouTube),
-                or you can listen directly in Spotify.
+              <p className="text-xs text-[#6B7280] m-0 mt-1 leading-relaxed">
+                {activeInfo.guidance}
               </p>
             </div>
           </div>
@@ -258,6 +247,74 @@ export default function MediaPreviewCard({
     !ffmpegAvailable &&
     (isVideo ? selectedFormat?.requires_ffmpeg : selectedAudioFormat?.requires_ffmpeg);
 
+  // Active streams for pairing
+  const activeVideoStream =
+    activeInfo?.video_streams?.find(
+      (v) => String(v.format_id) === String(selectedVideoStreamId)
+    ) || activeInfo?.video_streams?.[0];
+
+  const activeAudioStream =
+    activeInfo?.audio_streams?.find(
+      (a) => String(a.format_id) === String(selectedAudioStreamId)
+    ) || activeInfo?.audio_streams?.[0];
+
+  // Calculate stream pairing status dynamically
+  let pairingStatus = {
+    valid: false,
+    is_direct: false,
+    requires_ffmpeg: false,
+    recommended_container: "mp4",
+    reason: "Select a video stream to evaluate pairing.",
+  };
+
+  if (activeVideoStream) {
+    if (activeVideoStream.has_audio) {
+      pairingStatus = {
+        valid: true,
+        is_direct: true,
+        requires_ffmpeg: false,
+        recommended_container: activeVideoStream.ext || "mp4",
+        reason: `Video stream (f${activeVideoStream.format_id}) already contains integrated audio (${activeVideoStream.acodec || "audio"}). It can be downloaded directly as a complete playable file without needing extra merging.`,
+      };
+    } else if (!activeAudioStream) {
+      pairingStatus = {
+        valid: false,
+        is_direct: false,
+        requires_ffmpeg: true,
+        recommended_container: "mp4",
+        reason: `Video stream (f${activeVideoStream.format_id}) is video-only (has no sound). Select a compatible audio stream to pair with it.`,
+      };
+    } else {
+      const vExt = (activeVideoStream.ext || "").toLowerCase();
+      const vCodec = (activeVideoStream.vcodec || "").toLowerCase();
+      const aExt = (activeAudioStream.ext || "").toLowerCase();
+      const aCodec = (activeAudioStream.acodec || "").toLowerCase();
+
+      let recContainer = "mp4";
+      let method = "lossless stream copy";
+      if (vExt === "webm" && ["webm", "opus", "ogg"].includes(aExt)) {
+        recContainer = "webm";
+      } else if (
+        (vExt === "mp4" || vCodec.includes("avc") || vCodec.includes("h264")) &&
+        (["m4a", "aac"].includes(aExt) || aCodec.includes("aac") || aCodec.includes("mp4a"))
+      ) {
+        recContainer = "mp4";
+      } else {
+        recContainer = "mkv";
+        method = "lossless multi-codec container";
+      }
+
+      pairingStatus = {
+        valid: true,
+        is_direct: false,
+        requires_ffmpeg: true,
+        recommended_container: recContainer,
+        reason: `Compatible stream pairing: Video f${activeVideoStream.format_id} (${vExt.toUpperCase()}) + Audio f${activeAudioStream.format_id} (${aExt.toUpperCase()}) will be downloaded and merged automatically into a single playable ${recContainer.toUpperCase()} file via ${method}.`,
+      };
+    }
+  }
+
+  // Quick download trigger
   const handleDownload = () => {
     if (isBlockedByMissingFfmpeg) return;
 
@@ -270,6 +327,66 @@ export default function MediaPreviewCard({
       media_type: mediaType,
       ext: isVideo ? "mp4" : selectedAudioFormat?.ext || "mp3",
       audio_bitrate: selectedAudioBitrate,
+      thumbnail: activeInfo.thumbnail,
+      duration: activeInfo.duration,
+    });
+  };
+
+  // Merged stream download trigger
+  const handleDownloadMerged = () => {
+    if (!pairingStatus.valid || (pairingStatus.requires_ffmpeg && !ffmpegAvailable)) return;
+
+    if (pairingStatus.is_direct) {
+      onStartDownload({
+        url: activeInfo.webpage_url,
+        title: activeInfo.original_spotify_title || activeInfo.title,
+        format_id: String(activeVideoStream.format_id),
+        media_type: "video",
+        ext: activeVideoStream.ext || "mp4",
+        thumbnail: activeInfo.thumbnail,
+        duration: activeInfo.duration,
+      });
+    } else {
+      onStartDownload({
+        url: activeInfo.webpage_url,
+        title: activeInfo.original_spotify_title || activeInfo.title,
+        format_id: `${activeVideoStream.format_id}+${activeAudioStream.format_id}`,
+        media_type: "video",
+        merge_streams: true,
+        video_format_id: String(activeVideoStream.format_id),
+        audio_format_id: String(activeAudioStream.format_id),
+        merge_output_format: pairingStatus.recommended_container,
+        ext: pairingStatus.recommended_container,
+        thumbnail: activeInfo.thumbnail,
+        duration: activeInfo.duration,
+      });
+    }
+  };
+
+  // Standalone video-only download trigger
+  const handleDownloadVideoOnly = () => {
+    if (!activeVideoStream) return;
+    onStartDownload({
+      url: activeInfo.webpage_url,
+      title: activeInfo.original_spotify_title || activeInfo.title,
+      format_id: String(activeVideoStream.format_id),
+      media_type: "video",
+      ext: activeVideoStream.ext || "mp4",
+      thumbnail: activeInfo.thumbnail,
+      duration: activeInfo.duration,
+    });
+  };
+
+  // Standalone audio-only download trigger
+  const handleDownloadAudioOnly = () => {
+    if (!activeAudioStream) return;
+    onStartDownload({
+      url: activeInfo.webpage_url,
+      title: activeInfo.original_spotify_title || activeInfo.title,
+      format_id: String(activeAudioStream.format_id),
+      media_type: "audio",
+      ext: activeAudioStream.ext || "m4a",
+      audio_bitrate: "original",
       thumbnail: activeInfo.thumbnail,
       duration: activeInfo.duration,
     });
@@ -359,7 +476,7 @@ export default function MediaPreviewCard({
               }`}
             >
               <Video className="w-3.5 h-3.5" />
-              <span>Video (MP4)</span>
+              <span>Video (Complete / Merged)</span>
             </button>
             <button
               type="button"
@@ -369,11 +486,11 @@ export default function MediaPreviewCard({
               }`}
             >
               <Music className="w-3.5 h-3.5" />
-              <span>Audio (MP3 / Direct)</span>
+              <span>Audio (MP3 / Direct Streams)</span>
             </button>
           </div>
 
-          {/* Quality Options Grid */}
+          {/* Quick Quality Options Grid */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-medium text-[#A5ABB5] uppercase tracking-wider">
               {mediaType === "video" ? "Available Resolutions" : "Audio Bitrate & Quality"}
@@ -466,8 +583,8 @@ export default function MediaPreviewCard({
             </div>
           )}
 
-          {/* Action Trigger */}
-          <div className="pt-2 flex justify-end">
+          {/* Quick Action Trigger */}
+          <div className="pt-1 flex justify-end">
             <button
               type="button"
               onClick={handleDownload}
@@ -478,6 +595,171 @@ export default function MediaPreviewCard({
               <span>{isBlockedByMissingFfmpeg ? "FFmpeg Required" : "Start Download"}</span>
             </button>
           </div>
+
+          {/* Additional Download Options — Smart Stream Pairing & Merging */}
+          {activeInfo.video_streams && activeInfo.video_streams.length > 0 && (
+            <div className="pt-3 border-t border-[#252932] space-y-3">
+              <button
+                type="button"
+                onClick={() => setIsAdditionalOpen(!isAdditionalOpen)}
+                className="w-full flex items-center justify-between p-3 rounded-xl neu-recessed text-xs font-semibold text-[#A5ABB5] hover:text-[#F3F4F6] cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-[#8BC5B0]" />
+                  <span>Additional Download Options — Smart Stream Pairing & Automatic Merging</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-[#272B32] text-[#8BC5B0] font-mono border border-[#383D46]">
+                    {isAdditionalOpen ? "Hide Options" : "Show Options"}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-[#8BC5B0] transition-transform duration-200 ${
+                      isAdditionalOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {isAdditionalOpen && (
+                <div className="p-4 rounded-xl bg-[#14161B] border border-[#2D323B] space-y-4">
+                  <div className="text-xs text-[#A5ABB5] leading-relaxed">
+                    Select a separate video stream and audio stream below. KON Media will validate compatibility, download both streams automatically, and merge them into a single playable file with sound.
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Video Stream Selector */}
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between text-[11px] font-semibold text-[#8BC5B0] uppercase tracking-wider">
+                        <span className="flex items-center gap-1.5">
+                          <FileVideo className="w-3.5 h-3.5" />
+                          Video Stream
+                        </span>
+                        <span className="text-[10px] text-[#6B7280] font-mono lowercase">
+                          {activeInfo.video_streams.length} available
+                        </span>
+                      </label>
+                      <select
+                        value={selectedVideoStreamId}
+                        onChange={(e) => setSelectedVideoStreamId(e.target.value)}
+                        className="w-full p-2.5 rounded-xl bg-[#1D2026] border border-[#383D46] text-xs text-[#F3F4F6] font-mono focus:border-[#8BC5B0] outline-none cursor-pointer"
+                      >
+                        {activeInfo.video_streams.map((v) => (
+                          <option key={v.format_id} value={v.format_id}>
+                            {v.label} (ID: {v.format_id})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Audio Stream Selector */}
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between text-[11px] font-semibold text-[#8BC5B0] uppercase tracking-wider">
+                        <span className="flex items-center gap-1.5">
+                          <FileAudio className="w-3.5 h-3.5" />
+                          Audio Stream
+                        </span>
+                        <span className="text-[10px] text-[#6B7280] font-mono lowercase">
+                          {activeInfo.audio_streams?.length || 0} available
+                        </span>
+                      </label>
+                      <select
+                        value={selectedAudioStreamId}
+                        onChange={(e) => setSelectedAudioStreamId(e.target.value)}
+                        className="w-full p-2.5 rounded-xl bg-[#1D2026] border border-[#383D46] text-xs text-[#F3F4F6] font-mono focus:border-[#8BC5B0] outline-none cursor-pointer disabled:opacity-50"
+                        disabled={activeInfo.audio_streams?.length === 0}
+                      >
+                        {activeInfo.audio_streams && activeInfo.audio_streams.length > 0 ? (
+                          activeInfo.audio_streams.map((a) => (
+                            <option key={a.format_id} value={a.format_id}>
+                              {a.label} (ID: {a.format_id})
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">No standalone audio streams</option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Compatibility Inspection Banner */}
+                  <div className="p-3 rounded-xl bg-[#1A1D24] border border-[#383D46] text-xs space-y-1.5 font-mono">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#A5ABB5] text-[11px] uppercase tracking-wider font-semibold">
+                        Pairing Compatibility
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          pairingStatus.valid
+                            ? pairingStatus.is_direct
+                              ? "bg-[#1E2922] text-[#8BC5B0] border border-[#8BC5B0]/30"
+                              : "bg-[#1A2521] text-[#72C69A] border border-[#72C69A]/30"
+                            : "bg-[#2D1B1E] text-[#EF8585] border border-[#EF8585]/30"
+                        }`}
+                      >
+                        {pairingStatus.valid
+                          ? pairingStatus.is_direct
+                            ? "Direct Stream"
+                            : `Merge -> ${pairingStatus.recommended_container.toUpperCase()}`
+                          : "Needs Audio Stream"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#F3F4F6]/90 m-0 leading-relaxed font-sans">
+                      {pairingStatus.reason}
+                    </p>
+                  </div>
+
+                  {/* Missing FFmpeg Warning for Merging */}
+                  {pairingStatus.requires_ffmpeg && !ffmpegAvailable && (
+                    <div className="p-3 rounded-lg bg-[#2D281E] border border-[#E8BE72]/40 text-[#E8BE72] text-xs flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-semibold m-0">FFmpeg Required for Merging</p>
+                        <p className="m-0 mt-0.5 text-[11px] text-[#F3F4F6]/80">
+                          Combining separate video and audio streams requires FFmpeg. You can configure FFmpeg in Settings, or use the standalone download buttons below to download individual streams.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Bar for Stream Pairing */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#252932]">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleDownloadVideoOnly}
+                        disabled={!activeVideoStream}
+                        className="neu-button px-3 py-1.5 flex items-center gap-1.5 text-xs text-[#A5ABB5] hover:text-[#F3F4F6] cursor-pointer disabled:opacity-50"
+                        title="Download video stream standalone"
+                      >
+                        <FileVideo className="w-3.5 h-3.5 text-[#8BC5B0]" />
+                        <span>Download Video Only</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadAudioOnly}
+                        disabled={!activeAudioStream}
+                        className="neu-button px-3 py-1.5 flex items-center gap-1.5 text-xs text-[#A5ABB5] hover:text-[#F3F4F6] cursor-pointer disabled:opacity-50"
+                        title="Download audio stream standalone"
+                      >
+                        <FileAudio className="w-3.5 h-3.5 text-[#8BC5B0]" />
+                        <span>Download Audio Only</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadMerged}
+                      disabled={!pairingStatus.valid || (pairingStatus.requires_ffmpeg && !ffmpegAvailable)}
+                      className="neu-accent px-4 py-2 flex items-center gap-2 text-xs font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download Selected + Merge</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

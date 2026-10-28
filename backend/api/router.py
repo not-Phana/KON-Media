@@ -16,6 +16,7 @@ from backend.engine.media_engine import (
     get_engine_health,
     find_spotify_match,
     fetch_spotify_oembed,
+    validate_stream_pairing,
     MediaEngineError,
 )
 from backend.engine.ffmpeg_manager import validate_ffmpeg_path
@@ -43,6 +44,11 @@ class AnalyzeRequest(BaseModel):
     url: str = Field(..., description="Media URL to analyze")
 
 
+class ValidatePairingRequest(BaseModel):
+    video_stream: Optional[Dict[str, Any]] = None
+    audio_stream: Optional[Dict[str, Any]] = None
+
+
 class DownloadRequest(BaseModel):
     url: str = Field(..., description="Media URL to download")
     title: Optional[str] = Field("Media Download", description="Media Title")
@@ -52,6 +58,10 @@ class DownloadRequest(BaseModel):
     audio_bitrate: Optional[str] = Field("320k", description="Audio quality bitrate")
     thumbnail: Optional[str] = Field(None, description="Media thumbnail URL")
     duration: Optional[int | float] = Field(None, description="Media duration in seconds")
+    video_format_id: Optional[str] = Field(None, description="Selected video stream format_id")
+    audio_format_id: Optional[str] = Field(None, description="Selected audio stream format_id")
+    merge_streams: Optional[bool] = Field(False, description="Whether to merge separate video and audio streams")
+    merge_output_format: Optional[str] = Field(None, description="Desired merge output container")
 
 
 class OpenFolderRequest(BaseModel):
@@ -115,6 +125,18 @@ async def analyze_url(req: AnalyzeRequest):
         raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
 
+@router.post("/validate-pairing")
+async def validate_pairing_endpoint(req: ValidatePairingRequest):
+    """Validate compatibility between a selected video stream and audio stream."""
+    configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
+    ffmpeg_status = validate_ffmpeg_path(configured_ffmpeg)
+    return validate_stream_pairing(
+        video_stream=req.video_stream,
+        audio_stream=req.audio_stream,
+        ffmpeg_available=ffmpeg_status["available"],
+    )
+
+
 @router.post("/download")
 async def start_download(req: DownloadRequest):
     """Queue a media download task."""
@@ -135,15 +157,28 @@ async def start_download(req: DownloadRequest):
             ),
         )
 
+    format_selector = req.format_id or "bestvideo+bestaudio/best"
+    final_ext = req.ext or "mp4"
+
+    if req.merge_streams:
+        if req.video_format_id and req.audio_format_id:
+            format_selector = f"{req.video_format_id}+{req.audio_format_id}"
+        elif req.video_format_id:
+            format_selector = str(req.video_format_id)
+
+        if req.merge_output_format:
+            final_ext = req.merge_output_format
+
     task_id = task_manager.create_task(
         url=validated_url,
         title=req.title or "Media Download",
-        format_id=req.format_id or "bestvideo+bestaudio/best",
+        format_id=format_selector,
         media_type=req.media_type or "video",
-        ext=req.ext or "mp4",
+        ext=final_ext,
         audio_bitrate=req.audio_bitrate or "320k",
         thumbnail=req.thumbnail,
         duration=req.duration,
+        merge_output_format=req.merge_output_format,
     )
 
     return {"task_id": task_id, "status": "queued"}

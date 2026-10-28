@@ -96,7 +96,9 @@ export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile, on
                     {task.title}
                   </h3>
                   <div className="flex items-center gap-2 mt-1 text-[11px] text-[#A5ABB5] font-mono">
-                    <span>{task.media_type === "audio" ? "MP3 Audio" : "MP4 Video"}</span>
+                    <span>
+                      {(task.actual_ext || task.ext || (task.media_type === "audio" ? "Audio" : "Video")).toUpperCase()} · {task.media_type === "audio" ? "Audio" : (task.has_audio === false ? "Video Only" : "Video")}
+                    </span>
                     {task.speed > 0 && <span>· {formatSpeed(task.speed)}</span>}
                     {task.eta && <span>· ETA: {task.eta}s</span>}
                     {task.total_bytes > 0 && (
@@ -164,7 +166,7 @@ export default function ActiveTasksMonitor({ tasks, onCancelTask, onOpenFile, on
                     />
                   </div>
                   <div className="flex justify-between text-[10px] font-mono text-[#6B7280]">
-                    <span>{task.status === "processing" ? "Merging audio/video streams..." : "Downloading data"}</span>
+                    <span>{task.stage_label || (task.status === "processing" ? "Merging audio/video streams..." : "Downloading data")}</span>
                     <span>{percent.toFixed(1)}%</span>
                   </div>
                 </div>
