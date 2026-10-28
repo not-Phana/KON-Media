@@ -14,6 +14,8 @@ from backend.config import DOWNLOADS_DIR
 from backend.engine.media_engine import (
     extract_media_info,
     get_engine_health,
+    find_spotify_match,
+    fetch_spotify_oembed,
     MediaEngineError,
 )
 from backend.engine.ffmpeg_manager import validate_ffmpeg_path
@@ -58,6 +60,11 @@ class OpenFolderRequest(BaseModel):
 
 class OpenExternalUrlRequest(BaseModel):
     url: str = Field(..., description="External URL to open in default browser")
+
+
+class SpotifyMatchRequest(BaseModel):
+    url: str = Field(..., description="Spotify URL")
+    title: Optional[str] = Field(None, description="Optional track title to search")
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -140,6 +147,48 @@ async def start_download(req: DownloadRequest):
     )
 
     return {"task_id": task_id, "status": "queued"}
+
+
+@router.post("/spotify/match")
+async def match_spotify_track(req: SpotifyMatchRequest):
+    """Find an authorized public media source match (such as YouTube) for a Spotify track."""
+    try:
+        validated_url = validate_media_url(req.url)
+    except SecurityValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    spotify_match = detect_spotify_source(validated_url)
+    if not spotify_match:
+        raise HTTPException(status_code=400, detail="The provided URL is not a recognized Spotify source.")
+
+    query = req.title
+    thumbnail = None
+    if not query:
+        oembed = await asyncio.to_thread(fetch_spotify_oembed, spotify_match["canonical_url"])
+        query = oembed.get("title") or spotify_match.get("title")
+        thumbnail = oembed.get("thumbnail")
+
+    if not query or query in ("Spotify Track", "Spotify Content"):
+        raise HTTPException(
+            status_code=400,
+            detail="Could not determine track title from Spotify URL to find an audio match."
+        )
+
+    try:
+        configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
+        matched_info = await asyncio.to_thread(
+            find_spotify_match,
+            query=query,
+            original_url=spotify_match["canonical_url"],
+            original_title=query,
+            original_thumbnail=thumbnail,
+            ffmpeg_location=configured_ffmpeg,
+        )
+        return matched_info
+    except MediaEngineError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error matching Spotify track: {e}")
 
 
 @router.post("/open-url")

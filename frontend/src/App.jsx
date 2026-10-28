@@ -185,6 +185,7 @@ export default function App() {
             mediaInfo={analyzedMedia}
             onStartDownload={handleStartDownload}
             onDismiss={() => setAnalyzedMedia(null)}
+            onUpdateMediaInfo={setAnalyzedMedia}
           />
         )}
 

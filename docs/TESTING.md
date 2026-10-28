@@ -156,3 +156,36 @@ Automated tests in `tests/test_real_downloads.py` verify live network downloads,
   * Output file written to disk with exact size `198,658 bytes`.
   * Header validation: Confirmed valid MPEG-1 Audio Layer III frame sync word (`b'\xff\xfa'`).
   * No post-processing errors; completed within 3.5 seconds.
+
+---
+
+## 8. Phase 3: Multi-Platform Downloads, Bundled FFmpeg & Spotify Matcher Tests
+
+Automated tests in `tests/test_multi_platform.py` verify live Spotify oEmbed metadata extraction, YouTube direct audio stream parsing, bundled FFmpeg fallback, and alternative public source matching:
+
+```powershell
+.\.venv\Scripts\python -m pytest -v
+```
+
+**Results (67 passing tests across entire suite, 0 failures, 0 warnings)**:
+* `tests/test_multi_platform.py::test_spotify_oembed_metadata_extraction` PASSED
+* `tests/test_multi_platform.py::test_spotify_match_api_endpoint` PASSED
+* `tests/test_multi_platform.py::test_spotify_match_invalid_source_rejected` PASSED
+* `tests/test_multi_platform.py::test_youtube_direct_audio_format_inclusion` PASSED
+* `tests/test_multi_platform.py::test_bundled_ffmpeg_detection` PASSED
+* Plus 62 passing tests from earlier phases.
+
+### Real-World Multi-Platform Verification Summary:
+1. **YouTube Video + Audio Merging via Bundled FFmpeg**:
+   * Target: `https://www.youtube.com/watch?v=aqz-KE-bpKQ`
+   * Format: `bestvideo[height<=360]+bestaudio/best[height<=360]`
+   * Result: Downloaded 14.59 MB video DASH stream (f396) + 9.73 MB audio stream (f251) and merged into `25,581,767 bytes` MP4.
+   * Header validation: Valid ISO Base Media File Format header (`b'\x00\x00\x00 ftypisom'`).
+2. **Spotify Public oEmbed & Audio Matcher**:
+   * Target: `https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT`
+   * Metadata: Retrieved title `Never Gonna Give You Up`, provider `Spotify`, and artwork URL.
+   * Matcher: Successfully queried `ytsearch1:Never Gonna Give You Up Rick Astley`, returning authorized public source `https://www.youtube.com/watch?v=dQw4w9WgXcQ`.
+   * Real Download: Successfully downloaded audio stream (`3,433,755 bytes`), verifying EBML header (`b'\x1aE\xdf\xa3'`).
+3. **Frontend Production Build**:
+   * Vite production build completed in 3.88s with zero errors (`dist/index.html`, `dist/assets/index-*.js`, `dist/assets/index-*.css`).
+   * Vector brand assets (`favicon.svg`, `logo.svg`, `<KonLogo />`) verified.

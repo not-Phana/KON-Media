@@ -60,6 +60,26 @@ def format_duration(seconds: Optional[int | float]) -> str:
     return f"{minutes:02d}:{rem_seconds:02d}"
 
 
+def fetch_spotify_oembed(spotify_url: str) -> Dict[str, Any]:
+    """Fetch public track metadata and cover art from Spotify's official oEmbed API without credentials."""
+    import httpx
+    try:
+        with socket_guard_scope():
+            with httpx.Client(timeout=6.0, follow_redirects=True) as client:
+                res = client.get("https://open.spotify.com/oembed", params={"url": spotify_url})
+                if res.status_code == 200:
+                    data = res.json()
+                    return {
+                        "title": data.get("title"),
+                        "thumbnail": data.get("thumbnail_url"),
+                        "provider_name": data.get("provider_name", "Spotify"),
+                        "author_name": data.get("author_name"),
+                    }
+    except Exception as e:
+        log.warning("Failed to fetch Spotify oEmbed metadata: %s", e)
+    return {}
+
+
 def extract_media_info(
     url: str,
     abort_event: Optional[threading.Event] = None,
@@ -71,12 +91,18 @@ def extract_media_info(
     # 1. Recognize Spotify sources upfront before attempting extraction
     spotify_match = detect_spotify_source(url)
     if spotify_match:
+        oembed = fetch_spotify_oembed(spotify_match["canonical_url"])
+        title = oembed.get("title") or spotify_match["title"]
+        thumbnail = oembed.get("thumbnail")
+        uploader = oembed.get("author_name") or oembed.get("provider_name") or "Spotify"
+        content_type = spotify_match["content_type"]
+
         return {
-            "title": spotify_match["title"],
-            "uploader": "Spotify",
+            "title": title,
+            "uploader": uploader,
             "duration": None,
             "duration_formatted": "N/A",
-            "thumbnail": None,
+            "thumbnail": thumbnail,
             "extractor": "Spotify",
             "webpage_url": spotify_match["canonical_url"],
             "video_formats": [],
@@ -85,8 +111,10 @@ def extract_media_info(
             "supported": False,
             "is_unsupported_source": True,
             "source": "spotify",
-            "content_type": spotify_match["content_type"],
+            "content_type": content_type,
             "open_in_spotify_url": spotify_match["canonical_url"],
+            "can_match_audio": content_type in ("track", "content"),
+            "match_search_query": title if content_type == "track" else None,
             "message": (
                 "Spotify music streams are protected by Digital Rights Management (DRM) "
                 "and cannot be exported as MP3 or offline audio files."
@@ -98,13 +126,16 @@ def extract_media_info(
             ),
         }
 
-    ydl_opts = {
+    ydl_opts: Dict[str, Any] = {
         "skip_download": True,
         "extract_flat": False,
         "quiet": True,
         "no_warnings": True,
         "no_color": True,
     }
+
+    if shutil.which("node"):
+        ydl_opts["js_runtimes"] = {"node": {}}
 
     if ffmpeg_status["available"]:
         ydl_opts["ffmpeg_location"] = ffmpeg_status["path"]
@@ -203,25 +234,24 @@ def extract_media_info(
                 },
             ]
 
-            # If the source is direct audio (or has pre-encoded direct audio streams), offer direct audio download without FFmpeg
+            # If the source has standalone or direct audio streams, offer direct audio download without FFmpeg
             ext = (info.get("ext") or "mp4").lower()
-            is_direct_audio = (
+            has_standalone_audio = (
                 info.get("vcodec") in (None, "none")
                 and ext in ("mp3", "wav", "m4a", "flac", "ogg", "opus", "aac")
             ) or any(
                 f.get("vcodec") in (None, "none")
                 and f.get("acodec") not in (None, "none")
-                and f.get("ext") in ("mp3", "m4a", "wav", "flac", "ogg")
                 for f in raw_formats
             )
 
-            if is_direct_audio:
-                audio_ext = ext if ext in ("mp3", "wav", "m4a", "flac", "ogg", "opus", "aac") else "mp3"
+            if has_standalone_audio:
+                direct_ext = ext if ext in ("mp3", "wav", "m4a", "flac", "ogg", "opus", "aac") else "m4a"
                 audio_options.insert(0, {
                     "format_id": "bestaudio/best",
-                    "label": f"Original Audio ({audio_ext.upper()}) (Direct)",
+                    "label": f"Original Audio ({direct_ext.upper()}) (Direct)",
                     "bitrate": "original",
-                    "ext": audio_ext,
+                    "ext": direct_ext,
                     "type": "audio",
                     "requires_ffmpeg": False,
                 })
@@ -246,6 +276,62 @@ def extract_media_info(
         raise MediaEngineError(f"Media extraction failed: {clean_err}")
     except Exception as e:
         raise MediaEngineError(f"Unexpected extraction error: {e}")
+
+
+def find_spotify_match(
+    query: str,
+    original_url: Optional[str] = None,
+    original_title: Optional[str] = None,
+    original_thumbnail: Optional[str] = None,
+    ffmpeg_location: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Find an authorized public source match (e.g. YouTube) for a Spotify track.
+
+    Searches via yt-dlp `ytsearch1:{query}`, extracting real formats and metadata.
+    Does not circumvent DRM; queries public open media sources transparently.
+    """
+    clean_query = (query or "").strip()
+    if not clean_query:
+        raise MediaEngineError("Search query cannot be empty.")
+
+    ffmpeg_status = validate_ffmpeg_path(ffmpeg_location)
+    ydl_opts: Dict[str, Any] = {
+        "skip_download": True,
+        "extract_flat": False,
+        "quiet": True,
+        "no_warnings": True,
+        "no_color": True,
+    }
+    if shutil.which("node"):
+        ydl_opts["js_runtimes"] = {"node": {}}
+    if ffmpeg_status["available"]:
+        ydl_opts["ffmpeg_location"] = ffmpeg_status["path"]
+
+    try:
+        with socket_guard_scope():
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                search_term = f"ytsearch1:{clean_query}"
+                res = ydl.extract_info(search_term, download=False)
+                if not res or not res.get("entries"):
+                    raise MediaEngineError(f"No matching public media found for: '{clean_query}'")
+
+                entry = res["entries"][0]
+                matched_url = entry.get("webpage_url") or entry.get("url")
+                if not matched_url:
+                    raise MediaEngineError("Search match did not return a valid URL.")
+
+        matched_info = extract_media_info(matched_url, ffmpeg_location=ffmpeg_location)
+        matched_info["is_alternative_match"] = True
+        matched_info["original_spotify_title"] = original_title or clean_query
+        matched_info["original_spotify_url"] = original_url
+        if original_thumbnail and not matched_info.get("thumbnail"):
+            matched_info["thumbnail"] = original_thumbnail
+        matched_info["match_banner"] = f"Alternative Match for: {original_title or clean_query}"
+        return matched_info
+    except MediaEngineError:
+        raise
+    except Exception as e:
+        raise MediaEngineError(f"Failed to find audio match: {e}")
 
 
 def execute_download(
@@ -311,6 +397,9 @@ def execute_download(
         "no_color": True,
     }
 
+    if shutil.which("node"):
+        ydl_opts["js_runtimes"] = {"node": {}}
+
     ffmpeg_status = validate_ffmpeg_path(ffmpeg_location)
     has_ffmpeg = ffmpeg_status["available"]
 
@@ -318,8 +407,8 @@ def execute_download(
         ydl_opts["ffmpeg_location"] = ffmpeg_status["path"]
 
     if media_type == "audio":
-        if audio_bitrate == "original" or format_selector == "best":
-            ydl_opts["format"] = "bestaudio/best"
+        if audio_bitrate.startswith("original") or format_selector == "best":
+            ydl_opts["format"] = format_selector or "bestaudio/best"
         else:
             if not has_ffmpeg:
                 raise MediaEngineError(

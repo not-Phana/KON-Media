@@ -7,11 +7,23 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
+def _find_bundled_ffmpeg() -> Optional[str]:
+    """Check for bundled or package-provided FFmpeg executable."""
+    try:
+        import imageio_ffmpeg
+        bundled = imageio_ffmpeg.get_ffmpeg_exe()
+        if bundled and Path(bundled).exists():
+            return str(bundled)
+    except Exception:
+        pass
+    return None
+
+
 def validate_ffmpeg_path(custom_path: Optional[str] = None) -> Dict[str, Any]:
-    """Validate an FFmpeg executable from a custom path or system PATH.
+    """Validate an FFmpeg executable from a custom path, system PATH, or bundled package.
 
     Accepts:
-    - None or empty string: auto-detects from system PATH.
+    - None or empty string: auto-detects from system PATH or bundled imageio-ffmpeg.
     - Path to an ffmpeg executable (e.g. E:\\...\\bin\\ffmpeg.exe).
     - Path to a directory containing ffmpeg.exe (e.g. E:\\...\\bin).
 
@@ -20,23 +32,27 @@ def validate_ffmpeg_path(custom_path: Optional[str] = None) -> Dict[str, Any]:
         "available": bool,
         "path": Optional[str],
         "version": Optional[str],
-        "source": "custom" | "path" | "none",
+        "source": "custom" | "path" | "bundled" | "none",
         "error": Optional[str],
     }
     """
-    # 1. Automatic PATH detection if no custom path configured
+    # 1. Automatic PATH detection or bundled fallback if no custom path configured
     if not custom_path or not str(custom_path).strip():
         system_path = shutil.which("ffmpeg")
-        if not system_path:
-            return {
-                "available": False,
-                "path": None,
-                "version": None,
-                "source": "none",
-                "error": "FFmpeg was not found in system PATH. Please configure a custom path in Settings.",
-            }
+        if system_path:
+            return _test_ffmpeg_executable(system_path, source="path")
 
-        return _test_ffmpeg_executable(system_path, source="path")
+        bundled_path = _find_bundled_ffmpeg()
+        if bundled_path:
+            return _test_ffmpeg_executable(bundled_path, source="bundled")
+
+        return {
+            "available": False,
+            "path": None,
+            "version": None,
+            "source": "none",
+            "error": "FFmpeg was not found in system PATH. Please configure a custom path in Settings.",
+        }
 
     # 2. Custom path evaluation
     raw_path = str(custom_path).strip().strip('"').strip("'")

@@ -164,3 +164,25 @@ flowchart TD
 
 ### 9.2 Complete Intermediate Output Cleanup
 * **`cleanup_partial_files`**: Automatically removes any intermediate task-prefixed output files (`{task_id}.*`) and `.part` / `.temp` files if a download task fails, cancels, or encounters network interruption, guaranteeing zero leftover orphaned files in the downloads directory.
+
+---
+
+## 10. Phase 3: Working Downloader Integrations, Spotify Matcher & Brand Redesign
+
+### 10.1 Bundled FFmpeg Integration & Drive C: Protection
+* **Built-in Bundled Binary**: Integrated `imageio-ffmpeg` directly within the project's Python virtual environment on Drive E: (`.venv\Lib\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe`).
+* **Zero Host Installation Overhead**: Eliminates hanging external winget/installer processes. Provides immediate, out-of-the-box video/audio merging and MP3 encoding without requiring manual user setup.
+* **Three-Tier Fallback Resolution**: Checks custom path from Settings -> System PATH (`shutil.which`) -> Bundled virtual environment binary.
+
+### 10.2 YouTube Player Challenge Solving & Direct Audio Support
+* **Node.js Runtime Integration**: yt-dlp leverages the local Node.js runtime (`js_runtimes: {'node': {}}`) to solve modern YouTube n-sig / player challenges dynamically, eliminating throttling.
+* **Direct Audio Formats**: Exposes standalone direct audio streams (Format 140 M4A / AAC and Format 251 WebM / Opus) with `requires_ffmpeg: False`, allowing immediate audio downloads even in environments where FFmpeg is unavailable.
+
+### 10.3 Spotify oEmbed Metadata & Authorized Public Source Matcher
+* **Public oEmbed Metadata**: Fetches real album artwork, track title, and artist from Spotify's official oEmbed API (`https://open.spotify.com/oembed`) at $0 cost and with zero credentials required.
+* **Zero DRM Circumvention**: Fully respects platform boundaries and DRM encryption. Does not claim or attempt to bypass Spotify encryption.
+* **Authorized Public Matcher (`/api/spotify/match`)**: Uses ytsearch to locate the matching authorized public track (e.g. YouTube / SoundCloud), allowing users to download the matched audio track with full transparency and verified provenance.
+
+### 10.4 Brand Identity & Vector Assets
+* **Crafted Vector Mark**: Replaced generic template icons with a bespoke, Neumorphic-compatible mint/slate logo mark (`favicon.svg`, `logo.svg`, `KonLogo.jsx`).
+* **Symbolism**: Combines the letter **K** with a forward media playback chevron, symbolizing momentum, precision, and personal-first media sovereignty.

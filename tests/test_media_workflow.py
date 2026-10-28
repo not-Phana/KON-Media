@@ -54,9 +54,10 @@ def test_extract_media_info_format_grouping():
         assert result["video_formats"][0]["format_id"] == "137+bestaudio/best"
         assert result["video_formats"][1]["height"] == 720
         assert result["video_formats"][2]["height"] == 360
-        # Verify audio options
-        assert len(result["audio_formats"]) == 3
-        assert result["audio_formats"][0]["bitrate"] == "320k"
+        # Verify audio options (includes direct audio stream when standalone audio present + 3 MP3 presets)
+        assert len(result["audio_formats"]) == 4
+        assert result["audio_formats"][0]["bitrate"] == "original"
+        assert result["audio_formats"][1]["bitrate"] == "320k"
 
 
 def test_extract_media_info_direct_stream_fallback():
@@ -101,7 +102,7 @@ def test_download_cancellation():
 
 
 def test_missing_ffmpeg_audio_error():
-    with patch("shutil.which", return_value=None):
+    with patch("shutil.which", return_value=None), patch("backend.engine.ffmpeg_manager._find_bundled_ffmpeg", return_value=None):
         with pytest.raises(MediaEngineError, match=r"FFmpeg is not (available|installed)"):
             execute_download(
                 url="https://example.com/audio",

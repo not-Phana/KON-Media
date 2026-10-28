@@ -1,14 +1,13 @@
 import React from "react";
-import { HardDrive, Settings, CheckCircle2, AlertTriangle, Layers } from "lucide-react";
+import { HardDrive, Settings, CheckCircle2, AlertTriangle } from "lucide-react";
+import KonLogo from "./KonLogo";
 
 export default function Header({ health, onOpenSettings }) {
   return (
     <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-6 border-b border-[#2D323B]">
       <div>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#272B32] border border-[#383D46] flex items-center justify-center text-[#8BC5B0] shadow-md">
-            <Layers className="w-5 h-5" />
-          </div>
+          <KonLogo size={42} />
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-[#F3F4F6] m-0">
               KON <span className="text-[#8BC5B0]">Media</span>

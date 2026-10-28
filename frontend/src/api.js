@@ -132,6 +132,19 @@ export async function openExternalUrl(url) {
   return data;
 }
 
+export async function matchSpotifyTrack(url, title) {
+  const res = await fetch(`${API_BASE}/spotify/match`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, title }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Audio match failed");
+  }
+  return data;
+}
+
 export function subscribeToEvents(onEvent, onError) {
   const es = new EventSource(`${API_BASE}/events`);
 

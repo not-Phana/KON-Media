@@ -35,13 +35,31 @@ def test_ffmpeg_auto_detection_found():
 
 
 def test_ffmpeg_auto_detection_not_found():
-    """Verify validate_ffmpeg_path reports clear error when not on system PATH."""
-    with patch("shutil.which", return_value=None):
+    """Verify validate_ffmpeg_path reports clear error when not on system PATH and no bundled binary."""
+    with patch("shutil.which", return_value=None), patch("backend.engine.ffmpeg_manager._find_bundled_ffmpeg", return_value=None):
         res = validate_ffmpeg_path(None)
         assert res["available"] is False
         assert res["source"] == "none"
         assert res["path"] is None
         assert "not found in system PATH" in res["error"]
+
+
+def test_ffmpeg_auto_detection_bundled():
+    """Verify validate_ffmpeg_path discovers bundled package binary when not on system PATH."""
+    with patch("shutil.which", return_value=None), patch("backend.engine.ffmpeg_manager._find_bundled_ffmpeg", return_value="E:\\tools\\bundled_ffmpeg.exe"):
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["E:\\tools\\bundled_ffmpeg.exe", "-version"],
+                returncode=0,
+                stdout="ffmpeg version 7.1-bundled\n",
+                stderr="",
+            )
+            res = validate_ffmpeg_path(None)
+            assert res["available"] is True
+            assert res["source"] == "bundled"
+            assert res["path"] == "E:\\tools\\bundled_ffmpeg.exe"
+            assert res["version"] == "ffmpeg version 7.1-bundled"
+            assert res["error"] is None
 
 
 def test_ffmpeg_custom_path_nonexistent():

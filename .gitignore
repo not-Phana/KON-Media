@@ -14,6 +14,7 @@ frontend/.vite/
 # Local state & media files
 downloads/
 app_state/
+tools/
 *.log
 
 # Research candidates (segregated)
