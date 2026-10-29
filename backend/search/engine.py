@@ -9,6 +9,7 @@ from backend.search.providers import MultiProviderAggregator, SearchProvider
 from backend.search.feedback import SearchFeedbackStore
 from backend.search.learning_model import SearchLearningModel
 from backend.search.cache import SearchCache, get_shared_search_cache
+import backend.search.rust_bridge as rust_bridge
 
 log = logging.getLogger("kon_search_engine")
 
@@ -70,22 +71,12 @@ class SearchEngine:
             media_type=media_type,
         )
 
-        # 2. Check for soundtrack / thematic song associations
-        from backend.search.normalization import resolve_soundtrack_associations
-        associated = resolve_soundtrack_associations(clean_q)
-        learned_assoc_tokens = self.learning_model.get_associated_tokens(clean_q, top_k=4)
-
-        # 3. Formulate search query: if searching for song and associated theme exists, enrich query
+        # 2. Formulate search query without destructive query mutation
+        # Preserve user query intact - never poison search term with blind unigram associations or guesses
         search_term = clean_q
-        if media_type == "audio" and associated:
-            search_term = f"{clean_q} {associated[0]}"
-        elif media_type == "audio" and learned_assoc_tokens:
-            search_term = f"{clean_q} {' '.join(learned_assoc_tokens)}"
-        elif media_type == "audio" and not any(k in clean_q.lower() for k in ("song", "audio", "track", "music", "ost")):
-            search_term = f"{clean_q} song"
 
-        # 4. Retrieve candidates from providers concurrently
-        pool_limit = max(limit * 2, 8)
+        # 3. Retrieve candidates from providers concurrently with broad candidate pool
+        pool_limit = min(max(limit * 3, 24), 60)
         candidates = self.aggregator.aggregate_candidates(
             query=search_term,
             limit_per_provider=pool_limit,
@@ -100,19 +91,34 @@ class SearchEngine:
         # 4. Load historical verified feedback lookup
         feedback_lookup = self.feedback_store.get_verified_lookup()
 
-        # 5. Rank candidates using multi-signal scoring and learned associations
-        ranked = rank_candidates(
+        # 5. Rank candidates using native Rust search core (or verified Python relevance fallback)
+        ranked = rust_bridge.rank_candidates(
             query=search_query,
             candidates=candidates,
-            config=self.config,
-            feedback_lookup=feedback_lookup,
-            learning_model=self.learning_model,
         )
 
-        # 6. Format results for API / UI consumers and store in fast cache
+        # 6. Apply verified historical user feedback boost if available
+        norm_key = search_query.normalized_query
+        if feedback_lookup and norm_key in feedback_lookup:
+            verified_id = feedback_lookup[norm_key]
+            for i, c in enumerate(ranked):
+                if c.id == verified_id:
+                    c.score += 1.0
+                    if "Verified user match from historical feedback" not in c.explanation:
+                        c.explanation.append("Verified user match from historical feedback")
+                    # Move to front
+                    verified_cand = ranked.pop(i)
+                    ranked.insert(0, verified_cand)
+                    break
+
+        # 7. Format results for API / UI consumers and store in fast cache
         results = [c.to_dict() for c in ranked[:limit]]
         self.cache.set(cache_key, results)
         return results
+
+    def get_active_engine(self) -> str:
+        """Return diagnostic engine identifier."""
+        return rust_bridge.get_active_engine_name()
 
     def record_feedback(
         self,

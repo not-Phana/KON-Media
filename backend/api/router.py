@@ -6,7 +6,7 @@ import logging
 import shutil
 from pathlib import Path
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel, Field
 
@@ -290,7 +290,8 @@ async def open_external_url(req: OpenExternalUrlRequest):
 @router.get("/search")
 async def search_media_endpoint(
     q: str,
-    limit: int = 5,
+    response: Response,
+    limit: int = 20,
     media_type: Optional[str] = "all",
     provider: Optional[str] = None,
 ):
@@ -300,17 +301,27 @@ async def search_media_endpoint(
     if not clean_q:
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
 
+    clamped_limit = min(max(limit, 1), 50)
     configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
     engine = SearchEngine()
+    active_engine = engine.get_active_engine()
+    response.headers["X-KON-Search-Engine"] = active_engine
+
     results = await asyncio.to_thread(
         engine.search,
         query=clean_q,
-        limit=min(max(limit, 1), 20),
+        limit=clamped_limit,
         media_type=media_type or "all",
         preferred_provider=provider,
         ffmpeg_path=configured_ffmpeg,
     )
-    return {"query": clean_q, "media_type": media_type or "all", "count": len(results), "results": results}
+    return {
+        "query": clean_q,
+        "media_type": media_type or "all",
+        "count": len(results),
+        "engine": active_engine,
+        "results": results,
+    }
 
 
 @router.post("/search/feedback")

@@ -303,6 +303,7 @@ class MultiProviderAggregator:
 
         primary_target_provider = preferred_provider or "youtube"
 
+        max_pool_target = min(max(limit_per_provider * (len(active_providers) or 1), 24), 60)
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(active_providers) or 2)
         future_to_provider = {
             executor.submit(p.search, query, limit_per_provider, ffmpeg_path): p
@@ -326,8 +327,8 @@ class MultiProviderAggregator:
 
                         all_candidates.append(cand)
 
-                    # Early exit: if the primary provider finished and fulfilled the candidate threshold, don't wait for slower providers
-                    if p.name == primary_target_provider and len(all_candidates) >= min(limit_per_provider, 4):
+                    # Stop collecting only if we have satisfied the bounded candidate pool target
+                    if len(all_candidates) >= max_pool_target:
                         break
                 except Exception as e:
                     log.warning("Provider %s search error: %s", p.name, e)

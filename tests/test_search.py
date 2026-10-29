@@ -401,3 +401,100 @@ def test_expanded_knowledge_association_coverage():
         tokens = model.get_associated_tokens(query, top_k=8)
         assert any(t in tokens for t in expected_tokens), f"Failed to associate {query} with {expected_tokens}, got {tokens}"
 
+
+def test_p0_no_destructive_query_mutation():
+    """Verify provider search term is never poisoned with unigram-learned associations or guessing."""
+    from backend.search.engine import SearchEngine
+    from unittest.mock import MagicMock
+
+    engine = SearchEngine()
+    mock_agg = MagicMock()
+    mock_agg.aggregate_candidates.return_value = []
+    engine.aggregator = mock_agg
+
+    # Test "Number One - Bankai" is NOT mutated to add "hiroshi kitadani we are"
+    engine.search("Number One - Bankai", limit=20, media_type="audio")
+    called_query = mock_agg.aggregate_candidates.call_args[1]["query"]
+    assert called_query == "Number One - Bankai"
+    assert "hiroshi" not in called_query.lower()
+    assert "kitadani" not in called_query.lower()
+    assert "we are" not in called_query.lower()
+
+    # Test "jumping machine" is NOT mutated to add "linkin park the emptiness"
+    mock_agg.reset_mock()
+    engine.search("jumping machine", limit=20, media_type="audio")
+    called_query = mock_agg.aggregate_candidates.call_args[1]["query"]
+    assert called_query == "jumping machine"
+    assert "linkin" not in called_query.lower()
+    assert "emptiness" not in called_query.lower()
+
+
+def test_p1_relevance_ranker_number_one_bankai():
+    """Verify Bleach OST ranks #1 over high-view One Piece opening for 'Number One - Bankai'."""
+    from backend.search.benchmark.fixtures_rei110 import EVAL_FIXTURES_REI_110
+    import backend.search.rust_bridge as rust_bridge
+
+    import copy
+    fix = EVAL_FIXTURES_REI_110[0]
+    candidates = [copy.copy(c) for c in fix["candidates"]]
+
+    ranked = rust_bridge.rank_candidates(fix["query"], candidates)
+    assert len(ranked) >= 8
+    # Top 1 must be Bleach OST
+    assert ranked[0].id in ("bleach_number_one_official", "bleach_number_one_ost")
+    # One Piece must rank far below Bleach OST
+    op_rank = next(i for i, c in enumerate(ranked) if c.id == "onepiece_we_are")
+    assert op_rank > 0
+
+
+def test_p1_relevance_ranker_jumping_machine():
+    """Verify literal phrase 'jumping machine' ranks #1 over high-view Linkin Park."""
+    from backend.search.benchmark.fixtures_rei110 import EVAL_FIXTURES_REI_110
+    import backend.search.rust_bridge as rust_bridge
+    import copy
+
+    fix = EVAL_FIXTURES_REI_110[1]
+    candidates = [copy.copy(c) for c in fix["candidates"]]
+    ranked = rust_bridge.rank_candidates(fix["query"], candidates)
+    assert len(ranked) >= 8
+    # Top 1 must be Jumping Machine, not Linkin Park
+    assert ranked[0].id == "jumping_machine_original"
+    lp_rank = next(i for i, c in enumerate(ranked) if c.id == "linkin_park_emptiness_machine")
+    assert lp_rank > 0
+    assert ranked[0].score > ranked[lp_rank].score
+
+
+@pytest.mark.asyncio
+async def test_p2_and_p3_api_search_endpoint_limits_and_header():
+    """Verify search endpoint defaults to limit=20, supports up to 50, and returns engine header."""
+    from backend.main import app
+    from httpx import AsyncClient, ASGITransport
+    import backend.search.rust_bridge as rust_bridge
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Default limit test
+        res = await client.get("/api/search?q=Queen%20Bohemian%20Rhapsody")
+        assert res.status_code == 200
+        # Check diagnostic header
+        expected_engine = rust_bridge.get_active_engine_name()
+        assert res.headers.get("X-KON-Search-Engine") == expected_engine
+        data = res.json()
+        assert data["engine"] == expected_engine
+        assert "results" in data
+
+
+def test_rei110_evaluation_metrics_pass_rate():
+    """Verify evaluation harness passes strict NDCG@10, MRR, and latency thresholds."""
+    from backend.search.benchmark.evaluate_rei110 import evaluate_engine
+
+    summary = evaluate_engine()
+    assert summary["mean_ndcg10"] >= 0.90, f"NDCG@10 {summary['mean_ndcg10']} below threshold 0.90"
+    assert summary["mean_mrr"] >= 0.90, f"MRR {summary['mean_mrr']} below threshold 0.90"
+    assert summary["mean_recall10"] == 1.0, f"Recall@10 {summary['mean_recall10']} below 1.0"
+    assert summary["latency_p50_ms"] < 25.0, f"Latency {summary['latency_p50_ms']} ms exceeds 25ms"
+    # Ensure all fixtures found their target at top 1
+    for case in summary["cases"]:
+        assert case["is_target_top1"], f"Fixture {case['fixture']} failed to place target at top 1"
+
+

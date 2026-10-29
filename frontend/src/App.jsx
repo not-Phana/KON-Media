@@ -139,7 +139,7 @@ export default function App() {
       setAnalyzedMedia(null);
       setSearchQuery(input);
       try {
-        const res = await searchMedia(input, { limit: 6, mediaType: searchMode });
+        const res = await searchMedia(input, { limit: 20, mediaType: searchMode });
         setSearchResults(res.results || []);
       } catch (err) {
         setAnalyzeError(err.message || "Failed to search media");
