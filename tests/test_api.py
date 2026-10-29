@@ -69,6 +69,44 @@ async def test_dismiss_task_endpoint():
 
 
 @pytest.mark.asyncio
+async def test_retry_task_and_clear_finished_endpoints():
+    from backend.api.router import task_manager
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Non-existent task retry returns 400
+        resp = await client.post("/api/tasks/nonexistent_id/retry")
+        assert resp.status_code == 400
+
+        # Inject completed and failed tasks into task_manager
+        task_manager.tasks["api_test_failed"] = {
+            "id": "api_test_failed",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "title": "Failed Task",
+            "format_id": "18",
+            "media_type": "video",
+            "ext": "mp4",
+            "audio_bitrate": "192",
+            "status": "failed",
+            "percentage": 10.0,
+            "error": "Timeout",
+        }
+        task_manager.tasks["api_test_done"] = {
+            "id": "api_test_done",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "title": "Done Task",
+            "status": "completed",
+        }
+
+        # Clear finished
+        clear_resp = await client.post("/api/tasks/clear-finished")
+        assert clear_resp.status_code == 200
+        data = clear_resp.json()
+        assert "api_test_done" in data["cleared_ids"]
+        assert "api_test_failed" in data["cleared_ids"]
+        assert data["count"] >= 2
+
+
+@pytest.mark.asyncio
 async def test_open_folder_outside_path_rejected():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

@@ -1,0 +1,28 @@
+{
+  "dataset_version": "v1.0.0",
+  "total_examples": 1406,
+  "train_count": 986,
+  "val_count": 211,
+  "test_count": 209,
+  "queries_count": 445,
+  "grade_distribution": {
+    "EXACT_MATCH": 363,
+    "RELEVANT": 330,
+    "PARTIALLY_RELEVANT": 240,
+    "IRRELEVANT": 473
+  },
+  "provenance_distribution": {
+    "verified_canonical": 480,
+    "synthetic_variation": 213,
+    "hard_negative": 713
+  },
+  "sha256_checksum": "24025d8a7ff0abdd0a29225579939aac8b5a4de665ccd39e653828d987b18fd9",
+  "created_at": "2026-10-29T08:59:00Z",
+  "rejection_reasons": {
+    "duplicate_pair": 114,
+    "contradictory_label": 9
+  },
+  "metadata": {
+    "model_target": "KON Search 1 Rei"
+  }
+}

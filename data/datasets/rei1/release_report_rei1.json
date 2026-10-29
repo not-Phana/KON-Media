@@ -1,0 +1,92 @@
+{
+  "model_name": "KON Search 1 Rei",
+  "model_version": "1.0.0",
+  "pipeline_duration_seconds": 3.38,
+  "dataset": {
+    "version": "v1.0.0",
+    "sha256": "24025d8a7ff0abdd0a29225579939aac8b5a4de665ccd39e653828d987b18fd9",
+    "raw_examples": 1529,
+    "valid_examples": 1406,
+    "train_samples": 986,
+    "val_samples": 211,
+    "test_samples": 209,
+    "grade_distribution": {
+      "EXACT_MATCH": 363,
+      "RELEVANT": 330,
+      "PARTIALLY_RELEVANT": 240,
+      "IRRELEVANT": 473
+    },
+    "rejections": {
+      "duplicate_pair": 114,
+      "contradictory_label": 9
+    },
+    "local_path": "E:\\Code\\make thing\\data\\datasets\\rei1\\rei1_dataset_v1.0.0.json"
+  },
+  "gdrive_storage": {
+    "status": "unauthenticated",
+    "real_upload_succeeded": false,
+    "mock_upload_succeeded": true,
+    "client_secrets_found": false,
+    "token_found": false
+  },
+  "metrics": {
+    "baseline": {
+      "ndcg@10": 0.8602,
+      "mrr": 0.7818,
+      "p@5": 0.7723,
+      "recall@10": 1.0,
+      "latency_ms": 2.412,
+      "evaluated_queries": 65
+    },
+    "kon_search_1_rei": {
+      "ndcg@10": 1.0,
+      "mrr": 1.0,
+      "p@5": 0.8892,
+      "recall@10": 1.0,
+      "latency_ms": 4.784,
+      "evaluated_queries": 65
+    },
+    "delta": {
+      "ndcg@10_gain": 0.1398,
+      "mrr_gain": 0.2182,
+      "p@5_gain": 0.1169,
+      "recall@10_gain": 0.0,
+      "latency_delta_ms": 2.372
+    },
+    "decision": "ACCEPTED"
+  },
+  "improvement_loop": {
+    "iterations_executed": 0,
+    "final_metrics": {
+      "ndcg@10": 1.0,
+      "mrr": 1.0,
+      "p@5": 0.8892,
+      "recall@10": 1.0,
+      "latency_ms": 4.518,
+      "evaluated_queries": 65
+    },
+    "history": []
+  },
+  "feature_importances": {
+    "view_count_log_scale": 1.8647,
+    "version_remix_indicator": 0.3235,
+    "version_live_indicator": 0.3136,
+    "version_cover_indicator": 0.0749,
+    "exact_title_match": 0.0366,
+    "title_length_ratio": 0.0339,
+    "exact_artist_match": 0.0053,
+    "char_3gram_similarity": 0.005,
+    "token_overlap_jaccard": 0.0041,
+    "query_to_artist_ratio": 0.001,
+    "token_containment_ratio": -0.0,
+    "media_type_audio_match": 0.0,
+    "media_type_video_match": 0.0,
+    "non_music_clip_penalty": -0.0,
+    "seq_matcher_ratio": -0.0002
+  },
+  "artifacts": {
+    "model_joblib": "E:\\Code\\make thing\\data\\models\\rei1\\rei1_v1.0.0\\kon_search_1_rei.joblib",
+    "metadata_json": "E:\\Code\\make thing\\data\\models\\rei1\\rei1_v1.0.0\\metadata.json",
+    "model_sha256": "60111afcf63f6b2e3d0c38cc17ac744a8b25b38d21aa5a41da26c5c946c08f38"
+  }
+}

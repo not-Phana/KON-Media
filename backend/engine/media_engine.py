@@ -60,6 +60,179 @@ def format_duration(seconds: Optional[int | float]) -> str:
     return f"{minutes:02d}:{rem_seconds:02d}"
 
 
+def clean_codec_name(codec_str: Optional[str]) -> Optional[str]:
+    """Return a human-readable clean codec representation from raw codec identifier."""
+    if not codec_str or codec_str == "none":
+        return None
+    c = str(codec_str).lower().strip()
+    if c.startswith("avc1") or c.startswith("h264"):
+        return "H.264 (AVC)"
+    if c.startswith("vp09") or c.startswith("vp9"):
+        return "VP9"
+    if c.startswith("av01"):
+        return "AV1"
+    if c.startswith("hvc1") or c.startswith("hevc") or c.startswith("h265"):
+        return "H.265 (HEVC)"
+    if c.startswith("mp4a") or c.startswith("aac"):
+        return "AAC"
+    if "opus" in c:
+        return "Opus"
+    if "vorbis" in c:
+        return "Vorbis"
+    if "mp3" in c:
+        return "MP3"
+    if "flac" in c:
+        return "FLAC"
+    return codec_str.split(".")[0].upper()
+
+
+def determine_stream_kind(vcodec: Optional[str], acodec: Optional[str]) -> str:
+    """Classify stream as 'video_only', 'audio_only', or 'combined'."""
+    has_v = vcodec not in (None, "none")
+    has_a = acodec not in (None, "none")
+    if has_v and has_a:
+        return "combined"
+    if has_v:
+        return "video_only"
+    if has_a:
+        return "audio_only"
+    return "unknown"
+
+
+def validate_stream_pair(
+    video_stream: Optional[Dict[str, Any]],
+    audio_stream: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Validate whether two chosen streams can be merged into a playable media file.
+
+    Returns compatibility status, container recommendation, lossless capability,
+    and a clear explanation of container/codec requirements.
+    """
+    if not video_stream and not audio_stream:
+        return {
+            "compatible": False,
+            "requires_merge": False,
+            "error": "Please select a video stream and an audio stream to pair.",
+        }
+
+    # Only video stream provided
+    if video_stream and not audio_stream:
+        v_kind = video_stream.get("stream_kind") or determine_stream_kind(
+            video_stream.get("vcodec"), video_stream.get("acodec")
+        )
+        if v_kind == "combined":
+            return {
+                "compatible": True,
+                "requires_merge": False,
+                "is_combined_direct": True,
+                "target_container": (video_stream.get("ext") or "mp4").lower(),
+                "format_selector": str(video_stream.get("format_id")),
+                "message": "This video stream already contains audio and can be downloaded directly without merging.",
+            }
+        elif v_kind == "video_only":
+            return {
+                "compatible": False,
+                "requires_merge": True,
+                "error": "The selected video stream has no audio. Please select an audio stream below to pair and merge.",
+            }
+        else:
+            return {
+                "compatible": False,
+                "requires_merge": False,
+                "error": "The format chosen under Video is an audio-only stream. Please select a valid video stream.",
+            }
+
+    # Only audio stream provided
+    if audio_stream and not video_stream:
+        a_kind = audio_stream.get("stream_kind") or determine_stream_kind(
+            audio_stream.get("vcodec"), audio_stream.get("acodec")
+        )
+        if a_kind in ("audio_only", "combined"):
+            return {
+                "compatible": True,
+                "requires_merge": False,
+                "is_audio_solo": True,
+                "target_container": (audio_stream.get("ext") or "m4a").lower(),
+                "format_selector": str(audio_stream.get("format_id")),
+                "message": "Audio stream selected for standalone direct audio download.",
+            }
+        else:
+            return {
+                "compatible": False,
+                "requires_merge": False,
+                "error": "The format chosen under Audio is not an audio stream.",
+            }
+
+    # Both video and audio streams provided:
+    v_kind = video_stream.get("stream_kind") or determine_stream_kind(
+        video_stream.get("vcodec"), video_stream.get("acodec")
+    )
+    a_kind = audio_stream.get("stream_kind") or determine_stream_kind(
+        audio_stream.get("vcodec"), audio_stream.get("acodec")
+    )
+
+    if v_kind == "audio_only":
+        return {
+            "compatible": False,
+            "requires_merge": False,
+            "error": "The format chosen as Video is audio-only. Please choose a video stream.",
+        }
+
+    if a_kind == "video_only":
+        return {
+            "compatible": False,
+            "requires_merge": False,
+            "error": "The format chosen as Audio is video-only. Pairing two video streams is not an audio-merging solution.",
+        }
+
+    v_ext = (video_stream.get("ext") or "").lower()
+    a_ext = (audio_stream.get("ext") or "").lower()
+    vc = str(video_stream.get("vcodec") or "").lower()
+    ac = str(audio_stream.get("acodec") or "").lower()
+
+    # Determine container and lossless remuxing capability
+    # MP4 container: supports H.264 (avc1), H.265 (hevc/hvc1), AV1 (av01) + AAC (mp4a), MP3
+    is_mp4_video = v_ext == "mp4" or any(vc.startswith(p) for p in ("avc", "h264", "av01", "hvc1", "hevc", "h265"))
+    is_mp4_audio = a_ext in ("m4a", "mp4") or any(ac.startswith(p) for p in ("mp4a", "aac", "mp3"))
+
+    # WebM container: supports VP8, VP9, AV1 + Opus, Vorbis
+    is_webm_video = v_ext == "webm" or any(vc.startswith(p) for p in ("vp8", "vp9", "vp09"))
+    is_webm_audio = a_ext in ("webm", "opus", "ogg") or any(ac.startswith(p) for p in ("opus", "vorbis"))
+
+    if is_mp4_video and is_mp4_audio:
+        target_container = "mp4"
+        lossless = True
+        desc = "Compatible MP4 container: lossless stream copy without re-encoding."
+    elif is_webm_video and is_webm_audio:
+        target_container = "webm"
+        lossless = True
+        desc = "Compatible WebM container: lossless stream copy without re-encoding."
+    elif is_mp4_video and is_webm_audio:
+        # AVC1/MP4 video + Opus audio: can merge to MP4 with audio remuxed to AAC, preserving video losslessly
+        target_container = "mp4"
+        lossless = False
+        desc = "Cross-container pair: video will be preserved losslessly; audio will be packaged into MP4."
+    elif is_webm_video and is_mp4_audio:
+        # VP9 video + AAC audio: can merge to MP4/MKV
+        target_container = "mp4"
+        lossless = False
+        desc = "Cross-container pair: streams will be merged into standard MP4."
+    else:
+        target_container = "mp4"
+        lossless = False
+        desc = "Streams will be merged into a standard playable container using FFmpeg."
+
+    format_selector = f"{video_stream.get('format_id')}+{audio_stream.get('format_id')}"
+    return {
+        "compatible": True,
+        "requires_merge": True,
+        "target_container": target_container,
+        "lossless": lossless,
+        "format_selector": format_selector,
+        "message": desc,
+    }
+
+
 def fetch_spotify_oembed(spotify_url: str) -> Dict[str, Any]:
     """Fetch public track metadata and cover art from Spotify's official oEmbed API without credentials."""
     import httpx
@@ -158,10 +331,10 @@ def extract_media_info(
             # Filter valid video formats by resolution height
             for f in sorted(raw_formats, key=lambda x: (x.get("height") or 0, x.get("tbr") or 0), reverse=True):
                 height = f.get("height")
-                vcodec = f.get("vcodec", "none")
-                acodec = f.get("acodec", "none")
+                vcodec = f.get("vcodec")
+                acodec = f.get("acodec")
 
-                if not height or vcodec == "none":
+                if not height or vcodec in (None, "none"):
                     continue
 
                 label_base = f"{height}p"
@@ -170,8 +343,9 @@ def extract_media_info(
                 seen_resolutions.add(label_base)
 
                 format_id = f.get("format_id")
+                has_audio = acodec not in (None, "none")
                 # If audio is not included in this video stream, requires ffmpeg to merge with bestaudio
-                if acodec == "none":
+                if not has_audio:
                     format_selector = f"{format_id}+bestaudio/best"
                     requires_ffmpeg = True
                     label = f"{height}p MP4"
@@ -206,7 +380,7 @@ def extract_media_info(
                     "requires_ffmpeg": False,
                 })
 
-            # Define standard audio quality options (all audio extractions require FFmpeg)
+            # Define standard audio quality options (genuine MP3 conversions require FFmpeg)
             audio_options = [
                 {
                     "format_id": "bestaudio/best",
@@ -234,27 +408,106 @@ def extract_media_info(
                 },
             ]
 
+            # Extract distinct native audio streams
+            native_audio_streams = [
+                f for f in raw_formats
+                if f.get("vcodec") in (None, "none") and f.get("acodec") not in (None, "none")
+            ]
+
             # If the source has standalone or direct audio streams, offer direct audio download without FFmpeg
             ext = (info.get("ext") or "mp4").lower()
             has_standalone_audio = (
                 info.get("vcodec") in (None, "none")
                 and ext in ("mp3", "wav", "m4a", "flac", "ogg", "opus", "aac")
-            ) or any(
-                f.get("vcodec") in (None, "none")
-                and f.get("acodec") not in (None, "none")
-                for f in raw_formats
-            )
+            ) or bool(native_audio_streams)
 
             if has_standalone_audio:
-                direct_ext = ext if ext in ("mp3", "wav", "m4a", "flac", "ogg", "opus", "aac") else "m4a"
+                # Find best M4A / AAC audio stream if available (universal MP4 container compatibility)
+                m4a_stream = next((s for s in native_audio_streams if (s.get("ext") or "").lower() == "m4a"), None)
+                # Find best WebM / Opus audio stream if available
+                webm_stream = next((s for s in native_audio_streams if (s.get("ext") or "").lower() == "webm"), None)
+                # Fallback to top audio stream or container ext
+                primary_stream = m4a_stream or webm_stream or (native_audio_streams[0] if native_audio_streams else None)
+
+                direct_ext = (
+                    (primary_stream.get("ext") or "").lower()
+                    if primary_stream
+                    else (ext if ext in ("mp3", "wav", "m4a", "flac", "ogg", "opus", "aac") else "m4a")
+                )
+                direct_fid = str(primary_stream.get("format_id")) if primary_stream else "bestaudio/best"
+                clean_acodec = clean_codec_name(primary_stream.get("acodec")) if primary_stream else direct_ext.upper()
+
                 audio_options.insert(0, {
-                    "format_id": "bestaudio/best",
+                    "format_id": direct_fid,
                     "label": f"Original Audio ({direct_ext.upper()}) (Direct)",
                     "bitrate": "original",
                     "ext": direct_ext,
                     "type": "audio",
+                    "codec": clean_acodec,
                     "requires_ffmpeg": False,
                 })
+
+            # Process all individual streams for Additional Download Options and Smart Stream Pairing
+            available_streams = []
+            for f in raw_formats:
+                fid = f.get("format_id")
+                f_ext = (f.get("ext") or "").lower()
+                if not fid or f_ext in ("mhtml", "none", "") or str(fid).startswith("sb"):
+                    continue
+
+                vc = f.get("vcodec")
+                ac = f.get("acodec")
+                kind = determine_stream_kind(vc, ac)
+                if kind == "unknown":
+                    continue
+
+                h = f.get("height")
+                w = f.get("width")
+                fps = f.get("fps")
+                vc_clean = clean_codec_name(vc)
+                ac_clean = clean_codec_name(ac)
+                tbr = round(f.get("tbr") or f.get("vbr") or f.get("abr") or 0)
+                filesize = f.get("filesize") or f.get("filesize_approx")
+
+                if kind == "video_only":
+                    res_label = f"{h}p" if h else "Video"
+                    desc = f"{res_label} ({vc_clean or f_ext.upper()} · {f_ext.upper()}, Video only)"
+                elif kind == "audio_only":
+                    res_label = f"{tbr} kbps" if tbr else "Audio"
+                    desc = f"{res_label} ({ac_clean or f_ext.upper()} · {f_ext.upper()}, Audio only)"
+                else:
+                    res_label = f"{h}p" if h else "Combined"
+                    desc = f"{res_label} ({vc_clean}+{ac_clean} · {f_ext.upper()}, Audio+Video)"
+
+                available_streams.append({
+                    "format_id": str(fid),
+                    "ext": f_ext,
+                    "stream_kind": kind,
+                    "resolution": f.get("resolution") or (f"{h}p" if h else ("Audio only" if kind == "audio_only" else "Unknown")),
+                    "height": h,
+                    "width": w,
+                    "fps": fps,
+                    "vcodec": vc,
+                    "vcodec_clean": vc_clean,
+                    "acodec": ac,
+                    "acodec_clean": ac_clean,
+                    "bitrate_kbps": tbr,
+                    "filesize": filesize,
+                    "format_note": f.get("format_note"),
+                    "label": desc,
+                    "requires_ffmpeg": kind == "video_only",
+                })
+
+            available_video_streams = sorted(
+                [s for s in available_streams if s["stream_kind"] in ("video_only", "combined")],
+                key=lambda x: (x.get("height") or 0, x.get("bitrate_kbps") or 0),
+                reverse=True,
+            )
+            available_audio_streams = sorted(
+                [s for s in available_streams if s["stream_kind"] in ("audio_only", "combined")],
+                key=lambda x: (x.get("bitrate_kbps") or 0),
+                reverse=True,
+            )
 
             return {
                 "title": info.get("title", "Untitled Media"),
@@ -266,6 +519,9 @@ def extract_media_info(
                 "webpage_url": info.get("webpage_url", url),
                 "video_formats": video_options,
                 "audio_formats": audio_options,
+                "available_streams": available_streams,
+                "available_video_streams": available_video_streams,
+                "available_audio_streams": available_audio_streams,
                 "ffmpeg_available": ffmpeg_status["available"],
             }
 
@@ -287,43 +543,60 @@ def find_spotify_match(
 ) -> Dict[str, Any]:
     """Find an authorized public source match (e.g. YouTube) for a Spotify track.
 
-    Searches via yt-dlp `ytsearch1:{query}`, extracting real formats and metadata.
-    Does not circumvent DRM; queries public open media sources transparently.
+    Uses the multi-signal SearchEngine to find the most accurate public release,
+    avoiding low-quality covers, parodies, or mislabeled media.
     """
     clean_query = (query or "").strip()
     if not clean_query:
         raise MediaEngineError("Search query cannot be empty.")
 
-    ffmpeg_status = validate_ffmpeg_path(ffmpeg_location)
-    ydl_opts: Dict[str, Any] = {
-        "skip_download": True,
-        "extract_flat": False,
-        "quiet": True,
-        "no_warnings": True,
-        "no_color": True,
-    }
-    if shutil.which("node"):
-        ydl_opts["js_runtimes"] = {"node": {}}
-    if ffmpeg_status["available"]:
-        ydl_opts["ffmpeg_location"] = ffmpeg_status["path"]
-
     try:
-        with socket_guard_scope():
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                search_term = f"ytsearch1:{clean_query}"
-                res = ydl.extract_info(search_term, download=False)
-                if not res or not res.get("entries"):
-                    raise MediaEngineError(f"No matching public media found for: '{clean_query}'")
+        from backend.search.engine import SearchEngine
+        engine = SearchEngine()
+        candidates = engine.search(
+            query=clean_query,
+            limit=5,
+            expected_title=original_title,
+            ffmpeg_path=ffmpeg_location,
+        )
 
-                entry = res["entries"][0]
-                matched_url = entry.get("webpage_url") or entry.get("url")
-                if not matched_url:
-                    raise MediaEngineError("Search match did not return a valid URL.")
+        if not candidates:
+            # Fallback to direct query if multi-provider aggregator returned no candidates
+            ffmpeg_status = validate_ffmpeg_path(ffmpeg_location)
+            ydl_opts: Dict[str, Any] = {
+                "skip_download": True,
+                "extract_flat": False,
+                "quiet": True,
+                "no_warnings": True,
+                "no_color": True,
+            }
+            if shutil.which("node"):
+                ydl_opts["js_runtimes"] = {"node": {}}
+            if ffmpeg_status["available"]:
+                ydl_opts["ffmpeg_location"] = ffmpeg_status["path"]
+
+            with socket_guard_scope():
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    res = ydl.extract_info(f"ytsearch1:{clean_query}", download=False)
+                    if not res or not res.get("entries"):
+                        raise MediaEngineError(f"No matching public media found for: '{clean_query}'")
+                    entry = res["entries"][0]
+                    matched_url = entry.get("webpage_url") or entry.get("url")
+                    top_cand = {"url": matched_url, "score": 1.0, "confidence": "high", "explanation": ["Direct search fallback"]}
+        else:
+            top_cand = candidates[0]
+            matched_url = top_cand.get("url")
+
+        if not matched_url:
+            raise MediaEngineError("Search match did not return a valid URL.")
 
         matched_info = extract_media_info(matched_url, ffmpeg_location=ffmpeg_location)
         matched_info["is_alternative_match"] = True
         matched_info["original_spotify_title"] = original_title or clean_query
         matched_info["original_spotify_url"] = original_url
+        matched_info["match_score"] = top_cand.get("score")
+        matched_info["match_confidence"] = top_cand.get("confidence")
+        matched_info["match_explanation"] = top_cand.get("explanation")
         if original_thumbnail and not matched_info.get("thumbnail"):
             matched_info["thumbnail"] = original_thumbnail
         matched_info["match_banner"] = f"Alternative Match for: {original_title or clean_query}"
@@ -343,6 +616,7 @@ def execute_download(
     abort_event: Optional[threading.Event] = None,
     audio_bitrate: str = "320k",
     ffmpeg_location: Optional[str] = None,
+    merge_output_format: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute a media download with real-time progress callbacks and cancellation checks."""
 
@@ -422,16 +696,20 @@ def execute_download(
                 "preferredquality": audio_bitrate.replace("k", ""),
             }]
     else:
-        # If multi-stream merging requested (e.g. format_id+bestaudio) and FFmpeg is not available
-        if "+" in (format_selector or "") and not has_ffmpeg:
-            raise MediaEngineError(
-                "The requested format requires merging separate video and audio streams with FFmpeg, but FFmpeg is not available. "
-                "Please configure an FFmpeg location in Settings or select a direct single-stream format."
-            )
-
-        ydl_opts["format"] = format_selector or "bestvideo+bestaudio/best"
-        if has_ffmpeg:
-            ydl_opts["merge_output_format"] = "mp4"
+        # If multi-stream merging requested (e.g. format_id+bestaudio or custom pair)
+        if "+" in (format_selector or ""):
+            if not has_ffmpeg:
+                raise MediaEngineError(
+                    "The requested format requires merging separate video and audio streams with FFmpeg, but FFmpeg is not available. "
+                    "Please configure an FFmpeg location in Settings or select a direct single-stream format."
+                )
+            ydl_opts["format"] = format_selector
+            target_container = (merge_output_format or "mp4").lower()
+            ydl_opts["merge_output_format"] = target_container
+        else:
+            ydl_opts["format"] = format_selector or "bestvideo+bestaudio/best"
+            if has_ffmpeg:
+                ydl_opts["merge_output_format"] = (merge_output_format or "mp4").lower()
 
     if abort_event and abort_event.is_set():
         raise DownloadCancelledError("Download was cancelled by user.")

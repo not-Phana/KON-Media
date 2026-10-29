@@ -1,0 +1,435 @@
+{
+  "name": "Iteration 0 (Baseline)",
+  "tuning": {
+    "name": "Iteration 0 (Baseline) (Tuning)",
+    "total_queries": 18,
+    "precision@1": 0.1667,
+    "precision@5": 1.0,
+    "mrr": 0.5093,
+    "ndcg@5": 0.6856,
+    "avg_latency_ms": 0.001,
+    "empty_rate": 0.0,
+    "error_rate": 0.0,
+    "categories": {
+      "exact": {
+        "count": 3,
+        "p1": 0.0,
+        "mrr": 0.2778,
+        "ndcg": 0.5349
+      },
+      "incomplete_typos": {
+        "count": 3,
+        "p1": 0.0,
+        "mrr": 0.4444,
+        "ndcg": 0.6241
+      },
+      "lyrics_context": {
+        "count": 3,
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6436
+      },
+      "version_disambiguation": {
+        "count": 3,
+        "p1": 0.0,
+        "mrr": 0.3889,
+        "ndcg": 0.6573
+      },
+      "multilingual_unicode": {
+        "count": 3,
+        "p1": 0.0,
+        "mrr": 0.4444,
+        "ndcg": 0.6537
+      },
+      "negative_unanswerable": {
+        "count": 3,
+        "p1": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      }
+    },
+    "details": [
+      {
+        "query_id": "tune_exact_01",
+        "category": "exact",
+        "query": "Queen Bohemian Rhapsody",
+        "top_result": "cand_queen_trailer",
+        "top_title": "Bohemian Rhapsody | Official Trailer [HD] | 20th Century FOX",
+        "p1": 0.0,
+        "mrr": 0.25,
+        "ndcg": 0.47909084298136606,
+        "success": false
+      },
+      {
+        "query_id": "tune_exact_02",
+        "category": "exact",
+        "query": "The Weeknd Blinding Lights",
+        "top_result": "cand_weeknd_cover",
+        "top_title": "Blinding Lights - The Weeknd (Acoustic Guitar Cover)",
+        "p1": 0.0,
+        "mrr": 0.25,
+        "ndcg": 0.5550767566359431,
+        "success": false
+      },
+      {
+        "query_id": "tune_exact_03",
+        "category": "exact",
+        "query": "Daft Punk Get Lucky",
+        "top_result": "cand_daft_parody",
+        "top_title": "Daft Punk - Get Lucky Minecraft Parody",
+        "p1": 0.0,
+        "mrr": 0.3333333333333333,
+        "ndcg": 0.57064171895532,
+        "success": false
+      },
+      {
+        "query_id": "tune_typo_01",
+        "category": "incomplete_typos",
+        "query": "bohemain rhapsdy quen",
+        "top_result": "cand_unrelated_rap",
+        "top_title": "Rhap City - Freestyle Hip Hop Mix 2024",
+        "p1": 0.0,
+        "mrr": 0.3333333333333333,
+        "ndcg": 0.547831481922746,
+        "success": false
+      },
+      {
+        "query_id": "tune_typo_02",
+        "category": "incomplete_typos",
+        "query": "blindin lites the weeknd",
+        "top_result": "cand_unrelated_lights",
+        "top_title": "Traffic Lights Explained - Road Rules",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6934264036172708,
+        "success": false
+      },
+      {
+        "query_id": "tune_typo_03",
+        "category": "incomplete_typos",
+        "query": "get lukcy daft punk pharrel",
+        "top_result": "cand_unrelated_lucky",
+        "top_title": "How to Get Lucky in Business: 5 Tips",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6309297535714575,
+        "success": false
+      },
+      {
+        "query_id": "tune_lyrics_01",
+        "category": "lyrics_context",
+        "query": "mama just killed a man put a gun against his head song",
+        "top_result": "cand_crime_documentary",
+        "top_title": "True Crime Stories: Mama Just Killed a Man Documentary",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.606422698504514,
+        "success": false
+      },
+      {
+        "query_id": "tune_lyrics_02",
+        "category": "lyrics_context",
+        "query": "song with i said ooh i'm blinded by the lights",
+        "top_result": "cand_driving_night",
+        "top_title": "Night Drive 4K Ambient Relaxing City Lights",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6934264036172708,
+        "success": false
+      },
+      {
+        "query_id": "tune_lyrics_03",
+        "category": "lyrics_context",
+        "query": "we've come too far to give up who we are up all night to get lucky",
+        "top_result": "cand_motivational_speech",
+        "top_title": "Don't Give Up Who You Are - Motivational Speech 2023",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6309297535714575,
+        "success": false
+      },
+      {
+        "query_id": "tune_version_01",
+        "category": "version_disambiguation",
+        "query": "The Weeknd Blinding Lights Chromatics remix",
+        "top_result": "cand_weeknd_studio",
+        "top_title": "The Weeknd - Blinding Lights (Official Audio)",
+        "p1": 0.0,
+        "mrr": 0.3333333333333333,
+        "ndcg": 0.6310385047070085,
+        "success": false
+      },
+      {
+        "query_id": "tune_version_02",
+        "category": "version_disambiguation",
+        "query": "Queen Bohemian Rhapsody Live Aid 1985",
+        "top_result": "cand_queen_studio",
+        "top_title": "Queen - Bohemian Rhapsody (Official Video)",
+        "p1": 0.0,
+        "mrr": 0.3333333333333333,
+        "ndcg": 0.6310385047070085,
+        "success": false
+      },
+      {
+        "query_id": "tune_version_03",
+        "category": "version_disambiguation",
+        "query": "Daft Punk Get Lucky instrumental karaoke backing track",
+        "top_result": "cand_daft_vocal",
+        "top_title": "Daft Punk - Get Lucky (Official Vocal Track)",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098097413968655,
+        "success": false
+      },
+      {
+        "query_id": "tune_multi_01",
+        "category": "multilingual_unicode",
+        "query": "Rosalia Despecha",
+        "top_result": "cand_unrelated_spanish",
+        "top_title": "Aprende Espa\u00f1ol en 15 Minutos",
+        "p1": 0.0,
+        "mrr": 0.3333333333333333,
+        "ndcg": 0.5413402936435214,
+        "success": false
+      },
+      {
+        "query_id": "tune_multi_02",
+        "category": "multilingual_unicode",
+        "query": "\u5b87\u591a\u7530\u30d2\u30ab\u30eb First Love",
+        "top_result": "cand_utada_automatic",
+        "top_title": "\u5b87\u591a\u7530\u30d2\u30ab\u30eb - Automatic (Official Music Video)",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098097413968655,
+        "success": false
+      },
+      {
+        "query_id": "tune_multi_03",
+        "category": "multilingual_unicode",
+        "query": "Stromae Alors on danse",
+        "top_result": "cand_stromae_papaoutai",
+        "top_title": "Stromae - Papaoutai (Clip Officiel)",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098097413968655,
+        "success": false
+      },
+      {
+        "query_id": "tune_negative_01",
+        "category": "negative_unanswerable",
+        "query": "zxqwv9923 completely non-existent audio track 12345",
+        "top_result": "cand_junk_01",
+        "top_title": "Random Test Noise Video #442",
+        "p1": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0,
+        "success": true
+      },
+      {
+        "query_id": "tune_negative_02",
+        "category": "negative_unanswerable",
+        "query": "fabricated gibberish query 0000_not_found_song",
+        "top_result": "cand_junk_03",
+        "top_title": "10 Hours of Brown Noise",
+        "p1": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0,
+        "success": true
+      },
+      {
+        "query_id": "tune_negative_03",
+        "category": "negative_unanswerable",
+        "query": "qwertyuiopasdfghjklzxcvbnm invalid sound effect",
+        "top_result": "cand_junk_04",
+        "top_title": "Keyboard Typing Sound Effects ASMR",
+        "p1": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0,
+        "success": true
+      }
+    ]
+  },
+  "held_out": {
+    "name": "Iteration 0 (Baseline) (Held-out)",
+    "total_queries": 12,
+    "precision@1": 0.1667,
+    "precision@5": 1.0,
+    "mrr": 0.5556,
+    "ndcg@5": 0.7344,
+    "avg_latency_ms": 0.001,
+    "empty_rate": 0.0,
+    "error_rate": 0.0,
+    "categories": {
+      "exact": {
+        "count": 2,
+        "p1": 0.0,
+        "mrr": 0.3333,
+        "ndcg": 0.5996
+      },
+      "incomplete_typos": {
+        "count": 2,
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6934
+      },
+      "lyrics_context": {
+        "count": 2,
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6934
+      },
+      "version_disambiguation": {
+        "count": 2,
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098
+      },
+      "multilingual_unicode": {
+        "count": 2,
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098
+      },
+      "negative_unanswerable": {
+        "count": 2,
+        "p1": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0
+      }
+    },
+    "details": [
+      {
+        "query_id": "held_exact_01",
+        "category": "exact",
+        "query": "Billie Eilish Bad Guy",
+        "top_result": "cand_billie_cover",
+        "top_title": "bad guy - Billie Eilish (Ukulele Cover)",
+        "p1": 0.0,
+        "mrr": 0.3333333333333333,
+        "ndcg": 0.5996442494045168,
+        "success": false
+      },
+      {
+        "query_id": "held_exact_02",
+        "category": "exact",
+        "query": "Eminem Lose Yourself",
+        "top_result": "cand_eminem_parody",
+        "top_title": "Lose Yourself Mom's Spaghetti Parody",
+        "p1": 0.0,
+        "mrr": 0.3333333333333333,
+        "ndcg": 0.5996442494045168,
+        "success": false
+      },
+      {
+        "query_id": "held_typo_01",
+        "category": "incomplete_typos",
+        "query": "bili eilesh bd guy",
+        "top_result": "cand_unrelated_guy",
+        "top_title": "How to Be a Good Guy vs Bad Guy",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6934264036172708,
+        "success": false
+      },
+      {
+        "query_id": "held_typo_02",
+        "category": "incomplete_typos",
+        "query": "eminm lose youreself 8 mile",
+        "top_result": "cand_unrelated_running",
+        "top_title": "Lose Weight Running 8 Miles",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6934264036172708,
+        "success": false
+      },
+      {
+        "query_id": "held_lyrics_01",
+        "category": "lyrics_context",
+        "query": "so you're a tough guy like it really rough guy",
+        "top_result": "cand_boxing_workout",
+        "top_title": "Tough Guy Boxing Workout Routine",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6934264036172708,
+        "success": false
+      },
+      {
+        "query_id": "held_lyrics_02",
+        "category": "lyrics_context",
+        "query": "his palms are sweaty knees weak arms are heavy mom's spaghetti",
+        "top_result": "cand_cooking_pasta",
+        "top_title": "How to Cook Perfect Spaghetti Like Mom",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.6934264036172708,
+        "success": false
+      },
+      {
+        "query_id": "held_version_01",
+        "category": "version_disambiguation",
+        "query": "Billie Eilish bad guy remix featuring Justin Bieber",
+        "top_result": "cand_billie_original",
+        "top_title": "Billie Eilish - bad guy (Official Audio)",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098097413968655,
+        "success": false
+      },
+      {
+        "query_id": "held_version_02",
+        "category": "version_disambiguation",
+        "query": "Eminem Lose Yourself official instrumental track",
+        "top_result": "cand_eminem_vocal",
+        "top_title": "Eminem - Lose Yourself (Official Video)",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098097413968655,
+        "success": false
+      },
+      {
+        "query_id": "held_multi_01",
+        "category": "multilingual_unicode",
+        "query": "Rammstein Du Hast",
+        "top_result": "cand_rammstein_sonne",
+        "top_title": "Rammstein - Sonne (Official Video)",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098097413968655,
+        "success": false
+      },
+      {
+        "query_id": "held_multi_02",
+        "category": "multilingual_unicode",
+        "query": "Stromae Papaoutai",
+        "top_result": "cand_stromae_danse",
+        "top_title": "Stromae - Alors on danse (Clip Officiel)",
+        "p1": 0.0,
+        "mrr": 0.5,
+        "ndcg": 0.7098097413968655,
+        "success": false
+      },
+      {
+        "query_id": "held_negative_01",
+        "category": "negative_unanswerable",
+        "query": "completely fabricated nonsense title 999111888",
+        "top_result": "cand_junk_held_1",
+        "top_title": "Sample Static Video 001",
+        "p1": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0,
+        "success": true
+      },
+      {
+        "query_id": "held_negative_02",
+        "category": "negative_unanswerable",
+        "query": "zzzzqqqqxxx non-existent track title",
+        "top_result": "cand_junk_held_2",
+        "top_title": "Unrelated Drone Video 4K",
+        "p1": 1.0,
+        "mrr": 1.0,
+        "ndcg": 1.0,
+        "success": true
+      }
+    ]
+  }
+}

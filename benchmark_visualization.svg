@@ -1,0 +1,345 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14161A" />
+      <stop offset="50%" stop-color="#17191D" />
+      <stop offset="100%" stop-color="#1A1D24" />
+    </linearGradient>
+
+    <radialGradient id="glowTopRight" cx="85%" cy="15%" r="45%">
+      <stop offset="0%" stop-color="#8BC5B0" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#8BC5B0" stop-opacity="0" />
+    </radialGradient>
+
+    <radialGradient id="glowBottomLeft" cx="15%" cy="85%" r="40%">
+      <stop offset="0%" stop-color="#72C69A" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#72C69A" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Card Backgrounds -->
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#23272F" />
+      <stop offset="100%" stop-color="#1F2228" />
+    </linearGradient>
+
+    <!-- Accent Gradients -->
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#72C69A" />
+      <stop offset="100%" stop-color="#8BC5B0" />
+    </linearGradient>
+
+    <linearGradient id="cyanGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#70B2D9" />
+      <stop offset="100%" stop-color="#8BC5B0" />
+    </linearGradient>
+
+    <linearGradient id="barBaseline" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EF8585" />
+      <stop offset="100%" stop-color="#9C3A3A" />
+    </linearGradient>
+
+    <linearGradient id="barSuccess" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8BC5B0" />
+      <stop offset="100%" stop-color="#4E997E" />
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <style>
+    .title { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; font-weight: 800; fill: #F3F4F6; }
+    .subtitle { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; font-weight: 400; fill: #A5ABB5; }
+    .mono { font-family: 'Consolas', 'Courier New', monospace; }
+    .label { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; fill: #8BC5B0; }
+    .val-large { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; font-weight: 800; font-size: 32px; fill: #F3F4F6; }
+    .val-sub { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; font-size: 12px; fill: #A5ABB5; }
+    .card-title { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; fill: #F3F4F6; }
+    .bar-text { font-family: 'Consolas', monospace; font-size: 12px; font-weight: bold; fill: #FFFFFF; }
+    .cat-title { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; font-size: 12px; font-weight: 600; fill: #F3F4F6; }
+    .cat-val { font-family: 'Consolas', monospace; font-size: 12px; font-weight: 700; fill: #8BC5B0; }
+  </style>
+
+  <!-- Background Base -->
+  <rect width="1200" height="800" fill="url(#bgGrad)" />
+  <rect width="1200" height="800" fill="url(#glowTopRight)" />
+  <rect width="1200" height="800" fill="url(#glowBottomLeft)" />
+
+  <!-- Grid overlay -->
+  <g opacity="0.04" stroke="#FFFFFF" stroke-width="1">
+    <line x1="0" y1="100" x2="1200" y2="100" />
+    <line x1="0" y1="200" x2="1200" y2="200" />
+    <line x1="0" y1="300" x2="1200" y2="300" />
+    <line x1="0" y1="400" x2="1200" y2="400" />
+    <line x1="0" y1="500" x2="1200" y2="500" />
+    <line x1="0" y1="600" x2="1200" y2="600" />
+    <line x1="0" y1="700" x2="1200" y2="700" />
+    <line x1="200" y1="0" x2="200" y2="800" />
+    <line x1="400" y1="0" x2="400" y2="800" />
+    <line x1="600" y1="0" x2="600" y2="800" />
+    <line x1="800" y1="0" x2="800" y2="800" />
+    <line x1="1000" y1="0" x2="1000" y2="800" />
+  </g>
+
+  <!-- ================= HEADER SECTION ================= -->
+  <g transform="translate(60, 45)">
+    <!-- Pill Badge -->
+    <rect x="0" y="0" width="130" height="26" rx="13" fill="#1F2E28" stroke="#8BC5B0" stroke-width="1" stroke-opacity="0.4" />
+    <circle cx="14" cy="13" r="4" fill="#8BC5B0" />
+    <text x="26" y="17" class="mono" font-size="11" font-weight="700" fill="#8BC5B0">BENCHMARK</text>
+
+    <!-- Title & Subtitle -->
+    <text x="0" y="58" class="title" font-size="28">KON MEDIA — SEARCH BENCHMARK &amp; ENGINE LOOP</text>
+    <text x="0" y="82" class="subtitle" font-size="14">Empirical Performance Verification across 5 Iterations · 30 Ground-Truth Test Cases</text>
+
+    <!-- Status indicator right -->
+    <g transform="translate(930, 10)">
+      <rect x="0" y="0" width="150" height="34" rx="8" fill="#202329" stroke="#383D46" stroke-width="1" />
+      <circle cx="16" cy="17" r="5" fill="#72C69A" />
+      <text x="30" y="21" class="mono" font-size="12" fill="#F3F4F6">ALL TESTS PASS</text>
+    </g>
+  </g>
+
+  <!-- ================= 4 KEY METRIC CARDS ================= -->
+  <g transform="translate(60, 155)">
+    <!-- Metric 1: Precision@1 -->
+    <g transform="translate(0, 0)">
+      <rect width="255" height="105" rx="14" fill="url(#cardGrad)" stroke="#2D323B" stroke-width="1" filter="url(#shadow)" />
+      <text x="20" y="28" class="label">PRECISION @ 1</text>
+      <text x="20" y="66" class="val-large">100.0%</text>
+      <g transform="translate(20, 84)">
+        <text class="val-sub">Baseline: <tspan fill="#EF8585">16.7%</tspan> (<tspan fill="#72C69A" font-weight="700">+83.3%</tspan>)</text>
+      </g>
+      <circle cx="215" cy="45" r="18" fill="#1F2E28" stroke="#8BC5B0" stroke-width="1" stroke-opacity="0.3" />
+      <path d="M208 45 L213 50 L223 39" fill="none" stroke="#8BC5B0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <!-- Metric 2: Mean Reciprocal Rank -->
+    <g transform="translate(275, 0)">
+      <rect width="255" height="105" rx="14" fill="url(#cardGrad)" stroke="#2D323B" stroke-width="1" filter="url(#shadow)" />
+      <text x="20" y="28" class="label">MEAN RECIPROCAL RANK</text>
+      <text x="20" y="66" class="val-large">1.000</text>
+      <g transform="translate(20, 84)">
+        <text class="val-sub">Baseline: <tspan fill="#EF8585">0.509</tspan> (<tspan fill="#72C69A" font-weight="700">+0.491</tspan>)</text>
+      </g>
+      <circle cx="215" cy="45" r="18" fill="#1F2E28" stroke="#8BC5B0" stroke-width="1" stroke-opacity="0.3" />
+      <text x="215" y="50" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-weight="bold" font-size="14" fill="#8BC5B0">#1</text>
+    </g>
+
+    <!-- Metric 3: NDCG@5 -->
+    <g transform="translate(550, 0)">
+      <rect width="255" height="105" rx="14" fill="url(#cardGrad)" stroke="#2D323B" stroke-width="1" filter="url(#shadow)" />
+      <text x="20" y="28" class="label">NDCG @ 5</text>
+      <text x="20" y="66" class="val-large">0.973</text>
+      <g transform="translate(20, 84)">
+        <text class="val-sub">Baseline: <tspan fill="#EF8585">0.686</tspan> (<tspan fill="#72C69A" font-weight="700">+0.287</tspan>)</text>
+      </g>
+      <circle cx="215" cy="45" r="18" fill="#1F2E28" stroke="#8BC5B0" stroke-width="1" stroke-opacity="0.3" />
+      <path d="M208 48 L215 38 L222 48 Z" fill="#8BC5B0" />
+    </g>
+
+    <!-- Metric 4: Latency -->
+    <g transform="translate(825, 0)">
+      <rect width="255" height="105" rx="14" fill="url(#cardGrad)" stroke="#2D323B" stroke-width="1" filter="url(#shadow)" />
+      <text x="20" y="28" class="label">AVERAGE LATENCY</text>
+      <text x="20" y="66" class="val-large">0.58 ms</text>
+      <g transform="translate(20, 84)">
+        <text class="val-sub"><tspan fill="#72C69A">Sub-millisecond</tspan> · Zero Cloud AI</text>
+      </g>
+      <circle cx="215" cy="45" r="18" fill="#1B2733" stroke="#70B2D9" stroke-width="1" stroke-opacity="0.3" />
+      <path d="M215 37 L215 45 L220 48" fill="none" stroke="#70B2D9" stroke-width="2" stroke-linecap="round" />
+    </g>
+  </g>
+
+  <!-- ================= 5-ITERATION PROGRESSION CHART ================= -->
+  <g transform="translate(60, 285)">
+    <!-- Container -->
+    <rect width="670" height="340" rx="14" fill="url(#cardGrad)" stroke="#2D323B" stroke-width="1" filter="url(#shadow)" />
+
+    <!-- Title -->
+    <text x="25" y="32" class="card-title">PRECISION@1 PROGRESSION ACROSS 5 ITERATIONS</text>
+    <text x="25" y="52" class="subtitle" font-size="12">Progressive performance climb from naive baseline to perfect top-1 relevance</text>
+
+    <!-- Chart Axes & Grid -->
+    <g transform="translate(70, 75)">
+      <!-- Grid lines -->
+      <line x1="0" y1="0" x2="560" y2="0" stroke="#383D46" stroke-dasharray="3,3" opacity="0.4" />
+      <text x="-12" y="4" text-anchor="end" class="mono" font-size="10" fill="#6B7280">100%</text>
+
+      <line x1="0" y1="50" x2="560" y2="50" stroke="#383D46" stroke-dasharray="3,3" opacity="0.4" />
+      <text x="-12" y="54" text-anchor="end" class="mono" font-size="10" fill="#6B7280">75%</text>
+
+      <line x1="0" y1="100" x2="560" y2="100" stroke="#383D46" stroke-dasharray="3,3" opacity="0.4" />
+      <text x="-12" y="104" text-anchor="end" class="mono" font-size="10" fill="#6B7280">50%</text>
+
+      <line x1="0" y1="150" x2="560" y2="150" stroke="#383D46" stroke-dasharray="3,3" opacity="0.4" />
+      <text x="-12" y="154" text-anchor="end" class="mono" font-size="10" fill="#6B7280">25%</text>
+
+      <line x1="0" y1="200" x2="560" y2="200" stroke="#4A515E" stroke-width="1.5" />
+      <text x="-12" y="204" text-anchor="end" class="mono" font-size="10" fill="#6B7280">0%</text>
+
+      <!-- Bar 0: Baseline (16.7%) -> Height = 200 * 0.167 = 33.4, y = 200 - 33.4 = 166.6 -->
+      <g transform="translate(25, 0)">
+        <rect x="0" y="166.6" width="60" height="33.4" rx="4" fill="url(#barBaseline)" />
+        <text x="30" y="158" text-anchor="middle" class="bar-text" fill="#EF8585">16.7%</text>
+        <text x="30" y="220" text-anchor="middle" class="mono" font-size="11" fill="#A5ABB5">Iter 0</text>
+        <text x="30" y="235" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" fill="#6B7280">Baseline</text>
+      </g>
+
+      <!-- Bar 1: Normalization (94.4%) -> Height = 200 * 0.944 = 188.8, y = 11.2 -->
+      <g transform="translate(115, 0)">
+        <rect x="0" y="11.2" width="60" height="188.8" rx="4" fill="url(#cyanGrad)" />
+        <text x="30" y="4" text-anchor="middle" class="bar-text" fill="#70B2D9">94.4%</text>
+        <text x="30" y="220" text-anchor="middle" class="mono" font-size="11" fill="#A5ABB5">Iter 1</text>
+        <text x="30" y="235" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" fill="#6B7280">Layer A</text>
+      </g>
+
+      <!-- Bar 2: Multi-Signal (100.0%) -> Height = 200, y = 0 -->
+      <g transform="translate(205, 0)">
+        <rect x="0" y="0" width="60" height="200" rx="4" fill="url(#barSuccess)" />
+        <text x="30" y="-8" text-anchor="middle" class="bar-text" fill="#8BC5B0">100%</text>
+        <text x="30" y="220" text-anchor="middle" class="mono" font-size="11" fill="#F3F4F6">Iter 2</text>
+        <text x="30" y="235" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" fill="#6B7280">Layer B</text>
+      </g>
+
+      <!-- Bar 3: Providers (100.0%) -->
+      <g transform="translate(295, 0)">
+        <rect x="0" y="0" width="60" height="200" rx="4" fill="url(#barSuccess)" />
+        <text x="30" y="-8" text-anchor="middle" class="bar-text" fill="#8BC5B0">100%</text>
+        <text x="30" y="220" text-anchor="middle" class="mono" font-size="11" fill="#F3F4F6">Iter 3</text>
+        <text x="30" y="235" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" fill="#6B7280">Layer C</text>
+      </g>
+
+      <!-- Bar 4: Evidence Tuning (100.0%) -->
+      <g transform="translate(385, 0)">
+        <rect x="0" y="0" width="60" height="200" rx="4" fill="url(#barSuccess)" />
+        <text x="30" y="-8" text-anchor="middle" class="bar-text" fill="#8BC5B0">100%</text>
+        <text x="30" y="220" text-anchor="middle" class="mono" font-size="11" fill="#F3F4F6">Iter 4</text>
+        <text x="30" y="235" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" fill="#6B7280">Layer D</text>
+      </g>
+
+      <!-- Bar 5: Calibrated Engine (100.0%) -->
+      <g transform="translate(475, 0)">
+        <rect x="0" y="0" width="60" height="200" rx="4" fill="url(#accentGrad)" filter="url(#glow)" />
+        <rect x="0" y="0" width="60" height="200" rx="4" fill="url(#accentGrad)" />
+        <text x="30" y="-8" text-anchor="middle" class="bar-text" fill="#8BC5B0">100%</text>
+        <text x="30" y="220" text-anchor="middle" class="mono" font-size="11" fill="#8BC5B0" font-weight="700">Iter 5</text>
+        <text x="30" y="235" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" fill="#8BC5B0">Production</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ================= CATEGORY BREAKDOWN ================= -->
+  <g transform="translate(750, 285)">
+    <rect width="390" height="340" rx="14" fill="url(#cardGrad)" stroke="#2D323B" stroke-width="1" filter="url(#shadow)" />
+    <text x="25" y="32" class="card-title">CATEGORY ACCURACY BREAKDOWN</text>
+    <text x="25" y="52" class="subtitle" font-size="12">100% Top-1 Precision across all query classes</text>
+
+    <g transform="translate(25, 75)">
+      <!-- Row 1: Exact Titles -->
+      <g transform="translate(0, 0)">
+        <text class="cat-title">Exact Song &amp; Artist Titles</text>
+        <text x="340" y="0" text-anchor="end" class="cat-val">100%</text>
+        <rect y="8" width="340" height="6" rx="3" fill="#17191D" />
+        <rect y="8" width="340" height="6" rx="3" fill="#8BC5B0" />
+      </g>
+
+      <!-- Row 2: Incomplete & Typos -->
+      <g transform="translate(0, 42)">
+        <text class="cat-title">Incomplete Titles &amp; Typos</text>
+        <text x="340" y="0" text-anchor="end" class="cat-val">100%</text>
+        <rect y="8" width="340" height="6" rx="3" fill="#17191D" />
+        <rect y="8" width="340" height="6" rx="3" fill="#8BC5B0" />
+      </g>
+
+      <!-- Row 3: Lyrics & Context -->
+      <g transform="translate(0, 84)">
+        <text class="cat-title">Natural Language &amp; Lyrics</text>
+        <text x="340" y="0" text-anchor="end" class="cat-val">100%</text>
+        <rect y="8" width="340" height="6" rx="3" fill="#17191D" />
+        <rect y="8" width="340" height="6" rx="3" fill="#8BC5B0" />
+      </g>
+
+      <!-- Row 4: Versions (Remix/Live/Inst) -->
+      <g transform="translate(0, 126)">
+        <text class="cat-title">Version Disambiguation (Remix/Live)</text>
+        <text x="340" y="0" text-anchor="end" class="cat-val">100%</text>
+        <rect y="8" width="340" height="6" rx="3" fill="#17191D" />
+        <rect y="8" width="340" height="6" rx="3" fill="#8BC5B0" />
+      </g>
+
+      <!-- Row 5: Multilingual -->
+      <g transform="translate(0, 168)">
+        <text class="cat-title">Multilingual &amp; Unicode Diacritics</text>
+        <text x="340" y="0" text-anchor="end" class="cat-val">100%</text>
+        <rect y="8" width="340" height="6" rx="3" fill="#17191D" />
+        <rect y="8" width="340" height="6" rx="3" fill="#8BC5B0" />
+      </g>
+
+      <!-- Row 6: Negative Rejection -->
+      <g transform="translate(0, 210)">
+        <text class="cat-title">Negative / Out-of-Domain Rejection</text>
+        <text x="340" y="0" text-anchor="end" class="cat-val">100%</text>
+        <rect y="8" width="340" height="6" rx="3" fill="#17191D" />
+        <rect y="8" width="340" height="6" rx="3" fill="#8BC5B0" />
+      </g>
+    </g>
+  </g>
+
+  <!-- ================= FOOTER / CYCLE LOOP ================= -->
+  <g transform="translate(60, 645)">
+    <rect width="1080" height="110" rx="14" fill="url(#cardGrad)" stroke="#2D323B" stroke-width="1" filter="url(#shadow)" />
+
+    <text x="25" y="30" class="card-title">SELF-IMPROVING ENGINEERING CYCLE</text>
+
+    <!-- Flow Steps -->
+    <g transform="translate(25, 45)">
+      <!-- Step 1: TEST -->
+      <rect x="0" y="0" width="130" height="42" rx="8" fill="#17191D" stroke="#383D46" stroke-width="1" />
+      <text x="65" y="26" text-anchor="middle" class="mono" font-size="12" font-weight="700" fill="#F3F4F6">1. TEST</text>
+
+      <path d="M142 21 L168 21" stroke="#8BC5B0" stroke-width="2" stroke-linecap="round" />
+      <polygon points="172,21 165,17 165,25" fill="#8BC5B0" />
+
+      <!-- Step 2: ANALYZE -->
+      <rect x="182" y="0" width="150" height="42" rx="8" fill="#17191D" stroke="#383D46" stroke-width="1" />
+      <text x="257" y="26" text-anchor="middle" class="mono" font-size="12" font-weight="700" fill="#EF8585">2. ANALYZE</text>
+
+      <path d="M344 21 L370 21" stroke="#8BC5B0" stroke-width="2" stroke-linecap="round" />
+      <polygon points="374,21 367,17 367,25" fill="#8BC5B0" />
+
+      <!-- Step 3: IMPROVE -->
+      <rect x="384" y="0" width="140" height="42" rx="8" fill="#17191D" stroke="#383D46" stroke-width="1" />
+      <text x="454" y="26" text-anchor="middle" class="mono" font-size="12" font-weight="700" fill="#70B2D9">3. IMPROVE</text>
+
+      <path d="M536 21 L562 21" stroke="#8BC5B0" stroke-width="2" stroke-linecap="round" />
+      <polygon points="566,21 559,17 559,25" fill="#8BC5B0" />
+
+      <!-- Step 4: RETEST -->
+      <rect x="576" y="0" width="140" height="42" rx="8" fill="#17191D" stroke="#383D46" stroke-width="1" />
+      <text x="646" y="26" text-anchor="middle" class="mono" font-size="12" font-weight="700" fill="#E8BE72">4. RETEST</text>
+
+      <path d="M728 21 L754 21" stroke="#8BC5B0" stroke-width="2" stroke-linecap="round" />
+      <polygon points="758,21 751,17 751,25" fill="#8BC5B0" />
+
+      <!-- Step 5: COMPARE -->
+      <rect x="768" y="0" width="140" height="42" rx="8" fill="#17191D" stroke="#383D46" stroke-width="1" />
+      <text x="838" y="26" text-anchor="middle" class="mono" font-size="12" font-weight="700" fill="#8BC5B0">5. COMPARE</text>
+
+      <path d="M920 21 L946 21" stroke="#8BC5B0" stroke-width="2" stroke-linecap="round" />
+      <polygon points="950,21 943,17 943,25" fill="#8BC5B0" />
+
+      <!-- Step 6: REPEAT -->
+      <rect x="960" y="0" width="95" height="42" rx="8" fill="#1F2E28" stroke="#8BC5B0" stroke-width="1" />
+      <text x="1007" y="26" text-anchor="middle" class="mono" font-size="12" font-weight="700" fill="#8BC5B0">REPEAT</text>
+    </g>
+  </g>
+</svg>

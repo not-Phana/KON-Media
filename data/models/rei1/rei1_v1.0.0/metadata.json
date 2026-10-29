@@ -1,0 +1,59 @@
+{
+  "model_name": "KON Search 1 Rei",
+  "model_version": "1.0.0",
+  "architecture": "HistGradientBoostingRegressor",
+  "dataset_version": "v1.0.0",
+  "dataset_sha256": "24025d8a7ff0abdd0a29225579939aac8b5a4de665ccd39e653828d987b18fd9",
+  "feature_schema": [
+    "exact_title_match",
+    "exact_artist_match",
+    "token_overlap_jaccard",
+    "token_containment_ratio",
+    "char_3gram_similarity",
+    "seq_matcher_ratio",
+    "query_to_artist_ratio",
+    "title_length_ratio",
+    "media_type_audio_match",
+    "media_type_video_match",
+    "non_music_clip_penalty",
+    "version_live_indicator",
+    "version_remix_indicator",
+    "version_cover_indicator",
+    "view_count_log_scale"
+  ],
+  "hyperparameters": {
+    "learning_rate": 0.08,
+    "max_iter": 120,
+    "max_depth": 5,
+    "min_samples_leaf": 10,
+    "l2_regularization": 0.1,
+    "random_state": 42
+  },
+  "training_samples": 986,
+  "training_duration_seconds": 0.752,
+  "software_versions": {
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1"
+  },
+  "metrics_baseline": {
+    "ndcg@10": 0.8602,
+    "mrr": 0.7818,
+    "p@5": 0.7723,
+    "recall@10": 1.0,
+    "latency_ms": 2.412,
+    "evaluated_queries": 65
+  },
+  "metrics_model": {
+    "ndcg@10": 1.0,
+    "mrr": 1.0,
+    "p@5": 0.8892,
+    "recall@10": 1.0,
+    "latency_ms": 4.784,
+    "evaluated_queries": 65
+  },
+  "status": "accepted",
+  "trained_at": "2026-10-29T08:59:01Z",
+  "notes": "",
+  "model_artifact_sha256": "60111afcf63f6b2e3d0c38cc17ac744a8b25b38d21aa5a41da26c5c946c08f38",
+  "artifact_filename": "kon_search_1_rei.joblib"
+}

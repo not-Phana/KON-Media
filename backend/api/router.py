@@ -16,6 +16,7 @@ from backend.engine.media_engine import (
     get_engine_health,
     find_spotify_match,
     fetch_spotify_oembed,
+    validate_stream_pair,
     MediaEngineError,
 )
 from backend.engine.ffmpeg_manager import validate_ffmpeg_path
@@ -52,6 +53,15 @@ class DownloadRequest(BaseModel):
     audio_bitrate: Optional[str] = Field("320k", description="Audio quality bitrate")
     thumbnail: Optional[str] = Field(None, description="Media thumbnail URL")
     duration: Optional[int | float] = Field(None, description="Media duration in seconds")
+    video_format_id: Optional[str] = Field(None, description="Selected video stream format_id for merging")
+    audio_format_id: Optional[str] = Field(None, description="Selected audio stream format_id for merging")
+    merge_output_format: Optional[str] = Field(None, description="Target merged container ('mp4', 'webm', 'mkv')")
+    is_merge_operation: Optional[bool] = Field(False, description="Whether this task is a custom stream pair merge")
+
+
+class StreamPairValidationRequest(BaseModel):
+    video_stream: Optional[Dict[str, Any]] = None
+    audio_stream: Optional[Dict[str, Any]] = None
 
 
 class OpenFolderRequest(BaseModel):
@@ -76,6 +86,26 @@ class SettingsUpdateRequest(BaseModel):
 
 class ValidateFFmpegRequest(BaseModel):
     ffmpeg_path: Optional[str] = None
+
+
+class SearchFeedbackRequest(BaseModel):
+    query: str
+    selected_id: str
+    selected_title: str
+    selected_url: str
+    is_mismatch: Optional[bool] = False
+    reason: Optional[str] = None
+    provider: Optional[str] = "youtube"
+
+
+class TrainModelRequest(BaseModel):
+    epochs: Optional[int] = 5
+
+
+class LearnDocRequest(BaseModel):
+    content: str = Field(..., description="Raw text, markdown notes, or Google Doc/Drive URL")
+    is_url: Optional[bool] = None
+    epochs: Optional[int] = 5
 
 
 @router.get("/health")
@@ -135,18 +165,34 @@ async def start_download(req: DownloadRequest):
             ),
         )
 
+    # Handle custom stream pair merging if both video and audio format IDs were submitted
+    format_selector = req.format_id or "bestvideo+bestaudio/best"
+    target_ext = req.ext or "mp4"
+    media_type = req.media_type or "video"
+
+    if req.video_format_id and req.audio_format_id:
+        format_selector = f"{req.video_format_id}+{req.audio_format_id}"
+        target_ext = req.merge_output_format or req.ext or "mp4"
+        media_type = "video"
+
     task_id = task_manager.create_task(
         url=validated_url,
         title=req.title or "Media Download",
-        format_id=req.format_id or "bestvideo+bestaudio/best",
-        media_type=req.media_type or "video",
-        ext=req.ext or "mp4",
+        format_id=format_selector,
+        media_type=media_type,
+        ext=target_ext,
         audio_bitrate=req.audio_bitrate or "320k",
         thumbnail=req.thumbnail,
         duration=req.duration,
     )
 
     return {"task_id": task_id, "status": "queued"}
+
+
+@router.post("/streams/validate-pair")
+async def validate_streams_endpoint(req: StreamPairValidationRequest):
+    """Validate compatibility and container choice for pairing two streams."""
+    return validate_stream_pair(req.video_stream, req.audio_stream)
 
 
 @router.post("/spotify/match")
@@ -214,6 +260,125 @@ async def open_external_url(req: OpenExternalUrlRequest):
         raise HTTPException(status_code=500, detail=f"Failed to open URL in browser: {e}")
 
 
+@router.get("/search")
+async def search_media_endpoint(
+    q: str,
+    limit: int = 5,
+    media_type: Optional[str] = "all",
+    provider: Optional[str] = None,
+):
+    """Search for media across supported public providers and return ranked results."""
+    from backend.search.engine import SearchEngine
+    clean_q = q.strip()
+    if not clean_q:
+        raise HTTPException(status_code=400, detail="Search query cannot be empty.")
+
+    configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
+    engine = SearchEngine()
+    results = await asyncio.to_thread(
+        engine.search,
+        query=clean_q,
+        limit=min(max(limit, 1), 20),
+        media_type=media_type or "all",
+        preferred_provider=provider,
+        ffmpeg_path=configured_ffmpeg,
+    )
+    return {"query": clean_q, "media_type": media_type or "all", "count": len(results), "results": results}
+
+
+@router.post("/search/feedback")
+async def search_feedback_endpoint(req: SearchFeedbackRequest):
+    """Record user result confirmation or reported mismatch for continuous learning."""
+    from backend.search.engine import SearchEngine
+    engine = SearchEngine()
+    entry = engine.record_feedback(
+        query=req.query,
+        selected_id=req.selected_id,
+        selected_title=req.selected_title,
+        selected_url=req.selected_url,
+        is_mismatch=req.is_mismatch or False,
+        reason=req.reason,
+        provider=req.provider or "youtube",
+    )
+    return {"status": "recorded", "entry": entry}
+
+
+@router.post("/search/train")
+async def train_search_model_endpoint(req: Optional[TrainModelRequest] = None):
+    """Trigger an autonomous batch learning pass over feedback history and downloaded media."""
+    from backend.search.engine import SearchEngine
+    engine = SearchEngine()
+    epochs = req.epochs if req and req.epochs else 5
+    downloads = history_store.get_all()
+    metrics = await asyncio.to_thread(engine.self_train, download_history=downloads, epochs=epochs)
+    return metrics
+
+
+@router.get("/search/model-stats")
+async def search_model_stats_endpoint():
+    """Retrieve diagnostic health, learned vocabulary size, and loss stats for the learning ranker."""
+    from backend.search.engine import SearchEngine
+    engine = SearchEngine()
+    return engine.learning_model.get_stats()
+
+
+@router.post("/search/learn-doc")
+async def learn_from_doc_endpoint(req: LearnDocRequest):
+    """Ingest structured knowledge from a Google Doc, Drive file, or raw text note to train the ranker."""
+    from backend.search.doc_learner import DocumentLearner
+    clean_content = req.content.strip()
+    if not clean_content:
+        raise HTTPException(status_code=400, detail="Document content or URL cannot be empty.")
+
+    epochs = req.epochs if req.epochs and req.epochs > 0 else 5
+    learner = DocumentLearner()
+
+    is_url = req.is_url
+    if is_url is None:
+        is_url = (
+            clean_content.startswith("http://")
+            or clean_content.startswith("https://")
+            or "docs.google.com" in clean_content
+            or "drive.google.com" in clean_content
+        )
+
+    try:
+        if is_url:
+            res = await asyncio.to_thread(learner.learn_from_google_doc, url_or_id=clean_content, epochs=epochs)
+        else:
+            res = await asyncio.to_thread(learner.learn_from_text, text_content=clean_content, epochs=epochs, source_name="Custom Notes")
+        return res
+    except PermissionError as pe:
+        raise HTTPException(status_code=403, detail=str(pe))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to learn from document: {str(e)}")
+
+
+@router.get("/search/gdrive-status")
+async def gdrive_status_endpoint():
+    """Check whether Google Drive CLI is installed and authenticated."""
+    import shutil
+    import subprocess
+    has_gdrive = shutil.which("gdrive") is not None
+    has_gdocs = shutil.which("gdocs") is not None
+    authenticated = False
+    details = ""
+    if has_gdrive:
+        try:
+            res = subprocess.run(["gdrive", "readonly", "quota"], capture_output=True, text=True, timeout=5, check=False)
+            if res.returncode == 0:
+                authenticated = True
+                details = res.stdout.strip()
+        except Exception:
+            pass
+    return {
+        "gdrive_installed": has_gdrive,
+        "gdocs_installed": has_gdocs,
+        "authenticated": authenticated,
+        "details": details,
+    }
+
+
 @router.get("/tasks")
 async def list_tasks():
     """List all currently active or recent tasks."""
@@ -236,6 +401,25 @@ async def dismiss_download_task(task_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Task not found in active monitor.")
     return {"task_id": task_id, "status": "dismissed"}
+
+
+@router.post("/tasks/{task_id}/retry")
+async def retry_download_task(task_id: str):
+    """Retry a failed or cancelled task."""
+    success = task_manager.retry_task(task_id)
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail="Task could not be retried. Only failed or cancelled tasks can be retried."
+        )
+    return {"task_id": task_id, "status": "queued"}
+
+
+@router.post("/tasks/clear-finished")
+async def clear_finished_tasks():
+    """Dismiss all completed, failed, or cancelled tasks from the active monitor."""
+    cleared_ids = task_manager.clear_finished_tasks()
+    return {"cleared_ids": cleared_ids, "count": len(cleared_ids)}
 
 
 @router.get("/events")
