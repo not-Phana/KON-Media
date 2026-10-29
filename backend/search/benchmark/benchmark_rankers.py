@@ -84,7 +84,7 @@ def run_benchmark(iterations: int = 200) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     rep = run_benchmark()
-    print("=== KON SEARCH 1.1.0 REI BENCHMARK RESULTS ===")
+    print("=== KON SEARCH 1.1.0 RE BENCHMARK RESULTS ===")
     print(f"Active Engine: {rep['active_engine']}")
     for k, v in rep["results"].items():
         print(f"Pool Size {v['pool_size']:3d}: Median={v['median_latency_ms']:.3f}ms | P95={v['p95_latency_ms']:.3f}ms | Throughput={v['throughput_qps']:.1f} queries/sec")

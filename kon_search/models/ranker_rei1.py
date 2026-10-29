@@ -30,8 +30,8 @@ class KONSearch1ReiModel:
         l2_regularization: float = 0.1,
         random_state: int = 42,
     ):
-        self.model_name = "KON Search 1 Rei"
-        self.version = "1.0.0"
+        self.model_name = "KON Search 1.1.0 Re"
+        self.version = "1.1.0"
         self.feature_extractor = RankingFeatureExtractor()
         self.feature_names = self.feature_extractor.feature_names
 

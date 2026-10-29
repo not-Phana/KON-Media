@@ -1,4 +1,4 @@
-"""KON Search 1 Rei - Machine Learning Search Ranking & Dataset Architecture."""
+"""KON Search 1.1.0 Re - Machine Learning Search Ranking & Dataset Architecture."""
 
-__version__ = "1.0.0"
-__model_name__ = "KON Search 1 Rei"
+__version__ = "1.1.0"
+__model_name__ = "KON Search 1.1.0 Re"

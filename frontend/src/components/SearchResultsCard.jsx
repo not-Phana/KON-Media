@@ -89,10 +89,10 @@ export default function SearchResultsCard({
             type="button"
             onClick={onOpenModelModal}
             className="neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
-            title="Our Search Model: Scored and ranked by KON Search 1 Rei (Click for model architecture & live weights)"
+            title="Our Search Model: Scored and ranked by KON Search 1.1.0 Re (Click for model architecture & live weights)"
           >
             <Cpu className="w-3 h-3 text-[#0084FF]" />
-            <span>Ranked by KON Search 1 Rei</span>
+            <span>Ranked by KON Search 1.1.0 Re</span>
           </button>
         </div>
 

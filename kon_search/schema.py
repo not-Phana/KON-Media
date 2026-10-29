@@ -122,8 +122,8 @@ class DatasetManifest:
 @dataclass
 class ModelMetadata:
     """Metadata recording training configuration, versions, and performance."""
-    model_name: str = "KON Search 1 Rei"
-    model_version: str = "1.0.0"
+    model_name: str = "KON Search 1.1.0 Re"
+    model_version: str = "1.1.0"
     architecture: str = "GradientBoostingRanker"
     dataset_version: str = "v1.0.0"
     dataset_sha256: str = ""

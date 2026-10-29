@@ -1,4 +1,4 @@
-"""Evaluation harness for KON Search 1.1.0 Rei.
+"""Evaluation harness for KON Search 1.1.0 Re.
 
 Computes NDCG@10, MRR, P@5, Recall@10, and latency statistics across
 regression and multi-signal fixtures with >= 8 candidates per query.
@@ -117,7 +117,7 @@ def evaluate_engine() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     results = evaluate_engine()
-    print("=== KON SEARCH 1.1.0 REI EVALUATION REPORT ===")
+    print("=== KON SEARCH 1.1.0 RE EVALUATION REPORT ===")
     print(f"Active Engine: {results['engine']}")
     print(f"Mean NDCG@10: {results['mean_ndcg10']}")
     print(f"Mean MRR:     {results['mean_mrr']}")

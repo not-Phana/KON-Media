@@ -416,7 +416,7 @@ export default function App() {
         onOpenFile={handleOpenFile}
       />
 
-      {/* KON Search 1 Rei Model Spotlight Modal */}
+      {/* KON Search 1.1.0 Re Model Spotlight Modal */}
       <ModelInfoModal
         isOpen={isModelModalOpen}
         onClose={() => setIsModelModalOpen(false)}

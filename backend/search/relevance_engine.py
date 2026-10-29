@@ -1,4 +1,4 @@
-"""KON Search 1.1.0 Rei — Pure-Python Relevance-First Search Engine.
+"""KON Search 1.1.0 Re — Pure-Python Relevance-First Search Engine.
 
 Implements identical ranking semantics, feature extraction, deduplication,
 and deterministic tie-breaking to the kon_search_core Rust engine.
