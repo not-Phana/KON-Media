@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Cpu,
   Brain,
-  Zap,
   ShieldCheck,
   CheckCircle2,
   X,
@@ -10,11 +9,10 @@ import {
   Layers,
   Sparkles,
   Gauge,
-  BookOpen,
 } from "lucide-react";
 import { fetchModelStats } from "../api";
 
-export default function ModelInfoModal({ isOpen, onClose, onOpenLearnModal }) {
+export default function ModelInfoModal({ isOpen, onClose }) {
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -175,29 +173,13 @@ export default function ModelInfoModal({ isOpen, onClose, onOpenLearnModal }) {
             Trained and running locally in your Python desktop environment.
           </div>
 
-          <div className="flex items-center gap-2.5">
-            {onOpenLearnModal && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenLearnModal();
-                }}
-                className="neu-raised flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#0084FF] hover:text-[#0074E0] cursor-pointer rounded-xl transition-colors"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>Teach Knowledge</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="neu-accent px-5 py-2 text-xs font-semibold cursor-pointer rounded-xl"
-            >
-              Done
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="neu-accent px-6 py-2 text-xs font-semibold cursor-pointer rounded-xl"
+          >
+            Done
+          </button>
         </div>
       </div>
     </div>

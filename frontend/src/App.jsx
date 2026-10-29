@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Header from "./components/Header";
+import { X } from "lucide-react";
 import UrlInputBar from "./components/UrlInputBar";
 import SearchResultsCard from "./components/SearchResultsCard";
 import MediaPreviewCard from "./components/MediaPreviewCard";
 import ActiveTasksMonitor from "./components/ActiveTasksMonitor";
 import HistoryWorkspace from "./components/HistoryWorkspace";
 import SettingsModal from "./components/SettingsModal";
-import LearnFromDocModal from "./components/LearnFromDocModal";
 import ModelInfoModal from "./components/ModelInfoModal";
 import {
   fetchHealth,
@@ -32,7 +32,6 @@ export default function App() {
   const [health, setHealth] = useState(null);
   const [settings, setSettings] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isLearnModalOpen, setIsLearnModalOpen] = useState(false);
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
 
   const [analyzedMedia, setAnalyzedMedia] = useState(null);
@@ -355,7 +354,6 @@ export default function App() {
           isLoading={isAnalyzing}
           error={analyzeError}
           onClearError={() => setAnalyzeError(null)}
-          onOpenLearnModal={() => setIsLearnModalOpen(true)}
           onOpenModelModal={() => setIsModelModalOpen(true)}
         />
 
@@ -368,8 +366,7 @@ export default function App() {
             onDirectDownload={handleDirectDownload}
             onDismiss={() => setSearchResults(null)}
             onFeedback={(fb) => submitSearchFeedback(fb).catch(() => {})}
-            onOpenLearnModal={() => setIsLearnModalOpen(true)}
-            onOpenModelModal={() => setIsModelModalOpen(true)}
+              onOpenModelModal={() => setIsModelModalOpen(true)}
           />
         )}
 
@@ -418,24 +415,10 @@ export default function App() {
         onOpenFile={handleOpenFile}
       />
 
-      {/* Teach from Google Drive / Docs Modal */}
-      <LearnFromDocModal
-        isOpen={isLearnModalOpen}
-        onClose={() => setIsLearnModalOpen(false)}
-        onTrainingSuccess={(data) => {
-          setToast({
-            message: `Engine learned ${data.extracted_count} media associations from "${data.source}"!`,
-            type: "success",
-          });
-          setTimeout(() => setToast(null), 5000);
-        }}
-      />
-
       {/* KON Search 1 Rei Model Spotlight Modal */}
       <ModelInfoModal
         isOpen={isModelModalOpen}
         onClose={() => setIsModelModalOpen(false)}
-        onOpenLearnModal={() => setIsLearnModalOpen(true)}
       />
 
       {/* Interactive Toast Notification */}
@@ -448,7 +431,7 @@ export default function App() {
             onClick={() => setToast(null)}
             className="neu-raised p-1 text-[#64748B] hover:text-[#1E293B] cursor-pointer shrink-0 rounded-lg"
           >
-            ✕
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}

@@ -22,7 +22,6 @@ export default function SearchResultsCard({
   onDirectDownload,
   onDismiss,
   onFeedback,
-  onOpenLearnModal,
   onOpenModelModal,
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());

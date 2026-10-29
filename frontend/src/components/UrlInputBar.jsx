@@ -1,12 +1,11 @@
 import React, { useState } from "react";
-import { Search, Clipboard, X, Loader2, AlertCircle, Music, Film, Globe, Brain, Cpu } from "lucide-react";
+import { Search, Clipboard, X, Loader2, AlertCircle, Music, Film, Globe, Cpu } from "lucide-react";
 
 export default function UrlInputBar({
   onAnalyze,
   isLoading,
   error,
   onClearError,
-  onOpenLearnModal,
   onOpenModelModal,
 }) {
   const [url, setUrl] = useState("");
@@ -92,18 +91,6 @@ export default function UrlInputBar({
             <span>All Sources</span>
           </button>
         </div>
-
-        {onOpenLearnModal && (
-          <button
-            type="button"
-            onClick={onOpenLearnModal}
-            className="neu-raised flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#334155] hover:text-[#0084FF] cursor-pointer transition-colors"
-            title="Import or teach search engine from Google Drive or Google Docs"
-          >
-            <Brain className="w-3.5 h-3.5 text-[#0084FF]" />
-            <span>Knowledge &amp; Docs</span>
-          </button>
-        )}
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-stretch gap-3.5">
