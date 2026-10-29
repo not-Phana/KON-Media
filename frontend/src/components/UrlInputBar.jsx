@@ -1,7 +1,14 @@
 import React, { useState } from "react";
-import { Search, Clipboard, X, Loader2, AlertCircle, Music, Film, Globe, Brain } from "lucide-react";
+import { Search, Clipboard, X, Loader2, AlertCircle, Music, Film, Globe, Brain, Cpu } from "lucide-react";
 
-export default function UrlInputBar({ onAnalyze, isLoading, error, onClearError, onOpenLearnModal }) {
+export default function UrlInputBar({
+  onAnalyze,
+  isLoading,
+  error,
+  onClearError,
+  onOpenLearnModal,
+  onOpenModelModal,
+}) {
   const [url, setUrl] = useState("");
   const [searchMode, setSearchMode] = useState("audio"); // "audio", "video", "all"
 
@@ -159,6 +166,30 @@ export default function UrlInputBar({ onAnalyze, isLoading, error, onClearError,
           )}
         </button>
       </form>
+
+      {/* KON Search 1 Rei Model Spotlight Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-[11px] text-[#94A3B8]">Search Model:</span>
+          <button
+            type="button"
+            onClick={onOpenModelModal}
+            className="neu-recessed px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+            title="Our Search Model: KON Search 1 Rei (Supervised GBDT & Neural SGD)"
+          >
+            <Cpu className="w-3 h-3 text-[#0084FF]" />
+            <span>KON Search 1 Rei</span>
+            <span className="text-[10px] opacity-75 font-mono">v1.0.0</span>
+          </button>
+          <span className="text-[11px] text-[#94A3B8] hidden sm:inline">
+            · Supervised ML Ranker · 4,972 Associations · $0 API Cost
+          </span>
+        </div>
+
+        <span className="text-[10px] font-mono text-[#94A3B8] hidden md:inline">
+          &lt;1.5ms Local CPU Inference
+        </span>
+      </div>
 
       {/* Error Message */}
       {error && (

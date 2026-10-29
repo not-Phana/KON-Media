@@ -7,6 +7,7 @@ import ActiveTasksMonitor from "./components/ActiveTasksMonitor";
 import HistoryWorkspace from "./components/HistoryWorkspace";
 import SettingsModal from "./components/SettingsModal";
 import LearnFromDocModal from "./components/LearnFromDocModal";
+import ModelInfoModal from "./components/ModelInfoModal";
 import {
   fetchHealth,
   analyzeMediaUrl,
@@ -32,6 +33,7 @@ export default function App() {
   const [settings, setSettings] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLearnModalOpen, setIsLearnModalOpen] = useState(false);
+  const [isModelModalOpen, setIsModelModalOpen] = useState(false);
 
   const [analyzedMedia, setAnalyzedMedia] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
@@ -344,6 +346,7 @@ export default function App() {
           health={health}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenFile={handleOpenFile}
+          onOpenModelModal={() => setIsModelModalOpen(true)}
         />
 
         {/* URL Input & Ingress Bar */}
@@ -353,6 +356,7 @@ export default function App() {
           error={analyzeError}
           onClearError={() => setAnalyzeError(null)}
           onOpenLearnModal={() => setIsLearnModalOpen(true)}
+          onOpenModelModal={() => setIsModelModalOpen(true)}
         />
 
         {/* Ranked Search Discoveries */}
@@ -365,6 +369,7 @@ export default function App() {
             onDismiss={() => setSearchResults(null)}
             onFeedback={(fb) => submitSearchFeedback(fb).catch(() => {})}
             onOpenLearnModal={() => setIsLearnModalOpen(true)}
+            onOpenModelModal={() => setIsModelModalOpen(true)}
           />
         )}
 
@@ -424,6 +429,13 @@ export default function App() {
           });
           setTimeout(() => setToast(null), 5000);
         }}
+      />
+
+      {/* KON Search 1 Rei Model Spotlight Modal */}
+      <ModelInfoModal
+        isOpen={isModelModalOpen}
+        onClose={() => setIsModelModalOpen(false)}
+        onOpenLearnModal={() => setIsLearnModalOpen(true)}
       />
 
       {/* Interactive Toast Notification */}

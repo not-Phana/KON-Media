@@ -12,6 +12,7 @@ import {
   Music,
   SlidersHorizontal,
   ChevronRight,
+  Cpu,
 } from "lucide-react";
 
 export default function SearchResultsCard({
@@ -22,6 +23,7 @@ export default function SearchResultsCard({
   onDismiss,
   onFeedback,
   onOpenLearnModal,
+  onOpenModelModal,
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());
 
@@ -74,7 +76,7 @@ export default function SearchResultsCard({
     <div className="neu-card p-6 space-y-4 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 pb-1">
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="w-2.5 h-2.5 rounded-full bg-[#0084FF]"></div>
           <h3 className="text-base font-bold text-[#1E293B] m-0">
             Results for <span className="text-[#0084FF]">"{query}"</span>
@@ -82,6 +84,17 @@ export default function SearchResultsCard({
           <span className="neu-recessed px-2.5 py-0.5 rounded-full text-xs font-semibold text-[#64748B]">
             {results.length} found
           </span>
+
+          {/* Model Attribution Pill */}
+          <button
+            type="button"
+            onClick={onOpenModelModal}
+            className="neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+            title="Our Search Model: Scored and ranked by KON Search 1 Rei (Click for model architecture & live weights)"
+          >
+            <Cpu className="w-3 h-3 text-[#0084FF]" />
+            <span>Ranked by KON Search 1 Rei</span>
+          </button>
         </div>
 
         <button

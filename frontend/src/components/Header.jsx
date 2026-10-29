@@ -1,8 +1,8 @@
 import React from "react";
-import { HardDrive, Settings, CheckCircle2, FolderOpen } from "lucide-react";
+import { HardDrive, Settings, FolderOpen, Cpu } from "lucide-react";
 import KonLogo from "./KonLogo";
 
-export default function Header({ health, onOpenSettings, onOpenFile }) {
+export default function Header({ health, onOpenSettings, onOpenFile, onOpenModelModal }) {
   return (
     <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4">
       <div className="flex items-center gap-3.5">
@@ -18,6 +18,20 @@ export default function Header({ health, onOpenSettings, onOpenFile }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2.5 text-xs">
+        {/* KON Search 1 Rei Model Spotlight Badge */}
+        <button
+          type="button"
+          onClick={onOpenModelModal}
+          className="neu-raised flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#1E293B] hover:text-[#0084FF] cursor-pointer transition-colors"
+          title="Our Search Model: KON Search 1 Rei (Click for model architecture & live weights)"
+        >
+          <Cpu className="w-3.5 h-3.5 text-[#0084FF]" />
+          <span>KON Search 1 Rei</span>
+          <span className="neu-recessed px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-[#0084FF]">
+            v1.0.0
+          </span>
+        </button>
+
         {/* System Ready Badge */}
         <div className="neu-raised flex items-center gap-2 px-3.5 py-2 text-[#475569] font-medium">
           <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-xs"></span>
