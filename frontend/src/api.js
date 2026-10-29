@@ -260,9 +260,6 @@ export async function validateStreamPair(videoStream, audioStream) {
   }
   return data;
 }
-  }
-  return data;
-}
 
 export function subscribeToEvents(onEvent, onError) {
   const es = new EventSource(`${API_BASE}/events`);

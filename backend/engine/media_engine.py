@@ -614,13 +614,6 @@ def extract_media_info(
                     "codec": clean_acodec,
                     "requires_ffmpeg": False,
                 })
-                    "label": f"Original Audio ({direct_ext.upper()}) (Direct)",
-                    "bitrate": "original",
-                    "ext": direct_ext,
-                    "type": "audio",
-                    "codec": clean_acodec,
-                    "requires_ffmpeg": False,
-                })
 
             # Process all individual streams for Additional Download Options and Smart Stream Pairing
             available_streams = []

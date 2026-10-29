@@ -68,8 +68,24 @@ class GoogleDriveAuthManager:
 
     def get_credentials(self, interactive: bool = False) -> Tuple[Optional[Any], Optional[str]]:
         """Retrieve valid Google Credentials or None with explanation."""
-        from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
+        if not interactive and not self.token_file.exists() and not self.client_secrets_file.exists():
+            return (
+                None,
+                f"Missing OAuth client credentials file at: {self.client_secrets_file}. "
+                "Download client secret JSON from Google Cloud Console (Desktop application type).",
+            )
+
+        try:
+            from google.oauth2.credentials import Credentials
+            from google.auth.transport.requests import Request
+        except ImportError:
+            if not self.client_secrets_file.exists():
+                return (
+                    None,
+                    f"Missing OAuth client credentials file at: {self.client_secrets_file}. "
+                    "Download client secret JSON from Google Cloud Console (Desktop application type).",
+                )
+            return None, "google-auth or google-api-python-client is not installed in the environment." 
 
         creds = None
         if self.token_file.exists():
