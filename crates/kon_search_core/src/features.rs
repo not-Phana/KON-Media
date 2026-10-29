@@ -12,6 +12,18 @@ pub struct CandidateInput {
     pub views: Option<u64>,
     pub platform: Option<String>,
     pub url: Option<String>,
+    #[serde(default)]
+    pub clean_title: Option<String>,
+    #[serde(default)]
+    pub song_title: Option<String>,
+    #[serde(default)]
+    pub artist: Option<String>,
+    #[serde(default)]
+    pub context_source: Option<String>,
+    #[serde(default)]
+    pub is_cluttered: Option<bool>,
+    #[serde(default)]
+    pub is_cutscene: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -137,7 +137,7 @@ export default function SearchResultsCard({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     {isTopRanked && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0084FF]">
                         <CheckCircle2 className="w-3.5 h-3.5" />
@@ -147,14 +147,24 @@ export default function SearchResultsCard({
                     <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide">
                       {cand.platform}
                     </span>
+                    {cand.context_source && (
+                      <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] truncate max-w-[240px]">
+                        {cand.context_source}
+                      </span>
+                    )}
                   </div>
 
                   <h4
                     className="text-sm font-bold text-[#1E293B] truncate m-0"
-                    title={cand.title}
+                    title={cand.clean_title || cand.title}
                   >
-                    {cand.title}
+                    {cand.clean_title || cand.title}
                   </h4>
+                  {cand.clean_title && cand.clean_title !== cand.title && (
+                    <p className="text-[11px] text-[#94A3B8] truncate m-0 mt-0.5" title={cand.title}>
+                      Original: {cand.title}
+                    </p>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-[#64748B] font-medium">
                     {cand.uploader && (

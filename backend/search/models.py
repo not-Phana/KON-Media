@@ -21,11 +21,23 @@ class CandidateResult:
     features: Dict[str, float] = field(default_factory=dict)
     explanation: List[str] = field(default_factory=list)
     is_verified_match: bool = False
+    clean_title: Optional[str] = None
+    song_title: Optional[str] = None
+    artist: Optional[str] = None
+    context_source: Optional[str] = None
+    is_cluttered: bool = False
+    is_cutscene: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
             "title": self.title,
+            "clean_title": self.clean_title or self.title,
+            "song_title": self.song_title,
+            "artist": self.artist,
+            "context_source": self.context_source,
+            "is_cluttered": self.is_cluttered,
+            "is_cutscene": self.is_cutscene,
             "uploader": self.uploader,
             "url": self.url,
             "duration": self.duration,

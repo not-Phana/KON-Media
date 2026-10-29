@@ -20,12 +20,39 @@ VERSION_KEYWORDS = {
     "cover": ["cover", "parody", "tribute"],
 }
 
-# Cultural media and soundtrack associations (when user searches for a movie, game, or meme and wants a song)
+# Cultural media, gaming, anime, and soundtrack associations
 SOUNDTRACK_ASSOCIATIONS = {
+    # Zenless Zone Zero & Hoyoverse
+    "zenless zone zero season 3 chapter 2": ["jo0ji - I-BULL"],
+    "zenless zone zero chapter 2": ["jo0ji - I-BULL"],
+    "zenless zone zero season 3": ["jo0ji - I-BULL"],
+    "zenless zone zero ibull": ["jo0ji - I-BULL"],
+    "zenless zone zero iburu": ["jo0ji - I-BULL"],
+    "zenless zone zero opening": ["jo0ji - I-BULL", "Hoyo-Mix - Bite Back"],
+    "zenless zone zero": ["jo0ji - I-BULL", "Hoyo-Mix - Bite Back", "Swae Lee - Come Alive"],
+    "genshin impact": ["Yu-Peng Chen - Genshin Impact Main Theme", "Cecilia Cara - La Vaguelette"],
+    "honkai star rail": ["Jonathan Steingard - Wildfire", "Jake Miller - WHITE NIGHT", "Chevy - Hope Is the Thing With Feathers"],
+    # Major Anime Soundtracks
+    "chainsaw man": ["Kenshi Yonezu - KICK BACK", "Vaundy - Chainsaw Blood", "Maximum the Hormone - Hawatari Nioku Centi"],
+    "jujutsu kaisen season 2": ["King Gnu - SPECIALZ", "Tatsuya Kitani - Where Our Blue Is"],
+    "jujutsu kaisen": ["King Gnu - SPECIALZ", "Tatsuya Kitani - Where Our Blue Is", "Eve - Kaikai Kitan"],
+    "attack on titan season 4": ["SiM - The Rumbling", "Shinsei Kamattechan - My War"],
+    "attack on titan": ["SiM - The Rumbling", "Linked Horizon - Shinzou wo Sasageyo!", "Ai Higuchi - Akuma no Ko"],
+    "bleach tybw": ["Shiro Sagisu - Number One - Bankai", "w.o.d. - STARS"],
+    "bleach bankai": ["Shiro Sagisu - Number One - Bankai"],
+    "bleach": ["Shiro Sagisu - Number One - Bankai", "w.o.d. - STARS", "ORANGE RANGE - Asterisk"],
+    "oshi no ko": ["YOASOBI - Idol", "GEMN - Fatal", "Queen Bee - Mephisto"],
+    "frieren": ["YOASOBI - The Brave", "yorushika - Sunny", "milet - Anytime Anywhere"],
+    "dandadan": ["Creepy Nuts - Otonoke", "ZUTOMAYO - TAIDADA"],
+    "solo leveling": ["TOMORROW X TOGETHER - LEveL", "LiSA - ReawakeR"],
+    "demon slayer": ["LiSA - Gurenge", "Aimer - Zankyou Sanka", "MAN WITH A MISSION x milet - Kizuna no Kiseki"],
+    "kimetsu no yaiba": ["LiSA - Gurenge", "Aimer - Zankyou Sanka"],
+    "cyberpunk edgerunners": ["Rosa Walton - I Really Want to Stay at Your House", "Franz Ferdinand - This Fffire"],
+    "cyberpunk": ["Rosa Walton - I Really Want to Stay at Your House", "SAMURAI - Chippin In"],
+    "arcane": ["Imagine Dragons - Enemy", "Linkin Park - Heavy Is the Crown", "Ashnikko - Paint The Town Blue"],
+    "league of legends": ["K/DA - POP/STARS", "Against The Current - Legends Never Die", "NewJeans - GODS"],
     "titanic": ["Celine Dion - My Heart Will Go On", "Titanic Theme Song"],
     "rickroll": ["Rick Astley - Never Gonna Give You Up"],
-    "cyberpunk": ["Rosa Walton - I Really Want to Stay at Your House", "SAMURAI - Chippin In"],
-    "cyberpunk edgerunners": ["Rosa Walton - I Really Want to Stay at Your House"],
     "interstellar": ["Hans Zimmer - Cornfield Chase", "Hans Zimmer - S.T.A.Y."],
     "stranger things": ["Kate Bush - Running Up That Hill", "Stranger Things Theme"],
     "top gun": ["Kenny Loggins - Danger Zone", "Berlin - Take My Breath Away"],
@@ -48,10 +75,28 @@ SOUNDTRACK_ASSOCIATIONS = {
 def resolve_soundtrack_associations(query_str: str) -> List[str]:
     """Resolve iconic theme songs or soundtrack titles for movies, games, memes, or shows."""
     norm = normalize_text(query_str)
+    if not norm:
+        return []
+
+    # First check if the query itself is a cluttered anime/game video title
+    from backend.search.entity_parser import parse_media_entity
+    parsed = parse_media_entity(query_str)
+    if parsed.get("is_cluttered") and parsed.get("clean_title"):
+        return [parsed["clean_title"]]
+
     matches = []
-    for key, tracks in SOUNDTRACK_ASSOCIATIONS.items():
-        if key in norm or norm in key:
-            matches.extend(tracks)
+    # Sort keys by length descending so specific combinations (e.g. 'zenless zone zero season 3') match first
+    sorted_keys = sorted(SOUNDTRACK_ASSOCIATIONS.keys(), key=len, reverse=True)
+    for key in sorted_keys:
+        if len(key) <= 4:
+            # Short keys require exact word boundary match
+            if re.search(r"\b" + re.escape(key) + r"\b", norm):
+                matches.extend(SOUNDTRACK_ASSOCIATIONS[key])
+                break
+        elif key in norm:
+            matches.extend(SOUNDTRACK_ASSOCIATIONS[key])
+            break
+
     return matches
 
 

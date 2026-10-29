@@ -162,9 +162,10 @@ export default function App() {
         provider: candidate.platform,
       }).catch(() => {});
 
+      const effectiveTitle = isAudio && candidate.clean_title ? candidate.clean_title : candidate.title;
       await queueDownload({
         url: candidate.url,
-        title: candidate.title,
+        title: effectiveTitle,
         media_type: mediaType,
         format_id: isAudio ? "bestaudio/best" : "bestvideo+bestaudio/best",
         ext: isAudio ? "mp3" : "mp4",
@@ -174,7 +175,7 @@ export default function App() {
       });
 
       setToast({
-        message: `Queued ${isAudio ? "Song (MP3)" : "Video (MP4)"}: ${candidate.title}`,
+        message: `Queued ${isAudio ? "Song (MP3)" : "Video (MP4)"}: ${effectiveTitle}`,
         type: "success",
       });
       setTimeout(() => setToast(null), 4000);

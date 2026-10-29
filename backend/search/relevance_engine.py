@@ -167,45 +167,50 @@ def detect_version_hint(text: str) -> Optional[str]:
 
 def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str, float]:
     """Extract quantitative relevance signals for a candidate."""
+    from backend.search.normalization import resolve_soundtrack_associations
     raw_q = query.raw_query
     norm_q = query.normalized_query or normalize_text(raw_q)
     clean_title = strip_media_noise(candidate.title)
     norm_title = normalize_text(clean_title)
+    norm_clean = normalize_text(candidate.clean_title) if candidate.clean_title else ""
     uploader_norm = normalize_text(candidate.uploader)
     media_type = (query.media_type or "all").lower()
 
-    # 1. Exact title match
-    if norm_q == norm_title:
-        exact_title = 1.0
-    elif norm_title.startswith(norm_q):
-        exact_title = 0.95
-    elif norm_q in norm_title:
-        exact_title = 0.85
-    else:
-        exact_title = 0.0
+    # Formulate target query representations: original query + resolved soundtrack songs if any
+    target_queries = [norm_q]
+    associated_tracks = resolve_soundtrack_associations(raw_q)
+    if associated_tracks:
+        for t in associated_tracks:
+            norm_t = normalize_text(t)
+            if norm_t and norm_t not in target_queries:
+                target_queries.append(norm_t)
 
-    # 2. Phrase match
-    phrase_match = 1.0 if (norm_q and norm_q in norm_title) else 0.0
+    # 1. Exact title match (evaluating across raw title, clean parsed song title, and resolved targets)
+    exact_title = 0.0
+    phrase_match = 0.0
+    token_coverage = 0.0
+    token_order = 1.0
 
-    # 3. Token coverage & order
-    q_tokens = [w for w in norm_q.split() if w]
-    c_tokens = [w for w in norm_title.split() if w]
-    if not q_tokens:
-        token_coverage = 0.0
-        token_order = 1.0
-    else:
-        matched = 0
-        last_idx = None
-        order_inversions = 0
-        for qt in q_tokens:
-            if qt in c_tokens:
-                matched += 1
-                pos = c_tokens.index(qt)
-                if last_idx is not None and pos < last_idx:
-                    order_inversions += 1
-                last_idx = pos
-        token_coverage = matched / len(q_tokens)
-        token_order = max(0.2, 1.0 - (order_inversions * 0.2)) if order_inversions > 0 else 1.0
+    cand_title_variants = [norm_title]
+    if norm_clean and norm_clean != norm_title:
+        cand_title_variants.append(norm_clean)
+
+    for tq in target_queries:
+        for ctv in cand_title_variants:
+            e = 1.0 if tq == ctv else (0.95 if ctv.startswith(tq) else (0.85 if tq in ctv else 0.0))
+            exact_title = max(exact_title, e)
+
+            p = 1.0 if (tq and tq in ctv) else 0.0
+            phrase_match = max(phrase_match, p)
+
+        t_toks = [w for w in tq.split() if w]
+        if t_toks:
+            all_c_toks = set(norm_title.split())
+            if norm_clean:
+                all_c_toks.update(norm_clean.split())
+            matched = sum(1 for w in t_toks if w in all_c_toks)
+            cov = matched / len(t_toks)
+            token_coverage = max(token_coverage, cov)
 
     # 4. Typo similarity
     ngram_sim = ngram_similarity(norm_q, norm_title, n=3)
@@ -214,14 +219,14 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
 
     # 5. Artist affinity
     artist_affinity = 0.5
-    target_artist = query.expected_artist or query.detected_artist
+    target_artist = query.expected_artist or query.detected_artist or candidate.artist
     if target_artist:
         norm_artist = normalize_text(target_artist)
         if norm_artist:
             if norm_artist in uploader_norm or uploader_norm in norm_artist:
                 artist_affinity = 1.0
-            elif norm_title.startswith(norm_artist):
-                artist_affinity = 0.90
+            elif norm_title.startswith(norm_artist) or (norm_clean and norm_clean.startswith(norm_artist)):
+                artist_affinity = 0.95
             elif ngram_similarity(norm_artist, uploader_norm, 3) > 0.6:
                 artist_affinity = 0.85
             else:
@@ -281,8 +286,10 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
             duration_compat = 0.25
         elif dur < 25.0:
             duration_compat = 0.20
+        elif dur < 110.0:  # TV size anime/game opening cut (typically 90s), not full track
+            duration_compat = 0.70
         else:
-            duration_compat = 0.85
+            duration_compat = 0.95
 
     # 9. Bounded popularity tie-breaker (max 0.05 bonus)
     views = candidate.views or 0
@@ -297,10 +304,10 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
     if is_audio_mode:
         if candidate.platform == "soundcloud":
             audio_platform_boost += 0.10
-        if "official audio" in norm_title or "audio" in norm_title:
-            audio_platform_boost += 0.10
+        if "official audio" in raw_cand_norm or "audio" in raw_cand_norm:
+            audio_platform_boost += 0.12
         if "topic" in uploader_norm:
-            audio_platform_boost += 0.08
+            audio_platform_boost += 0.10
 
     return {
         "exact_title": exact_title,
@@ -322,6 +329,19 @@ def score_candidate(
     candidate: CandidateResult,
 ) -> Tuple[float, str, Dict[str, float], List[str]]:
     """Compute score, confidence tier, feature dict, and explanations for a candidate."""
+    from backend.search.entity_parser import parse_media_entity
+    from backend.search.normalization import resolve_soundtrack_associations
+
+    # 0. Extract clean song, artist, and franchise context
+    if not candidate.clean_title:
+        ent = parse_media_entity(candidate.title, uploader=candidate.uploader)
+        candidate.clean_title = ent.get("clean_title") or candidate.title
+        candidate.song_title = ent.get("song_title")
+        candidate.artist = ent.get("artist")
+        candidate.context_source = ent.get("context_source")
+        candidate.is_cluttered = ent.get("is_cluttered", False)
+        candidate.is_cutscene = ent.get("is_cutscene", False)
+
     feat = extract_features(query, candidate)
     explanations: List[str] = []
 
@@ -344,6 +364,30 @@ def score_candidate(
     if feat["non_music_penalty"] < 0.80:
         explanations.append("Non-music content mismatch penalty")
 
+    # 1. Soundtrack theme / opening association boost
+    soundtrack_boost = 0.0
+    associated_tracks = resolve_soundtrack_associations(query.raw_query)
+    if associated_tracks:
+        cand_keys = [
+            normalize_text(candidate.title),
+            normalize_text(candidate.clean_title or ""),
+        ]
+        for assoc in associated_tracks:
+            norm_assoc = normalize_text(assoc)
+            if any(norm_assoc in k for k in cand_keys if k):
+                soundtrack_boost = 0.35
+                explanations.append(f"Official soundtrack song match: {assoc}")
+                break
+
+    # 2. Cutscene / gameplay penalty in audio mode
+    cutscene_penalty = 1.0
+    if candidate.is_cutscene and (query.media_type or "all") == "audio":
+        cutscene_penalty = 0.25
+        explanations.append("Cutscene/gameplay clip penalized for audio")
+
+    # 3. Preference for clean official studio release over cluttered video uploads in audio mode
+    clutter_multiplier = 0.85 if (candidate.is_cluttered and (query.media_type or "all") == "audio") else 1.0
+
     # Linear base score
     base_score = (
         0.30 * feat["exact_title"]
@@ -358,7 +402,7 @@ def score_candidate(
     )
 
     duration_multiplier = feat["duration_compat"] if feat["duration_compat"] < 0.50 else 1.0
-    final_score = max(0.0, base_score * feat["version_compat"] * feat["non_music_penalty"] * duration_multiplier)
+    final_score = max(0.0, (base_score + soundtrack_boost) * feat["version_compat"] * feat["non_music_penalty"] * duration_multiplier * cutscene_penalty * clutter_multiplier)
 
     if final_score >= 0.65:
         confidence = "high"

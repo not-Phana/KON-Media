@@ -70,6 +70,12 @@ def rank_candidates(
                 {
                     "id": c.id,
                     "title": c.title,
+                    "clean_title": c.clean_title,
+                    "song_title": c.song_title,
+                    "artist": c.artist,
+                    "context_source": c.context_source,
+                    "is_cluttered": c.is_cluttered,
+                    "is_cutscene": c.is_cutscene,
                     "uploader": c.uploader,
                     "duration": c.duration,
                     "views": c.views,
@@ -96,6 +102,18 @@ def rank_candidates(
                     original.confidence = item.get("confidence", "medium")
                     original.features = item.get("features", {})
                     original.explanation = item.get("explanations", [])
+                    if item.get("clean_title"):
+                        original.clean_title = item.get("clean_title")
+                    if item.get("song_title"):
+                        original.song_title = item.get("song_title")
+                    if item.get("artist"):
+                        original.artist = item.get("artist")
+                    if item.get("context_source"):
+                        original.context_source = item.get("context_source")
+                    if item.get("is_cluttered") is not None:
+                        original.is_cluttered = item.get("is_cluttered", False)
+                    if item.get("is_cutscene") is not None:
+                        original.is_cutscene = item.get("is_cutscene", False)
                     ranked.append(original)
 
             if limit is not None:

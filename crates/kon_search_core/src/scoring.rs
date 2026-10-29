@@ -5,6 +5,18 @@ use serde::{Deserialize, Serialize};
 pub struct ScoredCandidate {
     pub id: String,
     pub title: String,
+    #[serde(default)]
+    pub clean_title: Option<String>,
+    #[serde(default)]
+    pub song_title: Option<String>,
+    #[serde(default)]
+    pub artist: Option<String>,
+    #[serde(default)]
+    pub context_source: Option<String>,
+    #[serde(default)]
+    pub is_cluttered: Option<bool>,
+    #[serde(default)]
+    pub is_cutscene: Option<bool>,
     pub uploader: Option<String>,
     pub duration: Option<f64>,
     pub views: Option<u64>,
@@ -103,6 +115,12 @@ pub fn score_candidate(
     ScoredCandidate {
         id: cand.id.clone(),
         title: cand.title.clone(),
+        clean_title: cand.clean_title.clone(),
+        song_title: cand.song_title.clone(),
+        artist: cand.artist.clone(),
+        context_source: cand.context_source.clone(),
+        is_cluttered: cand.is_cluttered,
+        is_cutscene: cand.is_cutscene,
         uploader: cand.uploader.clone(),
         duration: cand.duration,
         views: cand.views,

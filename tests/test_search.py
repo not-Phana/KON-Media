@@ -498,3 +498,66 @@ def test_rei110_evaluation_metrics_pass_rate():
         assert case["is_target_top1"], f"Fixture {case['fixture']} failed to place target at top 1"
 
 
+def test_zenless_zone_zero_real_song_understanding():
+    """Verify that messy anime/game franchise titles are parsed into real songs and official releases rank #1."""
+    from backend.search.models import CandidateResult, SearchQuery
+    from backend.search.relevance_engine import rank_candidates
+    from backend.search.normalization import resolve_soundtrack_associations
+
+    # 1. Verify query resolution knows Zenless Zone Zero Season 3 Chapter 2 Opening -> jo0ji - I-BULL
+    assoc = resolve_soundtrack_associations("Zenless Zone Zero Season 3 Chapter 2 Opening")
+    assert "jo0ji - I-BULL" in assoc
+
+    # 2. Candidate set with cluttered opening video, official studio audio, and gameplay cutscene
+    q = SearchQuery(raw_query="Zenless Zone Zero Season 3 Chapter 2 Opening", media_type="audio")
+    candidates = [
+        CandidateResult(
+            id="cutscene_rip",
+            title="Zenless Zone Zero Season 3 Chapter 2 Opening Cutscene HD",
+            uploader="GameArchive",
+            duration=90.0,
+        ),
+        CandidateResult(
+            id="cluttered_op",
+            title="Zenless Zone Zero Season 3 Chapter 2 Opening / (I-BULL - iburu) jo0ji",
+            uploader="AnimeMusicHQ",
+            duration=95.0,
+        ),
+        CandidateResult(
+            id="official_audio",
+            title="jo0ji - I-BULL (Official Audio)",
+            uploader="jo0ji - Topic",
+            duration=204.0,
+            views=1_500_000,
+        ),
+        CandidateResult(
+            id="random_gameplay",
+            title="Zenless Zone Zero Chapter 2 Boss Fight Walkthrough & Cutscenes",
+            uploader="GamerPro",
+            duration=1200.0,
+        ),
+    ]
+
+    ranked = rank_candidates(q, candidates)
+
+    # Official audio release by jo0ji must rank #1
+    assert ranked[0].id == "official_audio"
+    assert ranked[0].score > ranked[1].score
+
+    # Cluttered opening video must have its clean title and franchise context parsed
+    cluttered_item = next(c for c in ranked if c.id == "cluttered_op")
+    assert cluttered_item.clean_title == "jo0ji - I-BULL"
+    assert cluttered_item.song_title == "I-BULL"
+    assert cluttered_item.artist == "jo0ji"
+    assert "Zenless Zone Zero" in cluttered_item.context_source
+
+    # Raw cutscene and gameplay walkthrough must be penalized and ranked at bottom
+    cutscene_item = next(c for c in ranked if c.id == "cutscene_rip")
+    assert cutscene_item.is_cutscene is True
+    gameplay_item = next(c for c in ranked if c.id == "random_gameplay")
+    assert gameplay_item.is_cutscene is True
+    assert ranked.index(cutscene_item) > 1
+    assert ranked.index(gameplay_item) > 1
+
+
+
