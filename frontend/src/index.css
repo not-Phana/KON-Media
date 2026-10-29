@@ -2,6 +2,8 @@
 
 @layer base {
   :root {
+    color-scheme: light dark;
+
     --bg-main: #E9EEF5;
     --surface-card: #E9EEF5;
     --surface-elevated: #EEF3FA;
@@ -23,26 +25,63 @@
     --status-warning: #F59E0B;
     --status-error: #EF4444;
     --status-info: #0084FF;
+
+    accent-color: #0084FF;
+  }
+
+  html[data-theme="dark"],
+  html.dark {
+    color-scheme: dark;
+
+    --bg-main: #090D14;
+    --surface-card: #111724;
+    --surface-elevated: #162030;
+    --surface-recessed: #0A0E17;
+
+    --shadow-light: rgba(255, 255, 255, 0.03);
+    --shadow-dark: rgba(0, 0, 0, 0.7);
+    --shadow-dark-soft: rgba(0, 0, 0, 0.5);
+
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+
+    --accent-blue: #0084FF;
+    --accent-blue-hover: #0074E0;
+    --accent-blue-active: #0065C7;
+
+    accent-color: #0084FF;
   }
 
   body {
-    background-color: #E9EEF5;
-    color: #1E293B;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     min-height: 100vh;
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Cool dark ambient cosmic aura */
+  html[data-theme="dark"] body,
+  html.dark body {
+    background-image: 
+      radial-gradient(ellipse 70% 40% at 50% -10%, rgba(0, 132, 255, 0.12), transparent 70%),
+      radial-gradient(ellipse 50% 35% at 90% 100%, rgba(99, 102, 241, 0.07), transparent 70%);
+    background-attachment: fixed;
   }
 }
 
-/* Tactile Soft Neumorphic Utilities */
+/* Tactile Soft Neumorphic Utilities (Light Mode) */
 .neu-card {
   background-color: #E9EEF5;
   box-shadow: 10px 10px 22px #CAD5E2, -10px -10px 22px #FFFFFF;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.7);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .neu-recessed {
@@ -50,6 +89,7 @@
   box-shadow: inset 4px 4px 8px #C5D0E0, inset -4px -4px 8px #FFFFFF;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .neu-raised {
@@ -77,6 +117,7 @@
   background-color: #E4EAF2;
   box-shadow: inset 4px 4px 8px #CAD5E2, inset -4px -4px 8px #FFFFFF;
   border-radius: 14px;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .neu-accent {
@@ -118,6 +159,182 @@
   color: #1E293B;
 }
 
+/* Cool Dark Mode Neumorphic & Cyber Utilities */
+html[data-theme="dark"] .neu-card,
+html.dark .neu-card {
+  background: linear-gradient(155deg, #111724 0%, #0D131F 100%);
+  box-shadow: 10px 14px 28px rgba(0, 0, 0, 0.7), -3px -3px 12px rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .neu-recessed,
+html.dark .neu-recessed {
+  background-color: #0A0E17;
+  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.75), inset -2px -2px 6px rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="dark"] .neu-raised,
+html.dark .neu-raised {
+  background: linear-gradient(155deg, #162133 0%, #111A28 100%);
+  box-shadow: 5px 6px 14px rgba(0, 0, 0, 0.55), -2px -2px 8px rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #E2E8F0;
+}
+
+html[data-theme="dark"] .neu-raised:hover:not(:disabled),
+html.dark .neu-raised:hover:not(:disabled) {
+  box-shadow: 0 0 16px rgba(0, 163, 255, 0.28), 6px 8px 18px rgba(0, 0, 0, 0.65);
+  border-color: rgba(0, 163, 255, 0.4);
+  color: #38BDF8;
+  transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .neu-raised:active:not(:disabled),
+html[data-theme="dark"] .neu-raised.active,
+html.dark .neu-raised:active:not(:disabled),
+html.dark .neu-raised.active {
+  background: #0D1420;
+  box-shadow: inset 3px 3px 7px rgba(0, 0, 0, 0.7), inset -2px -2px 5px rgba(255, 255, 255, 0.02);
+  border-color: rgba(0, 163, 255, 0.25);
+  color: #38BDF8;
+}
+
+html[data-theme="dark"] .neu-pressed,
+html.dark .neu-pressed {
+  background-color: #0A0E17;
+  box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.8), inset -2px -2px 6px rgba(255, 255, 255, 0.02);
+}
+
+html[data-theme="dark"] .neu-accent,
+html.dark .neu-accent {
+  background: linear-gradient(135deg, #0084FF 0%, #005AE0 100%);
+  box-shadow: 0 0 22px rgba(0, 132, 255, 0.42), 5px 6px 16px rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+html[data-theme="dark"] .neu-accent:hover:not(:disabled),
+html.dark .neu-accent:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0095FF 0%, #0066F5 100%);
+  box-shadow: 0 0 28px rgba(0, 149, 255, 0.55), 6px 8px 20px rgba(0, 0, 0, 0.75);
+}
+
+html[data-theme="dark"] .neu-accent:active:not(:disabled),
+html.dark .neu-accent:active:not(:disabled) {
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.5), inset -2px -2px 6px rgba(255, 255, 255, 0.15);
+}
+
+html[data-theme="dark"] .neu-pill-active,
+html.dark .neu-pill-active {
+  background: #162133;
+  box-shadow: 0 0 14px rgba(0, 163, 255, 0.25), 3px 3px 8px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 163, 255, 0.35);
+  color: #38BDF8;
+}
+
+html[data-theme="dark"] .neu-pill-inactive,
+html.dark .neu-pill-inactive {
+  background: transparent;
+  color: #64748B;
+}
+
+html[data-theme="dark"] .neu-pill-inactive:hover,
+html.dark .neu-pill-inactive:hover {
+  color: #F8FAFC;
+}
+
+/* Comprehensive Dark-Mode Text & Surface Harmonization */
+html[data-theme="dark"] .text-\[\#1E293B\],
+html.dark .text-\[\#1E293B\] {
+  color: #F8FAFC !important;
+}
+
+html[data-theme="dark"] .text-\[\#334155\],
+html.dark .text-\[\#334155\] {
+  color: #E2E8F0 !important;
+}
+
+html[data-theme="dark"] .text-\[\#475569\],
+html.dark .text-\[\#475569\] {
+  color: #CBD5E1 !important;
+}
+
+html[data-theme="dark"] .text-\[\#64748B\],
+html.dark .text-\[\#64748B\] {
+  color: #94A3B8 !important;
+}
+
+html[data-theme="dark"] .text-\[\#94A3B8\],
+html.dark .text-\[\#94A3B8\] {
+  color: #64748B !important;
+}
+
+/* Background overrides */
+html[data-theme="dark"] .bg-\[\#E9EEF5\],
+html.dark .bg-\[\#E9EEF5\] {
+  background-color: #090D14 !important;
+}
+
+html[data-theme="dark"] .bg-\[\#E4EAF2\],
+html.dark .bg-\[\#E4EAF2\] {
+  background-color: #0A0E17 !important;
+}
+
+html[data-theme="dark"] .bg-white,
+html.dark .bg-white {
+  background-color: #111724 !important;
+}
+
+html[data-theme="dark"] .bg-slate-200,
+html.dark .bg-slate-200 {
+  background-color: #1E293B !important;
+}
+
+html[data-theme="dark"] .bg-slate-100,
+html.dark .bg-slate-100 {
+  background-color: #141C2B !important;
+}
+
+html[data-theme="dark"] .bg-slate-50,
+html.dark .bg-slate-50 {
+  background-color: #0F1622 !important;
+}
+
+/* Border overrides */
+html[data-theme="dark"] .border-slate-200,
+html[data-theme="dark"] .border-slate-200\/60,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/60 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-theme="dark"] .border-slate-100,
+html.dark .border-slate-100 {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Modal and dialog backdrop */
+html[data-theme="dark"] .bg-slate-900\/40,
+html[data-theme="dark"] .bg-slate-900\/30,
+html.dark .bg-slate-900\/40,
+html.dark .bg-slate-900\/30 {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Error and warning alert surfaces in dark mode */
+html[data-theme="dark"] .bg-\[\#FEE2E2\],
+html[data-theme="dark"] .bg-\[\#FEE2E2\]\/60,
+html.dark .bg-\[\#FEE2E2\],
+html.dark .bg-\[\#FEE2E2\]\/60 {
+  background-color: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+html[data-theme="dark"] .border-\[\#FCA5A5\],
+html.dark .border-\[\#FCA5A5\] {
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
@@ -136,4 +353,31 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #B4C2D3;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-track,
+html.dark ::-webkit-scrollbar-track {
+  background: #0A0E17;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb,
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Modern standard scrollbar-color */
+@supports (scrollbar-color: auto) {
+  :root {
+    scrollbar-color: #CAD5E2 #E4EAF2;
+  }
+  html[data-theme="dark"],
+  html.dark {
+    scrollbar-color: #1E293B #0A0E17;
+  }
 }

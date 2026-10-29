@@ -1,8 +1,15 @@
 import React from "react";
-import { HardDrive, Settings, FolderOpen, Cpu } from "lucide-react";
+import { HardDrive, Settings, FolderOpen, Cpu, Moon, Sun } from "lucide-react";
 import KonLogo from "./KonLogo";
 
-export default function Header({ health, onOpenSettings, onOpenFile, onOpenModelModal }) {
+export default function Header({
+  health,
+  onOpenSettings,
+  onOpenFile,
+  onOpenModelModal,
+  theme,
+  onToggleTheme,
+}) {
   return (
     <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4">
       <div className="flex items-center gap-3.5">
@@ -18,6 +25,26 @@ export default function Header({ health, onOpenSettings, onOpenFile, onOpenModel
       </div>
 
       <div className="flex flex-wrap items-center gap-2.5 text-xs">
+        {/* Cool Dark Mode Toggle */}
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          className="neu-raised flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#334155] cursor-pointer hover:text-[#0084FF] transition-all"
+          title={theme === "dark" ? "Dark Mode Active — Click to switch to Light" : "Light Mode Active — Click to switch to Cool Dark Mode"}
+        >
+          {theme === "dark" ? (
+            <>
+              <Moon className="w-3.5 h-3.5 text-[#38BDF8]" />
+              <span className="text-[#38BDF8] font-bold">Dark</span>
+            </>
+          ) : (
+            <>
+              <Sun className="w-3.5 h-3.5 text-[#F59E0B]" />
+              <span>Light</span>
+            </>
+          )}
+        </button>
+
         {/* KON Search 1.1.0 Re Model Spotlight Badge */}
         <button
           type="button"

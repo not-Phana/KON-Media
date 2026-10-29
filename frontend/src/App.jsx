@@ -29,6 +29,14 @@ import {
 } from "./api";
 
 export default function App() {
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem("kon_theme") || "dark";
+    } catch (_) {
+      return "dark";
+    }
+  });
+
   const [health, setHealth] = useState(null);
   const [settings, setSettings] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -115,6 +123,52 @@ export default function App() {
       }
     };
   }, [loadInitialData, flushUpdates]);
+
+  // Synchronize color scheme and theme attribute across the DOM per Modern Web Guidance
+  useEffect(() => {
+    try {
+      const isDark =
+        theme === "dark" ||
+        (theme === "system" &&
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+      if (isDark) {
+        document.documentElement.classList.add("dark");
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+
+      const meta = document.querySelector('meta[name="color-scheme"]');
+      if (meta) {
+        meta.setAttribute("content", theme === "system" ? "light dark" : theme);
+      }
+      localStorage.setItem("kon_theme", theme);
+    } catch (_) {}
+  }, [theme]);
+
+  // Listen to OS system theme changes if mode is set to 'system'
+  useEffect(() => {
+    if (theme !== "system") return;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e) => {
+      if (e.matches) {
+        document.documentElement.classList.add("dark");
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    };
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   // Handle URL analysis or keyword discovery
   const handleAnalyze = async (input, searchMode = "audio") => {
@@ -339,7 +393,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#E9EEF5] text-[#1E293B] flex flex-col justify-between">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between">
       <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Global Application Header */}
         <Header
@@ -347,6 +401,8 @@ export default function App() {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenFile={handleOpenFile}
           onOpenModelModal={() => setIsModelModalOpen(true)}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
         />
 
         {/* URL Input & Ingress Bar */}
@@ -414,6 +470,8 @@ export default function App() {
         currentSettings={settings}
         onSaveSettings={handleSaveSettings}
         onOpenFile={handleOpenFile}
+        theme={theme}
+        onSelectTheme={setTheme}
       />
 
       {/* KON Search 1.1.0 Re Model Spotlight Modal */}

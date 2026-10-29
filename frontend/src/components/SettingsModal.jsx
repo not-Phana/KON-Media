@@ -1,8 +1,31 @@
 import React, { useState, useEffect } from "react";
-import { X, Save, Folder, FolderOpen, Layers, Check, Film, CheckCircle2, AlertTriangle, Loader2, HelpCircle } from "lucide-react";
+import {
+  X,
+  Save,
+  Folder,
+  FolderOpen,
+  Layers,
+  Check,
+  Film,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  HelpCircle,
+  Moon,
+  Sun,
+  Monitor,
+} from "lucide-react";
 import { validateFFmpeg } from "../api";
 
-export default function SettingsModal({ isOpen, onClose, currentSettings, onSaveSettings, onOpenFile }) {
+export default function SettingsModal({
+  isOpen,
+  onClose,
+  currentSettings,
+  onSaveSettings,
+  onOpenFile,
+  theme,
+  onSelectTheme,
+}) {
   const [downloadsDir, setDownloadsDir] = useState("");
   const [maxConcurrent, setMaxConcurrent] = useState(2);
   const [defaultMediaType, setDefaultMediaType] = useState("video");
@@ -85,6 +108,56 @@ export default function SettingsModal({ isOpen, onClose, currentSettings, onSave
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Theme & Visual Style */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-[#1E293B] block">
+              Theme &amp; Visual Style
+            </label>
+            <div className="grid grid-cols-3 gap-2.5">
+              <button
+                type="button"
+                onClick={() => onSelectTheme && onSelectTheme("dark")}
+                className={`p-3 rounded-xl flex flex-col items-center gap-1.5 cursor-pointer text-xs font-semibold transition-all ${
+                  theme === "dark"
+                    ? "neu-accent"
+                    : "neu-raised text-[#334155] hover:text-[#0084FF]"
+                }`}
+              >
+                <Moon className="w-4 h-4 text-[#38BDF8]" />
+                <span>Cool Dark</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onSelectTheme && onSelectTheme("light")}
+                className={`p-3 rounded-xl flex flex-col items-center gap-1.5 cursor-pointer text-xs font-semibold transition-all ${
+                  theme === "light"
+                    ? "neu-accent"
+                    : "neu-raised text-[#334155] hover:text-[#0084FF]"
+                }`}
+              >
+                <Sun className="w-4 h-4 text-[#F59E0B]" />
+                <span>Soft Light</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onSelectTheme && onSelectTheme("system")}
+                className={`p-3 rounded-xl flex flex-col items-center gap-1.5 cursor-pointer text-xs font-semibold transition-all ${
+                  theme === "system"
+                    ? "neu-accent"
+                    : "neu-raised text-[#334155] hover:text-[#0084FF]"
+                }`}
+              >
+                <Monitor className="w-4 h-4 text-[#64748B]" />
+                <span>System Auto</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-[#64748B] font-medium m-0">
+              Cool Dark features deep obsidian surfaces, cyber luminescence, and tactile neumorphic shadows.
+            </p>
+          </div>
+
           {/* Downloads Directory */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-[#1E293B] block">
