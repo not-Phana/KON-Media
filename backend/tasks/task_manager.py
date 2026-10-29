@@ -156,6 +156,51 @@ class TaskManager:
             return True
         return False
 
+    def retry_task(self, task_id: str) -> bool:
+        """Retry a failed or cancelled task with its original configuration."""
+        task = self.tasks.get(task_id)
+        if not task:
+            return False
+
+        if task.get("status") not in ("failed", "cancelled"):
+            return False
+
+        # Reset task state to clean queued baseline
+        task["status"] = "queued"
+        task["substate"] = None
+        task["substate_message"] = None
+        task["percentage"] = 0.0
+        task["speed"] = 0
+        task["eta"] = None
+        task["downloaded_bytes"] = 0
+        task["total_bytes"] = 0
+        task["error"] = None
+        task["file_path"] = None
+        task["filename"] = None
+        task["completed_at"] = None
+
+        self.abort_events[task_id] = threading.Event()
+        self.broadcast("task_updated", task)
+
+        safe_base_name = sanitize_filename(task["title"], "")
+        final_ext = f".{task.get('ext', 'mp4').lstrip('.')}"
+        self.executor.submit(self._run_task, task_id, safe_base_name, final_ext)
+        return True
+
+    def clear_finished_tasks(self) -> List[str]:
+        """Dismiss all completed, failed, or cancelled tasks from active monitor in one action."""
+        finished_ids = [
+            tid for tid, t in list(self.tasks.items())
+            if t.get("status") in ("completed", "failed", "cancelled")
+        ]
+        for tid in finished_ids:
+            if tid in self.tasks:
+                del self.tasks[tid]
+            if tid in self.abort_events:
+                del self.abort_events[tid]
+            self.broadcast("task_dismissed", {"id": tid})
+        return finished_ids
+
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         return self.tasks.get(task_id)
 
@@ -187,6 +232,8 @@ class TaskManager:
             task["status"] = p.get("state", "downloading")
             task["stage"] = p.get("stage", "downloading")
             task["stage_label"] = p.get("stage_label", "Downloading media...")
+            task["substate"] = p.get("substate")
+            task["substate_message"] = p.get("message")
             task["percentage"] = p.get("percentage", 0.0)
             task["downloaded_bytes"] = p.get("downloaded_bytes", 0)
             task["total_bytes"] = p.get("total_bytes", 0)
@@ -204,7 +251,7 @@ class TaskManager:
                 abort_event=abort_event,
                 audio_bitrate=task["audio_bitrate"],
                 ffmpeg_location=configured_ffmpeg,
-                merge_output_format=task.get("merge_output_format"),
+                merge_output_format=task.get("merge_output_format") or task.get("ext"),
             )
 
             # Locate downloaded file with task_id prefix
@@ -220,6 +267,10 @@ class TaskManager:
 
             source_file = Path(valid_files[0])
             actual_ext = source_file.suffix or final_ext
+            clean_ext = actual_ext.lstrip(".")
+
+            # Ensure task ext reflects the actual downloaded/converted file extension
+            task["ext"] = clean_ext
 
             # Determine unique destination filename using sanitized title
             target_filename = sanitize_filename(task["title"], actual_ext)
@@ -243,6 +294,12 @@ class TaskManager:
                 except OSError:
                     pass
 
+            # Intermediate stage: verify file integrity
+            task["status"] = "verifying"
+            task["substate"] = "verifying"
+            task["substate_message"] = "Verifying output file integrity..."
+            self.broadcast("task_updated", task)
+
             # Verification: Check file exists and size > 0
             if not final_dest.exists() or final_dest.stat().st_size == 0:
                 raise MediaEngineError("Final media file verification failed (empty or missing file).")
@@ -253,6 +310,8 @@ class TaskManager:
             task["status"] = "completed"
             task["stage"] = "completed"
             task["stage_label"] = "Completed"
+            task["substate"] = None
+            task["substate_message"] = None
             task["percentage"] = 100.0
             task["file_path"] = str(final_dest)
             task["filename"] = final_dest.name
@@ -268,6 +327,29 @@ class TaskManager:
             # Record in persistent history
             self.history_store.add_entry(dict(task))
             self.broadcast("task_completed", task)
+
+            # Continuous learning reinforcement from completed download
+            try:
+                from backend.search.engine import get_shared_learning_model
+                from backend.search.learning_model import simple_tokenize
+                model = get_shared_learning_model()
+                title = task.get("title") or task.get("filename")
+                if title:
+                    tokens = simple_tokenize(title)
+                    if len(tokens) >= 2:
+                        query_prompt = " ".join(tokens[:2])
+                        model.train_step(query_prompt, title, {
+                            "exact_title": 0.9,
+                            "fuzzy_title": 0.8,
+                            "token_overlap": 0.8,
+                            "artist_match": 0.8,
+                            "duration_compat": 0.9,
+                            "version_compat": 1.0,
+                            "audio_affinity": 0.8,
+                        }, label=1.0)
+                        model.save_model()
+            except Exception:
+                pass
 
         except DownloadCancelledError:
             task["status"] = "cancelled"

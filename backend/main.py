@@ -18,9 +18,25 @@ from backend.config import HOST, PORT, FRONTEND_DIST_DIR
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle manager: register event loop with task manager."""
+    """Lifecycle manager: register event loop with task manager and run background self-training."""
     loop = asyncio.get_running_loop()
     task_manager.set_event_loop(loop)
+
+    async def background_startup_training():
+        try:
+            await asyncio.sleep(1.0)
+            from backend.search.engine import SearchEngine
+            from backend.storage.storage import HistoryStore
+            from backend.config import STATE_DIR
+            h_store = HistoryStore(STATE_DIR)
+            engine = SearchEngine()
+            history_entries = h_store.get_all()
+            if history_entries or engine.feedback_store.get_all():
+                engine.self_train(download_history=history_entries, epochs=3)
+        except Exception:
+            pass
+
+    asyncio.create_task(background_startup_training())
     yield
 
 

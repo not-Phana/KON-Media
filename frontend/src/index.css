@@ -2,26 +2,32 @@
 
 @layer base {
   :root {
-    --bg-main: #17191D;
-    --surface-card: #202329;
-    --surface-elevated: #272B32;
-    --surface-recessed: #131418;
-    --border-subtle: #2D323B;
-    --border-strong: #383D46;
-    --text-primary: #F3F4F6;
-    --text-secondary: #A5ABB5;
-    --text-muted: #6B7280;
-    --accent-primary: #8BC5B0;
-    --accent-hover: #9CD4C0;
-    --status-success: #72C69A;
-    --status-warning: #E8BE72;
-    --status-error: #EF8585;
-    --status-info: #70B2D9;
+    --bg-main: #E9EEF5;
+    --surface-card: #E9EEF5;
+    --surface-elevated: #EEF3FA;
+    --surface-recessed: #E4EAF2;
+
+    --shadow-light: #FFFFFF;
+    --shadow-dark: #CAD5E2;
+    --shadow-dark-soft: #D3DFED;
+
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --text-muted: #94A3B8;
+
+    --accent-blue: #0084FF;
+    --accent-blue-hover: #0074E0;
+    --accent-blue-active: #0065C7;
+
+    --status-success: #10B981;
+    --status-warning: #F59E0B;
+    --status-error: #EF4444;
+    --status-info: #0084FF;
   }
 
   body {
-    background-color: var(--bg-main);
-    color: var(--text-primary);
+    background-color: #E9EEF5;
+    color: #1E293B;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     min-height: 100vh;
     margin: 0;
@@ -31,75 +37,85 @@
   }
 }
 
-/* Tactile Neumorphic & Dashboard Utilities */
+/* Tactile Soft Neumorphic Utilities */
 .neu-card {
-  background-color: #202329;
-  border: 1px solid #2D323B;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
-  border-radius: 14px;
+  background-color: #E9EEF5;
+  box-shadow: 10px 10px 22px #CAD5E2, -10px -10px 22px #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 .neu-recessed {
-  background-color: #131418;
-  border: 1px solid #2D323B;
-  box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.55), inset -2px -2px 6px rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
+  background-color: #E4EAF2;
+  box-shadow: inset 4px 4px 8px #C5D0E0, inset -4px -4px 8px #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .neu-raised {
-  background-color: #272B32;
-  border: 1px solid #383D46;
-  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.45), -3px -3px 8px rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: #E9EEF5;
+  box-shadow: 6px 6px 14px #CAD5E2, -6px -6px 14px #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: #334155;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .neu-raised:hover:not(:disabled) {
-  box-shadow: 6px 6px 14px rgba(0, 0, 0, 0.55), -4px -4px 10px rgba(255, 255, 255, 0.06);
-  border-color: #4A515E;
+  box-shadow: 8px 8px 18px #BFCBD9, -8px -8px 18px #FFFFFF;
+  transform: translateY(-1px);
+  color: #0084FF;
 }
 
-.neu-raised:active:not(:disabled) {
-  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.6), inset -2px -2px 5px rgba(255, 255, 255, 0.03);
-  transform: translateY(1px);
+.neu-raised:active:not(:disabled),
+.neu-raised.active {
+  box-shadow: inset 3px 3px 6px #CAD5E2, inset -3px -3px 6px #FFFFFF;
+  transform: translateY(0);
+}
+
+.neu-pressed {
+  background-color: #E4EAF2;
+  box-shadow: inset 4px 4px 8px #CAD5E2, inset -4px -4px 8px #FFFFFF;
+  border-radius: 14px;
 }
 
 .neu-accent {
-  background-color: #8BC5B0;
-  color: #17191D;
+  background-color: #0084FF;
+  color: #FFFFFF;
   font-weight: 600;
-  border: 1px solid #9CD4C0;
-  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.4), -2px -2px 6px rgba(255, 255, 255, 0.15);
-  border-radius: 10px;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 5px 5px 14px rgba(0, 132, 255, 0.32), -3px -3px 8px #FFFFFF;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .neu-accent:hover:not(:disabled) {
-  background-color: #9CD4C0;
-  box-shadow: 4px 4px 14px rgba(139, 197, 176, 0.3), -2px -2px 8px rgba(255, 255, 255, 0.2);
+  background-color: #0074E0;
+  box-shadow: 6px 6px 18px rgba(0, 132, 255, 0.42), -4px -4px 10px #FFFFFF;
+  transform: translateY(-1px);
 }
 
 .neu-accent:active:not(:disabled) {
-  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.45);
-  transform: translateY(1px);
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.2);
+  transform: translateY(0);
 }
 
 .neu-pill-active {
-  background-color: #272B32;
-  border: 1px solid #8BC5B0;
-  color: #8BC5B0;
-  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+  background-color: #E9EEF5;
+  box-shadow: 4px 4px 8px #CAD5E2, -4px -4px 8px #FFFFFF;
+  color: #0084FF;
+  font-weight: 600;
+  border-radius: 12px;
 }
 
 .neu-pill-inactive {
-  background-color: #1A1C22;
-  border: 1px solid #2D323B;
-  color: #A5ABB5;
+  background: transparent;
+  color: #64748B;
+  border-radius: 12px;
 }
 
 .neu-pill-inactive:hover {
-  color: #F3F4F6;
-  border-color: #383D46;
+  color: #1E293B;
 }
 
 /* Custom Scrollbars */
@@ -109,14 +125,15 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #17191D;
+  background: #E4EAF2;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2D323B;
+  background: #CAD5E2;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #383D46;
+  background: #B4C2D3;
 }

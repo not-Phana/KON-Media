@@ -23,6 +23,63 @@ export async function analyzeMediaUrl(url) {
   return data;
 }
 
+export async function searchMedia(query, { limit = 5, provider = null, mediaType = "all" } = {}) {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  if (provider) params.append("provider", provider);
+  if (mediaType && mediaType !== "all") params.append("media_type", mediaType);
+
+  const res = await fetch(`${API_BASE}/search?${params.toString()}`);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Search failed");
+  }
+  return data;
+}
+
+export async function submitSearchFeedback(feedback) {
+  const res = await fetch(`${API_BASE}/search/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(feedback),
+  });
+  return res.json();
+}
+
+export async function fetchModelStats() {
+  const res = await fetch(`${API_BASE}/search/model-stats`);
+  if (!res.ok) throw new Error("Failed to fetch model stats");
+  return res.json();
+}
+
+export async function triggerModelTraining(epochs = 5) {
+  const res = await fetch(`${API_BASE}/search/train`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ epochs }),
+  });
+  if (!res.ok) throw new Error("Failed to trigger model training");
+  return res.json();
+}
+
+export async function learnFromDocument({ content, isUrl = null, epochs = 5 }) {
+  const res = await fetch(`${API_BASE}/search/learn-doc`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content, is_url: isUrl, epochs }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to learn from document");
+  }
+  return data;
+}
+
+export async function fetchGdriveStatus() {
+  const res = await fetch(`${API_BASE}/search/gdrive-status`);
+  if (!res.ok) throw new Error("Failed to fetch Google Drive status");
+  return res.json();
+}
+
 export async function queueDownload(options) {
   const res = await fetch(`${API_BASE}/download`, {
     method: "POST",
@@ -54,6 +111,28 @@ export async function dismissTask(taskId) {
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.detail || "Dismiss failed");
+  }
+  return data;
+}
+
+export async function retryTask(taskId) {
+  const res = await fetch(`${API_BASE}/tasks/${taskId}/retry`, {
+    method: "POST",
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Retry failed");
+  }
+  return data;
+}
+
+export async function clearFinishedTasks() {
+  const res = await fetch(`${API_BASE}/tasks/clear-finished`, {
+    method: "POST",
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Clear finished tasks failed");
   }
   return data;
 }
@@ -165,6 +244,22 @@ export async function validateStreamPairing(videoStream, audioStream) {
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.detail || "Stream pairing validation failed");
+  }
+  return data;
+}
+
+export async function validateStreamPair(videoStream, audioStream) {
+  const res = await fetch(`${API_BASE}/streams/validate-pair`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ video_stream: videoStream, audio_stream: audioStream }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || "Stream pair validation failed");
+  }
+  return data;
+}
   }
   return data;
 }

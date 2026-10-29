@@ -38,30 +38,35 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
   };
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#F3F4F6] uppercase tracking-wider flex items-center gap-2 m-0">
-          <History className="w-4 h-4 text-[#8BC5B0]" />
-          <span>Download History ({history.length})</span>
-        </h2>
+    <section className="neu-card p-6 space-y-4">
+      <div className="flex items-center justify-between pb-1">
+        <div className="flex items-center gap-3">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#0084FF]"></div>
+          <h2 className="text-base font-bold text-[#1E293B] m-0">
+            Download History
+          </h2>
+          <span className="neu-recessed px-2.5 py-0.5 rounded-full text-xs font-semibold text-[#64748B]">
+            {history.length}
+          </span>
+        </div>
 
         {history.length > 0 && (
           <div>
             {showConfirmClear ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#EF8585]">Clear history?</span>
+                <span className="text-xs font-semibold text-[#EF4444]">Clear history?</span>
                 <button
                   onClick={() => {
                     onClearAll();
                     setShowConfirmClear(false);
                   }}
-                  className="px-2 py-1 rounded bg-[#2C1D20] text-[#EF8585] text-xs font-semibold cursor-pointer"
+                  className="px-2.5 py-1 rounded-xl bg-[#FEE2E2] text-[#EF4444] text-xs font-bold cursor-pointer"
                 >
                   Yes, Clear
                 </button>
                 <button
                   onClick={() => setShowConfirmClear(false)}
-                  className="px-2 py-1 rounded bg-[#202329] text-[#A5ABB5] text-xs cursor-pointer"
+                  className="neu-raised px-2.5 py-1 text-[#64748B] text-xs font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -69,7 +74,7 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
             ) : (
               <button
                 onClick={() => setShowConfirmClear(true)}
-                className="text-xs text-[#6B7280] hover:text-[#EF8585] flex items-center gap-1 cursor-pointer"
+                className="neu-raised px-3 py-1.5 text-xs text-[#64748B] hover:text-[#EF4444] flex items-center gap-1.5 cursor-pointer rounded-xl font-medium"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Clear All</span>
@@ -80,48 +85,47 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
       </div>
 
       {history.length === 0 ? (
-        <div className="neu-card p-8 text-center text-[#6B7280] text-sm">
+        <div className="neu-recessed p-8 text-center text-[#94A3B8] text-sm font-medium rounded-2xl">
           No downloaded files recorded yet. Completed media downloads will appear here.
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {history.map((item) => (
             <div
               key={item.id}
-              className="neu-card p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#383D46] transition-colors"
+              className="neu-raised p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             >
-              <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-[#272B32] border border-[#383D46] flex items-center justify-center text-[#8BC5B0] shrink-0 mt-0.5 sm:mt-0">
+              <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+                <div className="w-10 h-10 rounded-xl neu-recessed flex items-center justify-center text-[#0084FF] shrink-0">
                   {item.media_type === "audio" ? (
-                    <Music className="w-4 h-4" />
+                    <Music className="w-5 h-5" />
                   ) : (
-                    <Video className="w-4 h-4" />
+                    <Video className="w-5 h-5" />
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <h3
-                    className="text-sm font-medium text-[#F3F4F6] truncate m-0"
-                    title={item.filename || item.title}
+                    className="text-sm font-bold text-[#1E293B] truncate m-0 leading-tight"
+                    title={item.title || item.filename}
                   >
-                    {item.filename || item.title}
+                    {item.title || item.filename}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-[#A5ABB5] font-mono">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-[#6B7280]" />
-                      {formatDate(item.completed_at || item.created_at)}
+
+                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#64748B] font-medium">
+                    <span className="uppercase font-semibold tracking-wider text-[11px] text-[#0084FF]">
+                      {item.ext || "MEDIA"}
                     </span>
-                    {item.filesize && (
-                      <span className="flex items-center gap-1">
-                        <HardDrive className="w-3 h-3 text-[#6B7280]" />
-                        {formatBytes(item.filesize)}
-                      </span>
+                    <span>·</span>
+                    <span>{formatBytes(item.filesize || item.total_bytes)}</span>
+                    {item.completed_at && (
+                      <>
+                        <span>·</span>
+                        <span>{formatDate(item.completed_at)}</span>
+                      </>
                     )}
-                    <span className="px-1.5 py-0.2 rounded bg-[#131418] text-[#8BC5B0]">
-                      {(item.actual_ext || item.ext || (item.filename ? item.filename.split('.').pop() : "MEDIA")).toUpperCase()}
-                    </span>
                     {item.has_video && item.has_audio && (
-                      <span className="px-1.5 py-0.2 rounded bg-[#17221C] text-[#72C69A] border border-[#72C69A]/30">
+                      <span className="neu-recessed px-2 py-0.5 rounded-md text-[11px] font-semibold text-[#10B981]">
                         Sound Verified
                       </span>
                     )}
@@ -129,38 +133,40 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                {item.file_path && (
-                  <button
-                    onClick={() => handleOpenFolder(item.file_path, item.id)}
-                    disabled={openingItemId === item.id}
-                    className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#F3F4F6] hover:text-[#8BC5B0] cursor-pointer disabled:opacity-50"
-                    title="Open in Windows File Explorer"
-                  >
-                    <FolderOpen className="w-3.5 h-3.5 text-[#8BC5B0]" />
-                    <span>{openingItemId === item.id ? "Opening..." : "Folder"}</span>
-                  </button>
-                )}
-
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                 {item.filename && (
                   <a
                     href={getDownloadUrl(item.filename)}
                     download={item.filename}
-                    className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#F3F4F6] hover:text-[#8BC5B0] cursor-pointer no-underline"
-                    title="Save to browser / device"
+                    className="neu-accent flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer no-underline rounded-xl"
+                    title="Save to browser downloads"
                   >
-                    <Download className="w-3.5 h-3.5 text-[#8BC5B0]" />
+                    <Download className="w-3.5 h-3.5 text-white" />
                     <span>Save</span>
                   </a>
                 )}
 
-                <button
-                  onClick={() => onDeleteItem(item.id)}
-                  className="text-[#6B7280] hover:text-[#EF8585] p-1.5 cursor-pointer"
-                  title="Remove from history"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {item.file_path && onOpenFile && (
+                  <button
+                    onClick={() => handleOpenFolder(item.file_path, item.id)}
+                    disabled={openingItemId === item.id}
+                    className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#334155] hover:text-[#0084FF] cursor-pointer disabled:opacity-50 rounded-xl"
+                    title="Show in Windows File Explorer"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5 text-[#0084FF]" />
+                    <span>{openingItemId === item.id ? "Opening..." : "Folder"}</span>
+                  </button>
+                )}
+
+                {onDeleteItem && (
+                  <button
+                    onClick={() => onDeleteItem(item.id)}
+                    className="neu-raised p-2 text-[#94A3B8] hover:text-[#EF4444] cursor-pointer rounded-xl"
+                    title="Delete record from history"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -1,0 +1,96 @@
+"""Data models for KON Media search engine, candidate results, ranking, and feedback."""
+
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+
+@dataclass
+class CandidateResult:
+    """A search candidate retrieved from a media provider."""
+    id: str
+    title: str
+    uploader: str = ""
+    url: str = ""
+    duration: Optional[float] = None
+    duration_formatted: str = ""
+    thumbnail: Optional[str] = None
+    platform: str = "youtube"
+    views: Optional[int] = None
+    score: float = 0.0
+    confidence: str = "low"  # "low", "medium", "high"
+    features: Dict[str, float] = field(default_factory=dict)
+    explanation: List[str] = field(default_factory=list)
+    is_verified_match: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "uploader": self.uploader,
+            "url": self.url,
+            "duration": self.duration,
+            "duration_formatted": self.duration_formatted,
+            "thumbnail": self.thumbnail,
+            "platform": self.platform,
+            "views": self.views,
+            "score": round(self.score, 4),
+            "confidence": self.confidence,
+            "features": {k: round(v, 4) for k, v in self.features.items()},
+            "explanation": self.explanation,
+            "is_verified_match": self.is_verified_match,
+        }
+
+
+@dataclass
+class SearchQuery:
+    """Parsed and normalized search query with intent signals."""
+    raw_query: str
+    normalized_query: str = ""
+    detected_artist: Optional[str] = None
+    detected_title: Optional[str] = None
+    version_hint: Optional[str] = None  # e.g., "live", "remix", "instrumental", "acoustic", "cover"
+    expected_duration: Optional[float] = None
+    expected_artist: Optional[str] = None
+    expected_title: Optional[str] = None
+    media_type: str = "all"  # "all", "audio", "video"
+
+
+@dataclass
+class RankerConfig:
+    """Weights and thresholds for candidate ranking."""
+    weight_exact_title: float = 0.35
+    weight_fuzzy_title: float = 0.25
+    weight_token_overlap: float = 0.15
+    weight_artist_match: float = 0.15
+    weight_version_match: float = 0.15
+    weight_duration_match: float = 0.10
+    weight_feedback_boost: float = 0.20
+    penalty_version_mismatch: float = 0.30
+    penalty_duration_divergence: float = 0.20
+    min_confidence_threshold: float = 0.35
+    high_confidence_threshold: float = 0.70
+
+
+@dataclass
+class SearchFeedbackEntry:
+    """User feedback or verified ground truth for search results."""
+    query: str
+    selected_id: str
+    selected_title: str
+    selected_url: str
+    is_mismatch: bool = False
+    reason: Optional[str] = None
+    timestamp: str = ""
+    provider: str = "youtube"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "query": self.query,
+            "selected_id": self.selected_id,
+            "selected_title": self.selected_title,
+            "selected_url": self.selected_url,
+            "is_mismatch": self.is_mismatch,
+            "reason": self.reason,
+            "timestamp": self.timestamp,
+            "provider": self.provider,
+        }

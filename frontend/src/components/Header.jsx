@@ -1,73 +1,54 @@
 import React from "react";
-import { HardDrive, Settings, CheckCircle2, AlertTriangle, FolderOpen } from "lucide-react";
+import { HardDrive, Settings, CheckCircle2, FolderOpen } from "lucide-react";
 import KonLogo from "./KonLogo";
 
 export default function Header({ health, onOpenSettings, onOpenFile }) {
   return (
-    <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-6 border-b border-[#2D323B]">
-      <div>
-        <div className="flex items-center gap-3">
-          <KonLogo size={42} />
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#F3F4F6] m-0">
-              KON <span className="text-[#8BC5B0]">Media</span>
-            </h1>
-            <p className="text-xs text-[#A5ABB5] m-0">
-              Personal Desktop Media Workspace · Local-First
-            </p>
-          </div>
+    <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4">
+      <div className="flex items-center gap-3.5">
+        <KonLogo size={46} />
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#1E293B] m-0">
+            KON <span className="text-[#0084FF]">Media</span>
+          </h1>
+          <p className="text-xs text-[#64748B] font-medium m-0 mt-0.5">
+            Private Desktop Media Downloader &amp; Library
+          </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        {/* yt-dlp Status Badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#202329] border border-[#2D323B] text-[#A5ABB5]">
-          <CheckCircle2 className="w-3.5 h-3.5 text-[#72C69A]" />
-          <span>yt-dlp: <strong className="text-[#F3F4F6]">{health?.engine?.ytdlp_version ? `v${health.engine.ytdlp_version.split('.')[0]}` : "Active"}</strong></span>
+      <div className="flex flex-wrap items-center gap-2.5 text-xs">
+        {/* System Ready Badge */}
+        <div className="neu-raised flex items-center gap-2 px-3.5 py-2 text-[#475569] font-medium">
+          <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-xs"></span>
+          <span>Engine Active</span>
         </div>
 
-        {/* FFmpeg Status Badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#202329] border border-[#2D323B] text-[#A5ABB5]">
-          {health?.engine?.ffmpeg_available ? (
-            <>
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#72C69A]" />
-              <span>FFmpeg: <strong className="text-[#F3F4F6]">{health.engine.ffmpeg_source === 'custom' ? 'Configured' : 'Ready'}</strong></span>
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="w-3.5 h-3.5 text-[#E8BE72]" />
-              <span title={health?.engine?.ffmpeg_error || "Install FFmpeg or configure custom path in Settings"}>
-                FFmpeg: <strong className="text-[#E8BE72]">Not Found</strong>
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Free Space Badge */}
+        {/* Disk Free Space */}
         {health?.disk_free_gb && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#202329] border border-[#2D323B] text-[#A5ABB5]">
-            <HardDrive className="w-3.5 h-3.5 text-[#8BC5B0]" />
-            <span>Disk Free: <strong className="text-[#F3F4F6]">{health.disk_free_gb} GB</strong></span>
+          <div className="neu-raised flex items-center gap-1.5 px-3.5 py-2 text-[#475569] font-medium">
+            <HardDrive className="w-3.5 h-3.5 text-[#0084FF]" />
+            <span>{health.disk_free_gb} GB Free</span>
           </div>
         )}
 
         {/* Open Downloads Folder */}
         <button
           onClick={() => onOpenFile && onOpenFile()}
-          className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#F3F4F6] cursor-pointer hover:text-[#8BC5B0]"
-          title="Open Downloads Folder in Windows File Explorer"
+          className="neu-raised flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#334155] cursor-pointer hover:text-[#0084FF] transition-colors"
+          title="Open Downloads Folder in File Explorer"
         >
-          <FolderOpen className="w-3.5 h-3.5 text-[#8BC5B0]" />
+          <FolderOpen className="w-3.5 h-3.5 text-[#0084FF]" />
           <span>Folder</span>
         </button>
 
         {/* Settings Button */}
         <button
           onClick={onOpenSettings}
-          className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#F3F4F6] cursor-pointer hover:text-[#8BC5B0]"
-          title="Open Settings"
+          className="neu-raised flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#334155] cursor-pointer hover:text-[#0084FF] transition-colors"
+          title="Open Application Settings"
         >
-          <Settings className="w-3.5 h-3.5" />
+          <Settings className="w-3.5 h-3.5 text-[#64748B]" />
           <span>Settings</span>
         </button>
       </div>

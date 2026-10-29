@@ -4,6 +4,15 @@
 __pycache__/
 *.pyc
 
+# Google OAuth & Credentials Security (STRICTLY UNTRACKED)
+*credentials*.json
+*client_secret*.json
+*token*.json
+.google_tokens/
+.gdrive_credentials/
+*.env
+*.secret
+
 # Node & Frontend
 node_modules/
 frontend/node_modules/
