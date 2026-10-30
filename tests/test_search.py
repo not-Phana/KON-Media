@@ -560,4 +560,59 @@ def test_zenless_zone_zero_real_song_understanding():
     assert ranked.index(gameplay_item) > 1
 
 
+def test_game_query_audio_mode_penalizes_gameplay_guides_and_promotes_soundtrack():
+    """Verify that searching a video game (e.g. Counter-Strike 2) in audio mode demotes guides/gameplay and ranks soundtrack."""
+    from backend.search.relevance_engine import rank_candidates as py_rank_candidates
+
+    q = SearchQuery(raw_query="Counter-Strike 2", media_type="audio")
+
+    candidates = [
+        CandidateResult(
+            id="guide_vid",
+            title="THE ULTIMATE CS2 Beginner Guide (2026)",
+            uploader="louiecs2",
+            duration=1385.0,  # 23 min
+            platform="youtube",
+        ),
+        CandidateResult(
+            id="evolution_vid",
+            title="Counter-Strike Evolution (1999-2026) | 25 Years of INSANE Graphics",
+            uploader="Ultimate Gaming Zone",
+            duration=523.0,  # 8.7 min
+            platform="youtube",
+        ),
+        CandidateResult(
+            id="tenz_gameplay",
+            title="TenZ BACK TO PRIME ON COUNTER STRIKE 2 !!!",
+            uploader="TenZ",
+            duration=1102.0,  # 18.3 min
+            platform="youtube",
+        ),
+        CandidateResult(
+            id="cs2_soundtrack",
+            title="【CS2】Counter Strike 2 Soundtrack - Main Menu",
+            uploader="teeaaa",
+            duration=210.0,  # 3.5 min
+            platform="youtube",
+        ),
+    ]
+
+    ranked = py_rank_candidates(q, candidates)
+
+    # 1. The genuine soundtrack must rank #1
+    assert ranked[0].id == "cs2_soundtrack"
+    assert ranked[0].is_music is True
+    assert ranked[0].content_type in ("soundtrack", "song")
+    assert ranked[0].score > 1.0
+
+    # 2. Non-music gaming videos must be identified as videos and demoted
+    for non_music_id in ("guide_vid", "evolution_vid", "tenz_gameplay"):
+        item = next(c for c in ranked if c.id == non_music_id)
+        assert item.is_music is False
+        assert item.content_type == "video"
+        assert item.score < 0.20
+        assert ranked.index(item) > 0
+
+
+
 

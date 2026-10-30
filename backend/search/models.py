@@ -27,6 +27,8 @@ class CandidateResult:
     context_source: Optional[str] = None
     is_cluttered: bool = False
     is_cutscene: bool = False
+    is_music: bool = True
+    content_type: str = "song"  # "song", "soundtrack", "video"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -38,6 +40,8 @@ class CandidateResult:
             "context_source": self.context_source,
             "is_cluttered": self.is_cluttered,
             "is_cutscene": self.is_cutscene,
+            "is_music": self.is_music,
+            "content_type": self.content_type,
             "uploader": self.uploader,
             "url": self.url,
             "duration": self.duration,

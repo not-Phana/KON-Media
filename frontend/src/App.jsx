@@ -46,6 +46,7 @@ export default function App() {
   const [analyzedMedia, setAnalyzedMedia] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentSearchMode, setCurrentSearchMode] = useState("audio");
   const [searchState, setSearchState] = useState("idle"); // 'idle' | 'searching' | 'updating' | 'complete' | 'no_results' | 'partial' | 'error'
   const [searchStage, setSearchStage] = useState(null);
   const [searchMeta, setSearchMeta] = useState(null);
@@ -211,6 +212,7 @@ export default function App() {
 
       setAnalyzedMedia(null);
       setSearchQuery(input);
+      setCurrentSearchMode(searchMode);
       setSearchResults(null);
       setSearchState("searching");
       setSearchStage({ stage: "understanding", message: "Understanding your search..." });
@@ -497,6 +499,7 @@ export default function App() {
           <SearchResultsCard
             query={searchQuery}
             results={searchResults}
+            searchMode={currentSearchMode}
             searchState={searchState}
             searchStage={searchStage}
             searchMeta={searchMeta}

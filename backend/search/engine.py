@@ -86,23 +86,26 @@ class SearchEngine:
             media_type=media_type,
         )
 
-        # 3b. Only retrieve canonical soundtrack artist release if user specifically asked for an anime/franchise theme
-        # and has not already specified an explicit song title (prevents destructive query expansion)
+        # 3b. Retrieve franchise/game theme or canonical soundtrack if known association exists
         has_franchise_role = any(k in clean_q.lower() for k in ("opening", "ending", " op", " ed", "theme", "ost", "soundtrack"))
-        if has_franchise_role and not (search_query.detected_artist and search_query.detected_title):
-            from backend.search.normalization import resolve_soundtrack_associations
-            associated_songs = resolve_soundtrack_associations(clean_q)
-            if associated_songs:
-                clean_song_target = associated_songs[0]
-                if clean_song_target.lower() != clean_q.lower():
-                    extra_candidates = self.aggregator.aggregate_candidates(
-                        query=clean_song_target,
-                        limit_per_provider=min(pool_limit // 2, 8),
-                        ffmpeg_path=ffmpeg_path,
-                        preferred_provider=preferred_provider,
-                        media_type=media_type,
-                    )
-                    candidates.extend(extra_candidates)
+        from backend.search.normalization import resolve_soundtrack_associations
+        associated_songs = resolve_soundtrack_associations(clean_q)
+
+        soundtrack_query_target = None
+        if associated_songs:
+            soundtrack_query_target = associated_songs[0]
+        elif has_franchise_role and not (search_query.detected_artist and search_query.detected_title):
+            soundtrack_query_target = clean_q
+
+        if soundtrack_query_target and soundtrack_query_target.lower() != clean_q.lower():
+            extra_candidates = self.aggregator.aggregate_candidates(
+                query=soundtrack_query_target,
+                limit_per_provider=min(pool_limit // 2, 8),
+                ffmpeg_path=ffmpeg_path,
+                preferred_provider=preferred_provider,
+                media_type=media_type,
+            )
+            candidates.extend(extra_candidates)
 
         if not candidates:
             return []
@@ -227,7 +230,31 @@ class SearchEngine:
             except Exception as e:
                 return provider.name, [], str(e)
 
+        # Determine if soundtrack/theme retrieval is available for this entity
+        has_franchise_role = any(k in clean_q.lower() for k in ("opening", "ending", " op", " ed", "theme", "ost", "soundtrack"))
+        from backend.search.normalization import resolve_soundtrack_associations
+        associated_songs = resolve_soundtrack_associations(clean_q)
+
+        soundtrack_query_target = None
+        if associated_songs:
+            soundtrack_query_target = associated_songs[0]
+        elif has_franchise_role and not (search_query.detected_artist and search_query.detected_title):
+            soundtrack_query_target = clean_q
+
         tasks = [asyncio.create_task(run_single_provider(p)) for p in active_providers]
+        if soundtrack_query_target and soundtrack_query_target.lower() != clean_q.lower():
+            async def run_soundtrack_provider(provider, target_q):
+                try:
+                    res = await asyncio.wait_for(
+                        asyncio.to_thread(provider.search, target_q, min(pool_limit // 2, 8), ffmpeg_path),
+                        timeout=8.0,
+                    )
+                    return f"{provider.name} (soundtrack)", res, None
+                except Exception:
+                    return f"{provider.name} (soundtrack)", [], None
+
+            for p in active_providers:
+                tasks.append(asyncio.create_task(run_soundtrack_provider(p, soundtrack_query_target)))
 
         for coro in asyncio.as_completed(tasks):
             p_name, candidates, err = await coro

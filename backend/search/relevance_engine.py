@@ -26,23 +26,55 @@ DISQUALIFYING_VERSION_TERMS: List[Tuple[str, float]] = [
 ]
 
 NON_MUSIC_TERMS: List[Tuple[str, float]] = [
-    ("documentary", 0.25),
+    ("guide", 0.15),
+    ("beginner guide", 0.10),
+    ("evolution", 0.15),
+    ("insane graphics", 0.10),
+    ("graphics", 0.20),
+    ("settings", 0.15),
+    ("learning", 0.20),
+    ("100 days", 0.10),
+    ("spent 100 days", 0.10),
+    ("back to prime", 0.15),
+    ("gameplay", 0.15),
+    ("walkthrough", 0.15),
+    ("pro gameplay", 0.15),
+    ("highlights", 0.20),
+    ("montage", 0.25),
+    ("clutch", 0.20),
+    ("rank up", 0.15),
+    ("tips and tricks", 0.15),
+    ("tips & tricks", 0.15),
+    ("how to play", 0.15),
+    ("how to", 0.20),
+    ("funny moments", 0.15),
+    ("epic moments", 0.15),
+    ("moments that broke", 0.10),
+    ("documentary", 0.20),
     ("trailer", 0.25),
     ("teaser", 0.25),
-    ("tutorial", 0.25),
-    ("gameplay", 0.25),
-    ("walkthrough", 0.25),
-    ("review", 0.30),
-    ("interview", 0.30),
-    ("podcast", 0.30),
-    ("reaction", 0.25),
-    ("scene", 0.30),
-    ("movie clip", 0.25),
-    ("ending scene", 0.25),
-    ("workout", 0.25),
-    ("fitness", 0.25),
-    ("routine", 0.25),
-    ("exercise", 0.25),
+    ("tutorial", 0.15),
+    ("review", 0.20),
+    ("interview", 0.20),
+    ("podcast", 0.20),
+    ("reaction", 0.15),
+    ("scene", 0.25),
+    ("scenes", 0.25),
+    ("movie clip", 0.20),
+    ("ending scene", 0.20),
+    ("recap", 0.15),
+    ("entire story", 0.10),
+    ("story of", 0.15),
+    ("season", 0.20),
+    ("episode", 0.20),
+    ("full movie", 0.15),
+    ("vlog", 0.15),
+    ("unboxing", 0.15),
+    ("banned products", 0.10),
+    ("workout", 0.20),
+    ("fitness", 0.20),
+    ("routine", 0.20),
+    ("exercise", 0.20),
 ]
 
 NOISE_RE = re.compile(
@@ -192,6 +224,65 @@ def detect_version_hint(text: str) -> Optional[str]:
             if f" {term} " in padded:
                 return cat
     return None
+
+
+def classify_candidate_media(candidate: CandidateResult, query: Optional[SearchQuery] = None) -> Tuple[bool, str]:
+    """Classify whether a candidate is genuinely music or general video content.
+
+    Returns:
+        (is_music, content_type) e.g. (True, "song"), (True, "soundtrack"), (False, "video").
+    """
+    raw_title = candidate.title or ""
+    clean_title = candidate.clean_title or raw_title
+    title_lower = clean_title.lower()
+    uploader_lower = (candidate.uploader or "").lower()
+    duration = candidate.duration
+
+    # 1. Platform-level certainty: SoundCloud is strictly audio music
+    if candidate.platform == "soundcloud":
+        if any(k in title_lower for k in ("ost", "soundtrack", "theme", "score", "bgm")):
+            return True, "soundtrack"
+        return True, "song"
+
+    # 2. Strong music markers
+    music_indicators = (
+        "official audio", "official music video", "mv", "lyrics", "feat.", "ft.",
+        "soundtrack", "ost", "theme", "opening", "ending", " op", " ed", "remix",
+        "acoustic", "instrumental", "karaoke", "orchestra", "symphony",
+        "topic", "records", "vevo", "audio", "song", "music", "prod.",
+        "band", "orchestral", "bgm", "cover", "album", "score", "main menu",
+    )
+    has_music_indicator = any(m in title_lower or m in uploader_lower for m in music_indicators)
+    is_soundtrack = any(s in title_lower or s in uploader_lower for s in ("ost", "soundtrack", "theme", "score", "bgm", "opening", "ending"))
+
+    # 3. Obvious non-music video content
+    combined = f"{title_lower} {uploader_lower}"
+    has_video_keyword = any(term in combined for term, _ in NON_MUSIC_TERMS) or candidate.is_cutscene
+
+    # If it has strong video keyword and NO music indicator: definitely video
+    if has_video_keyword and not has_music_indicator:
+        return False, "video"
+
+    # If duration > 15 mins (900s) and not an explicit soundtrack compilation:
+    if duration and duration > 900:
+        if is_soundtrack and any(w in title_lower for w in ("soundtrack", "ost", "album", "score", "suite")):
+            return True, "soundtrack"
+        return False, "video"
+
+    # If it has music indicator:
+    if has_music_indicator:
+        return True, "soundtrack" if is_soundtrack else "song"
+
+    # Parsed song and artist entity without video keywords:
+    if candidate.song_title and candidate.artist and not has_video_keyword:
+        return True, "song"
+
+    # Standard "Artist - Song" format without video noise
+    if " - " in clean_title and (duration is None or (45 <= duration <= 600)) and not has_video_keyword:
+        return True, "song"
+
+    # Fallback: general YouTube content is classified as video
+    return False, "video"
 
 
 def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str, float]:
@@ -356,16 +447,18 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
             if cand_version in ("remix", "live", "instrumental", "cover", "slowed", "sped_up"):
                 version_compat = 0.65
 
-    # 7. Non-music content penalty (check against raw unstripped title)
+    # 7. Non-music content penalty (check against raw unstripped title and classification)
     raw_cand_norm = normalize_text(candidate.title)
     is_audio_mode = media_type == "audio" or any(
         m in norm_q for m in ("song", "music", "audio", "ost", "soundtrack", "track", "theme")
     )
     non_music_penalty = 1.0
     if is_audio_mode:
+        if not getattr(candidate, "is_music", True):
+            non_music_penalty = 0.15
         for term, pen in NON_MUSIC_TERMS:
             if term in raw_cand_norm and term not in norm_q:
-                non_music_penalty = pen
+                non_music_penalty = min(non_music_penalty, pen)
                 break
 
     # 8. Duration compatibility
@@ -385,7 +478,9 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
             duration_compat = 0.10
     elif is_audio_mode and candidate.duration:
         dur = candidate.duration
-        if dur > 600.0 and not any(k in norm_q for k in ("album", "mix", "full", "compilation")):
+        if dur > 900.0 and not any(k in norm_q for k in ("album", "mix", "full", "compilation")):
+            duration_compat = 0.10
+        elif dur > 600.0 and not any(k in norm_q for k in ("album", "mix", "full", "compilation")):
             duration_compat = 0.25
         elif dur < 25.0:
             duration_compat = 0.20
@@ -457,6 +552,10 @@ def score_candidate(
         candidate.context_source = ent.get("context_source")
         candidate.is_cluttered = ent.get("is_cluttered", False)
         candidate.is_cutscene = ent.get("is_cutscene", False)
+
+    is_music, content_type = classify_candidate_media(candidate, query)
+    candidate.is_music = is_music
+    candidate.content_type = content_type
 
     feat = extract_features(query, candidate)
     explanations: List[str] = []

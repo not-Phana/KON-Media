@@ -42,9 +42,12 @@ function DownloadActionButton({
   statusInfo,
   onDownload,
   onOpenFile,
+  isPrimary = false,
 }) {
   const isAudio = mediaType === "audio";
   const { status, percent = 0, filePath } = statusInfo;
+  const isSong = candidate.is_music !== false && candidate.content_type !== "video";
+  const itemTypeLabel = isAudio ? (isSong ? "Song" : "Audio") : "Video";
 
   // 1. Queued / Starting state (instant click feedback)
   if (status === "starting" || status === "queued") {
@@ -53,7 +56,7 @@ function DownloadActionButton({
         type="button"
         disabled
         className="neu-recessed px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold text-[#0084FF] rounded-xl cursor-not-allowed select-none border border-[#0084FF]/30 animate-pulse"
-        title={isAudio ? "Preparing audio download..." : "Preparing video download..."}
+        title={isAudio ? `Preparing ${itemTypeLabel.toLowerCase()} download...` : "Preparing video download..."}
       >
         <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0084FF] shrink-0" />
         <span>Queued...</span>
@@ -68,7 +71,7 @@ function DownloadActionButton({
         className={`relative overflow-hidden rounded-xl neu-recessed border border-[#0084FF]/40 flex items-center ${
           isAudio ? "min-w-[140px]" : "min-w-[125px]"
         }`}
-        title={`Downloading ${isAudio ? "song" : "video"}: ${percent}%`}
+        title={`Downloading ${itemTypeLabel.toLowerCase()}: ${percent}%`}
       >
         {/* Progress fill bar */}
         <div
@@ -77,7 +80,7 @@ function DownloadActionButton({
         />
         <div className="relative px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold text-[#0084FF] select-none z-10 w-full justify-center">
           <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-[#0084FF]" />
-          <span>{isAudio ? "Downloading" : "Video"} {percent > 0 ? `${percent}%` : "..."}</span>
+          <span>{isAudio ? (isSong ? "Downloading Song" : "Downloading Audio") : "Downloading Video"} {percent > 0 ? `${percent}%` : "..."}</span>
         </div>
       </div>
     );
@@ -104,17 +107,17 @@ function DownloadActionButton({
           type="button"
           onClick={() => filePath && onOpenFile && onOpenFile(filePath)}
           className="neu-recessed px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold text-[#10B981] rounded-xl border border-[#10B981]/35 hover:border-[#10B981]/60 hover:bg-[#10B981]/10 transition-all cursor-pointer group shadow-[0_0_12px_rgba(16,185,129,0.15)]"
-          title={`${isAudio ? "Song" : "Video"} downloaded! Click to reveal in folder`}
+          title={`${itemTypeLabel} downloaded! Click to reveal in folder`}
         >
           <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
-          <span>{isAudio ? "Downloaded" : "MP4 Ready"}</span>
+          <span>{isAudio ? (isSong ? "Song Ready" : "Audio Ready") : "MP4 Ready"}</span>
           <FolderOpen className="w-3 h-3 text-[#10B981] opacity-75 group-hover:opacity-100 transition-opacity ml-0.5" />
         </button>
         <button
           type="button"
           onClick={() => onDownload(candidate, mediaType, true)}
           className="neu-raised p-2.5 text-[#64748B] hover:text-[#0084FF] rounded-xl cursor-pointer text-xs transition-colors"
-          title={`Download ${isAudio ? "Song (MP3)" : "Video (MP4)"} again`}
+          title={`Download ${isAudio ? (isSong ? "Song (MP3)" : "Audio (MP3)") : "Video (MP4)"} again`}
         >
           <Download className="w-3.5 h-3.5" />
         </button>
@@ -132,22 +135,26 @@ function DownloadActionButton({
         title="Download failed. Click to retry"
       >
         <AlertCircle className="w-3.5 h-3.5 text-[#EF4444] shrink-0" />
-        <span>Retry {isAudio ? "Song" : "Video"}</span>
+        <span>Retry {itemTypeLabel}</span>
       </button>
     );
   }
 
   // 6. Default idle button
+  const primaryClass = "neu-accent px-4 py-2.5 flex items-center gap-2 text-xs font-semibold cursor-pointer rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,132,255,0.25)]";
+  const secondaryClass = "neu-raised px-3.5 py-2.5 flex items-center gap-1.5 text-xs font-semibold text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] cursor-pointer rounded-xl active:scale-95 transition-all";
+
   if (isAudio) {
+    const label = isSong ? "Download Song" : "Download Audio";
     return (
       <button
         type="button"
         onClick={() => onDownload(candidate, "audio")}
-        className="neu-accent px-4 py-2.5 flex items-center gap-2 text-xs font-semibold cursor-pointer rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,132,255,0.25)]"
-        title="Direct 1-click download as MP3 audio"
+        className={isPrimary ? primaryClass : secondaryClass}
+        title={isSong ? "Direct 1-click download as MP3 song" : "Extract & download audio as MP3"}
       >
         <Music className="w-3.5 h-3.5" />
-        <span>Download Song</span>
+        <span>{label}</span>
       </button>
     );
   }
@@ -156,11 +163,11 @@ function DownloadActionButton({
     <button
       type="button"
       onClick={() => onDownload(candidate, "video")}
-      className="neu-raised px-3.5 py-2.5 flex items-center gap-1.5 text-xs font-semibold text-[#334155] hover:text-[#0084FF] cursor-pointer rounded-xl active:scale-95 transition-all"
+      className={isPrimary ? primaryClass : secondaryClass}
       title="Direct 1-click download as MP4 video"
     >
       <Film className="w-3.5 h-3.5" />
-      <span>Video</span>
+      <span>{isPrimary ? "Download Video" : "Video"}</span>
     </button>
   );
 }
@@ -168,6 +175,7 @@ function DownloadActionButton({
 export default function SearchResultsCard({
   query,
   results,
+  searchMode = "audio",
   searchState = "complete",
   searchStage = null,
   searchMeta = null,
@@ -498,7 +506,7 @@ export default function SearchResultsCard({
               {/* Media Info */}
               <div className="flex items-start gap-4 min-w-0 flex-1">
                 {/* Thumbnail */}
-                <div className="w-16 h-16 rounded-xl neu-recessed p-1 shrink-0 overflow-hidden flex items-center justify-center">
+                <div className="w-16 h-16 rounded-xl neu-recessed p-1 shrink-0 overflow-hidden flex items-center justify-center relative">
                   {cand.thumbnail ? (
                     <img
                       src={cand.thumbnail}
@@ -506,8 +514,16 @@ export default function SearchResultsCard({
                       className="w-full h-full object-cover rounded-lg"
                       referrerPolicy="no-referrer"
                     />
+                  ) : (cand.content_type === "video" || cand.is_music === false) ? (
+                    <Film className="w-6 h-6 text-[#EF4444]" />
                   ) : (
                     <Music className="w-6 h-6 text-[#0084FF]" />
+                  )}
+                  {/* Small platform chip on thumbnail for videos */}
+                  {(cand.content_type === "video" || cand.is_music === false) && (
+                    <span className="absolute bottom-1 right-1 bg-[#EF4444] text-[8px] font-black text-white px-1 py-0.2 rounded shadow-sm">
+                      {cand.platform === "youtube" ? "YT" : "VID"}
+                    </span>
                   )}
                 </div>
 
@@ -519,6 +535,25 @@ export default function SearchResultsCard({
                         Top Match
                       </span>
                     )}
+
+                    {/* Platform & Media Type Badge */}
+                    {cand.content_type === "soundtrack" ? (
+                      <span className="inline-flex items-center gap-1 neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] border border-[#0084FF]/25 bg-[#0084FF]/5">
+                        <Music className="w-3 h-3 text-[#0084FF]" />
+                        <span>Soundtrack</span>
+                      </span>
+                    ) : (cand.is_music === false || cand.content_type === "video") ? (
+                      <span className="inline-flex items-center gap-1 neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#EF4444] border border-[#EF4444]/25 bg-[#EF4444]/5">
+                        <Film className="w-3 h-3 text-[#EF4444]" />
+                        <span>{cand.platform === "youtube" ? "YouTube Video" : "Video"}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#10B981] border border-[#10B981]/25 bg-[#10B981]/5">
+                        <Music className="w-3 h-3 text-[#10B981]" />
+                        <span>Song</span>
+                      </span>
+                    )}
+
                     <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide">
                       {cand.platform}
                     </span>
@@ -572,13 +607,14 @@ export default function SearchResultsCard({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-stretch sm:self-end md:self-center justify-end">
-                {/* Download Song Button with Live Feedback */}
+                {/* Download Audio / Song Button with Live Feedback */}
                 <DownloadActionButton
                   candidate={cand}
                   mediaType="audio"
                   statusInfo={audioStatus}
                   onDownload={handleDownloadClick}
                   onOpenFile={onOpenFile}
+                  isPrimary={searchMode !== "video" && (cand.is_music !== false || searchMode === "audio")}
                 />
 
                 {/* Video Button with Live Feedback */}
@@ -588,6 +624,7 @@ export default function SearchResultsCard({
                   statusInfo={videoStatus}
                   onDownload={handleDownloadClick}
                   onOpenFile={onOpenFile}
+                  isPrimary={searchMode === "video" || (cand.is_music === false && searchMode === "all")}
                 />
 
                 {/* Format Inspector */}
