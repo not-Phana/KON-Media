@@ -96,12 +96,31 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
               className="neu-raised p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             >
               <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
-                <div className="w-10 h-10 rounded-xl neu-recessed flex items-center justify-center text-[#0084FF] shrink-0">
-                  {item.media_type === "audio" ? (
-                    <Music className="w-5 h-5" />
-                  ) : (
-                    <Video className="w-5 h-5" />
-                  )}
+                <div className="w-12 h-12 rounded-xl neu-recessed p-0.5 flex items-center justify-center shrink-0 overflow-hidden relative">
+                  {item.thumbnail ? (
+                    <img
+                      src={item.thumbnail}
+                      alt={item.title || item.filename}
+                      className="w-full h-full object-cover rounded-lg"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        const fallback = e.currentTarget.parentElement?.querySelector(".history-icon-fallback");
+                        if (fallback) fallback.classList.remove("hidden");
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className={`history-icon-fallback w-full h-full flex items-center justify-center text-[#0084FF] ${
+                      item.thumbnail ? "hidden" : ""
+                    }`}
+                  >
+                    {item.media_type === "audio" ? (
+                      <Music className="w-5 h-5" />
+                    ) : (
+                      <Video className="w-5 h-5" />
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex-1 min-w-0">

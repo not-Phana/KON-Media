@@ -513,12 +513,24 @@ export default function SearchResultsCard({
                       alt={cand.title}
                       className="w-full h-full object-cover rounded-lg"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        const fallback = e.currentTarget.parentElement?.querySelector(".cand-icon-fallback");
+                        if (fallback) fallback.classList.remove("hidden");
+                      }}
                     />
-                  ) : (cand.content_type === "video" || cand.is_music === false) ? (
-                    <Film className="w-6 h-6 text-[#EF4444]" />
-                  ) : (
-                    <Music className="w-6 h-6 text-[#0084FF]" />
-                  )}
+                  ) : null}
+                  <div
+                    className={`cand-icon-fallback w-full h-full flex items-center justify-center ${
+                      cand.thumbnail ? "hidden" : ""
+                    }`}
+                  >
+                    {cand.content_type === "video" || cand.is_music === false ? (
+                      <Film className="w-6 h-6 text-[#EF4444]" />
+                    ) : (
+                      <Music className="w-6 h-6 text-[#0084FF]" />
+                    )}
+                  </div>
                   {/* Small platform chip on thumbnail for videos */}
                   {(cand.content_type === "video" || cand.is_music === false) && (
                     <span className="absolute bottom-1 right-1 bg-[#EF4444] text-[8px] font-black text-white px-1 py-0.2 rounded shadow-sm">
