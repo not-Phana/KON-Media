@@ -287,6 +287,46 @@ async def open_external_url(req: OpenExternalUrlRequest):
         raise HTTPException(status_code=500, detail=f"Failed to open URL in browser: {e}")
 
 
+@router.get("/search/suggestions")
+async def search_suggestions_endpoint(
+    q: str,
+    response: Response,
+    limit: int = 6,
+    media_type: Optional[str] = "all",
+):
+    """Smart autocomplete and intelligent song discovery from genuine evidence."""
+    clean_q = q.strip()
+    if not clean_q:
+        return {
+            "query": "",
+            "suggestions": [],
+            "count": 0,
+            "product": "KON Search 1.1.0 Rei",
+            "engine": "KON Search 1.1.0 Rei",
+        }
+
+    clamped_limit = min(max(limit, 1), 12)
+    from backend.search.suggestions import get_shared_suggestion_engine
+
+    engine = get_shared_suggestion_engine()
+    response.headers["X-KON-Search-Engine"] = "KON Search 1.1.0 Rei"
+
+    suggestions = await asyncio.to_thread(
+        engine.get_suggestions,
+        query=clean_q,
+        limit=clamped_limit,
+        media_type=media_type or "all",
+    )
+
+    return {
+        "query": clean_q,
+        "suggestions": suggestions,
+        "count": len(suggestions),
+        "product": "KON Search 1.1.0 Rei",
+        "engine": "KON Search 1.1.0 Rei",
+    }
+
+
 @router.get("/search")
 async def search_media_endpoint(
     q: str,

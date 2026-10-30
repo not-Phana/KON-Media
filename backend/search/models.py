@@ -109,3 +109,32 @@ class SearchFeedbackEntry:
             "timestamp": self.timestamp,
             "provider": self.provider,
         }
+
+
+@dataclass
+class SearchSuggestion:
+    """A search autocomplete suggestion or intelligent song discovery."""
+    id: str
+    query: str
+    title: str
+    artist: Optional[str] = None
+    type: str = "query"  # "song" or "query"
+    thumbnail: Optional[str] = None
+    duration: Optional[float] = None
+    url: Optional[str] = None
+    match_reason: str = "Suggested query"
+    score: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "query": self.query,
+            "title": self.title,
+            "artist": self.artist,
+            "type": self.type,
+            "thumbnail": self.thumbnail,
+            "duration": self.duration,
+            "url": self.url,
+            "match_reason": self.match_reason,
+            "score": round(self.score, 4),
+        }

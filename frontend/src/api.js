@@ -65,6 +65,22 @@ export async function searchMedia(query, { limit = 5, provider = null, mediaType
   return data;
 }
 
+export async function fetchSearchSuggestions(query, { limit = 6, mediaType = "all", signal = null } = {}) {
+  const cleanQ = query?.trim();
+  if (!cleanQ) return { suggestions: [], count: 0 };
+  const params = new URLSearchParams({ q: cleanQ, limit: String(limit) });
+  if (mediaType && mediaType !== "all") params.append("media_type", mediaType);
+
+  try {
+    const res = await fetch(`${API_BASE}/search/suggestions?${params.toString()}`, { signal });
+    if (!res.ok) return { suggestions: [], count: 0 };
+    return await res.json();
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    return { suggestions: [], count: 0 };
+  }
+}
+
 export async function streamSearchMedia(
   query,
   {
