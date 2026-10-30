@@ -176,7 +176,7 @@ class SearchEngine:
                 "providers_timed_out": [],
                 "providers_failed": [],
                 "engine": self.get_active_engine(),
-                "product": "KON Search 1.1.0 Rei",
+                "product": "KON Search 1.2 Rei",
             }
             return
 
@@ -314,7 +314,7 @@ class SearchEngine:
                     "providers_timed_out": timed_out_providers,
                     "providers_failed": failed_providers,
                     "engine": self.get_active_engine(),
-                    "product": "KON Search 1.1.0 Rei",
+                    "product": "KON Search 1.2 Rei",
                 }
             else:
                 yield {
@@ -327,7 +327,7 @@ class SearchEngine:
                     "providers_timed_out": timed_out_providers,
                     "providers_failed": failed_providers,
                     "engine": self.get_active_engine(),
-                    "product": "KON Search 1.1.0 Rei",
+                    "product": "KON Search 1.2 Rei",
                 }
         else:
             yield {
@@ -340,7 +340,7 @@ class SearchEngine:
                 "providers_timed_out": timed_out_providers,
                 "providers_failed": failed_providers,
                 "engine": self.get_active_engine(),
-                "product": "KON Search 1.1.0 Rei",
+                "product": "KON Search 1.2 Rei",
             }
 
     def record_feedback(

@@ -243,7 +243,7 @@ export default function App() {
               completed: finalData.providers_completed || [],
               timedOut: finalData.providers_timed_out || [],
               failed: finalData.providers_failed || [],
-              engine: finalData.engine || "KON Search 1.1.0 Rei",
+              engine: finalData.engine || "KON Search 1.2 Rei",
             });
 
             if (results.length === 0) {
@@ -565,7 +565,7 @@ export default function App() {
         onSelectTheme={setTheme}
       />
 
-      {/* KON Search 1.1.0 Rei Model Spotlight Modal */}
+      {/* KON Search 1.2 Rei Model Spotlight Modal */}
       <ModelInfoModal
         isOpen={isModelModalOpen}
         onClose={() => setIsModelModalOpen(false)}

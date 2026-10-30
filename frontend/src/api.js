@@ -81,6 +81,24 @@ export async function fetchSearchSuggestions(query, { limit = 6, mediaType = "al
   }
 }
 
+export async function clearSuggestionHistory() {
+  const res = await fetch(`${API_BASE}/search/suggestions/history`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to clear suggestion history");
+  return res.json();
+}
+
+export async function fetchSuggestionHistoryStats() {
+  try {
+    const res = await fetch(`${API_BASE}/search/suggestions/history`);
+    if (!res.ok) return { history_count: 0, refinements_count: 0, recent_history: [] };
+    return await res.json();
+  } catch {
+    return { history_count: 0, refinements_count: 0, recent_history: [] };
+  }
+}
+
 export async function streamSearchMedia(
   query,
   {

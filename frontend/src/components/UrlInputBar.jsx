@@ -11,6 +11,10 @@ import {
   Cpu,
   Sparkles,
   ChevronRight,
+  User,
+  Layers,
+  Compass,
+  CornerDownLeft,
 } from "lucide-react";
 import { fetchSearchSuggestions } from "../api";
 
@@ -321,7 +325,7 @@ export default function UrlInputBar({
           <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-bold text-[#64748B] dark:text-[#94A3B8] border-b border-slate-200/40 dark:border-slate-700/40 pb-1.5 mb-1">
             <span className="flex items-center gap-1.5">
               <Sparkles className="w-3 h-3 text-[#0084FF]" />
-              <span>Intelligent Discovery · KON Search 1.1.0 Rei</span>
+              <span>Intelligent Discovery · KON Search 1.2 Rei</span>
             </span>
             <span className="text-[10px] font-mono text-[#94A3B8] hidden sm:inline">
               ↑↓ navigate · Enter select · Esc close
@@ -330,9 +334,54 @@ export default function UrlInputBar({
 
           {suggestions.map((sug, idx) => {
             const isSelected = selectedIndex === idx;
-            const isSong = sug.type === "song";
+            const isArtist = sug.type === "artist" || sug.category === "artist";
+            const isVersion = sug.category === "version";
+            const isContext = sug.category === "context";
+            const isPartial = sug.category === "partial";
+            const isSong = sug.type === "song" || (!sug.type && !isArtist);
             const isVideo = sug.type === "video";
-            const isMedia = isSong || isVideo;
+            const isMedia = isSong || isVideo || isArtist;
+
+            if (isArtist) {
+              return (
+                <div
+                  key={sug.id || `sug_${idx}`}
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => handleSelectSuggestion(sug)}
+                  onMouseEnter={() => setSelectedIndex(idx)}
+                  className={`p-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                    isSelected
+                      ? "neu-raised text-[#8B5CF6] border border-[#8B5CF6]/35 bg-[#8B5CF6]/5"
+                      : "hover:neu-raised"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-lg neu-recessed p-0.5 shrink-0 overflow-hidden flex items-center justify-center bg-[#8B5CF6]/10 text-[#8B5CF6]">
+                      <User className="w-5 h-5 text-[#8B5CF6]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#1E293B] dark:text-[#E2E8F0] truncate">
+                          {sug.title || sug.artist}
+                        </span>
+                        <span className="neu-recessed px-1.5 py-0.2 rounded text-[9px] font-bold text-[#8B5CF6] border border-[#8B5CF6]/30 uppercase">
+                          Artist
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#8B5CF6] font-semibold truncate m-0 mt-0.5 flex items-center gap-1">
+                        <User className="w-3 h-3 text-[#8B5CF6] shrink-0" />
+                        <span>Artist · Click to explore songs</span>
+                      </p>
+                    </div>
+                  </div>
+                  <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#8B5CF6] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 shrink-0 truncate max-w-[170px] hidden sm:inline-flex items-center gap-1">
+                    <User className="w-3 h-3 text-[#8B5CF6]" />
+                    <span>Artist Discovery</span>
+                  </span>
+                </div>
+              );
+            }
 
             if (isMedia) {
               return (
@@ -349,7 +398,7 @@ export default function UrlInputBar({
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* Verified Media Thumbnail or Music/Video Icon */}
+                    {/* Verified Media Thumbnail or Music/Video/Version Icon */}
                     <div className="w-10 h-10 rounded-lg neu-recessed p-0.5 shrink-0 overflow-hidden flex items-center justify-center relative">
                       {sug.thumbnail ? (
                         <img
@@ -360,6 +409,10 @@ export default function UrlInputBar({
                         />
                       ) : isVideo ? (
                         <Film className="w-4 h-4 text-[#EF4444]" />
+                      ) : isVersion ? (
+                        <Layers className="w-4 h-4 text-[#EC4899]" />
+                      ) : isContext ? (
+                        <Compass className="w-4 h-4 text-[#10B981]" />
                       ) : (
                         <Music className="w-4 h-4 text-[#0084FF]" />
                       )}
@@ -395,6 +448,16 @@ export default function UrlInputBar({
                             </>
                           )}
                         </p>
+                      ) : isVersion ? (
+                        <p className="text-[11px] text-[#EC4899] font-semibold truncate m-0 mt-0.5 flex items-center gap-1">
+                          <Layers className="w-3 h-3 text-[#EC4899] shrink-0" />
+                          <span>{sug.artist || sug.version_hint || "Version Match"}</span>
+                        </p>
+                      ) : isContext ? (
+                        <p className="text-[11px] text-[#10B981] font-semibold truncate m-0 mt-0.5 flex items-center gap-1">
+                          <Compass className="w-3 h-3 text-[#10B981] shrink-0" />
+                          <span>{sug.artist || sug.context_clue || "Soundtrack"}</span>
+                        </p>
                       ) : sug.artist ? (
                         <p className="text-[11px] text-[#10B981] font-semibold truncate m-0 mt-0.5 flex items-center gap-1">
                           <Music className="w-3 h-3 text-[#10B981] shrink-0" />
@@ -408,6 +471,21 @@ export default function UrlInputBar({
                     <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#EF4444] border border-[#EF4444]/30 bg-[#EF4444]/10 shrink-0 truncate max-w-[170px] hidden sm:inline-flex items-center gap-1">
                       <Film className="w-3 h-3 text-[#EF4444]" />
                       <span>{sug.match_reason || "YouTube Video"}</span>
+                    </span>
+                  ) : isVersion ? (
+                    <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#EC4899] border border-[#EC4899]/30 bg-[#EC4899]/10 shrink-0 truncate max-w-[170px] hidden sm:inline-flex items-center gap-1">
+                      <Layers className="w-3 h-3 text-[#EC4899]" />
+                      <span>{sug.version_hint || sug.match_reason || "Version Clue"}</span>
+                    </span>
+                  ) : isContext ? (
+                    <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#10B981] border border-[#10B981]/30 bg-[#10B981]/10 shrink-0 truncate max-w-[170px] hidden sm:inline-flex items-center gap-1">
+                      <Compass className="w-3 h-3 text-[#10B981]" />
+                      <span>{sug.context_clue || sug.match_reason || "Soundtrack Clue"}</span>
+                    </span>
+                  ) : isPartial ? (
+                    <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#F59E0B] border border-[#F59E0B]/30 bg-[#F59E0B]/10 shrink-0 truncate max-w-[170px] hidden sm:inline-flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-[#F59E0B]" />
+                      <span>{sug.match_reason || "Partial Match"}</span>
                     </span>
                   ) : sug.match_reason ? (
                     <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] shrink-0 truncate max-w-[170px] hidden sm:inline-flex items-center gap-1">
@@ -446,10 +524,34 @@ export default function UrlInputBar({
               </div>
             );
           })}
+
+          {/* Search As Typed Fallback Option */}
+          {url.trim() && !isUrl && (
+            <div
+              role="option"
+              onClick={() => {
+                setIsOpen(false);
+                setSelectedIndex(-1);
+                onAnalyze(url.trim(), searchMode);
+              }}
+              className="p-2.5 mt-1 rounded-xl cursor-pointer neu-recessed hover:neu-raised flex items-center justify-between text-xs text-[#64748B] hover:text-[#0084FF] border-t border-slate-200/50 dark:border-slate-700/50 transition-all"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Search className="w-3.5 h-3.5 text-[#0084FF] shrink-0" />
+                <span className="truncate">
+                  Search for &ldquo;<strong>{url.trim()}</strong>&rdquo; as typed
+                </span>
+              </div>
+              <span className="neu-raised px-2 py-0.5 rounded text-[10px] font-mono text-[#64748B] shrink-0 flex items-center gap-1">
+                <span>Enter</span>
+                <CornerDownLeft className="w-2.5 h-2.5 text-[#64748B]" />
+              </span>
+            </div>
+          )}
         </div>
       )}
 
-      {/* KON Search 1.1.0 Rei Model Spotlight Banner */}
+      {/* KON Search 1.2 Rei Model Spotlight Banner */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-[11px] text-[#94A3B8]">Search Model:</span>
@@ -457,11 +559,11 @@ export default function UrlInputBar({
             type="button"
             onClick={onOpenModelModal}
             className="neu-recessed px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
-            title="Our Search Model: KON Search 1.1.0 Rei (Supervised GBDT & Neural SGD)"
+            title="Our Search Model: KON Search 1.2 Rei (Supervised GBDT & Neural SGD)"
           >
             <Cpu className="w-3 h-3 text-[#0084FF]" />
-            <span>KON Search 1.1.0 Rei</span>
-            <span className="text-[10px] opacity-75 font-mono">v1.1.0</span>
+            <span>KON Search 1.2 Rei</span>
+            <span className="text-[10px] opacity-75 font-mono">v1.2</span>
           </button>
           <span className="text-[11px] text-[#94A3B8] hidden sm:inline">
             · Supervised ML Ranker · 4,972 Associations · $0 API Cost

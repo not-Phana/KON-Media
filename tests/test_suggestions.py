@@ -1,4 +1,4 @@
-"""Regression and integration tests for KON Search 1.1.0 Rei Suggestions & Song Discovery.
+"""Regression and integration tests for KON Search 1.2 Rei Suggestions & Song Discovery.
 
 Tests:
 1. One-word queries (e.g. 'ban', 'bankai', 'shelter')
@@ -179,11 +179,11 @@ def test_api_search_suggestions_endpoint(client):
     """Test FastAPI GET /api/search/suggestions REST endpoint."""
     resp = client.get("/api/search/suggestions?q=Bankai&limit=5&media_type=audio")
     assert resp.status_code == 200
-    assert resp.headers["X-KON-Search-Engine"] == "KON Search 1.1.0 Rei"
+    assert resp.headers["X-KON-Search-Engine"] == "KON Search 1.2 Rei"
 
     data = resp.json()
     assert data["query"] == "Bankai"
-    assert data["product"] == "KON Search 1.1.0 Rei"
+    assert data["product"] == "KON Search 1.2 Rei"
     assert "suggestions" in data
     assert isinstance(data["suggestions"], list)
     assert len(data["suggestions"]) > 0
@@ -193,7 +193,7 @@ def test_api_search_suggestions_endpoint(client):
     assert "query" in first
     assert "title" in first
     assert "type" in first
-    assert first["type"] in ("song", "query")
+    assert first["type"] in ("song", "query", "artist")
 
 
 def test_api_suggestions_empty_query(client):
@@ -242,3 +242,59 @@ def test_video_classification_and_platform_label(suggestion_engine):
     assert item.match_reason == "YouTube Video"
     assert item.artist == "JULIASINN"
 
+
+
+def test_artist_discovery_porter(suggestion_engine):
+    """Test that typing an artist name 'Porter' surfaces an artist card and top songs."""
+    sugs = suggestion_engine.get_suggestions("Porter", limit=5, media_type="audio")
+    assert len(sugs) > 0
+    # Must have Porter Robinson artist card
+    artist_sug = next((s for s in sugs if s["category"] == "artist" or s["type"] == "artist"), None)
+    assert artist_sug is not None
+    assert "porter robinson" in artist_sug["title"].lower()
+
+    # Must also discover songs by Porter Robinson
+    song_sug = next((s for s in sugs if s["type"] == "song"), None)
+    assert song_sug is not None
+    assert "porter robinson" in song_sug.get("artist", "").lower()
+
+
+def test_typo_discovery_bnkai(suggestion_engine):
+    """Test that typo 'Bnkai' discovers 'Number One - Bankai' through controlled typo similarity."""
+    sugs = suggestion_engine.get_suggestions("Bnkai", limit=5, media_type="audio")
+    assert len(sugs) > 0
+    match = next((s for s in sugs if "bankai" in s["title"].lower()), None)
+    assert match is not None
+    assert match["category"] == "partial"
+
+
+def test_version_discovery_jersey_club(suggestion_engine):
+    """Test that version-specific query 'NewJeans Jersey Club' classifies as category='version'."""
+    sugs = suggestion_engine.get_suggestions("NewJeans Jersey Club", limit=5, media_type="audio")
+    assert len(sugs) > 0
+    jersey_match = next((s for s in sugs if "jersey" in s["title"].lower()), None)
+    assert jersey_match is not None
+    assert jersey_match["category"] == "version"
+
+
+def test_contextual_discovery_bleach_opening(suggestion_engine):
+    """Test that contextual clue 'Bleach opening song' surfaces the Bleach soundtrack song."""
+    sugs = suggestion_engine.get_suggestions("Bleach opening song", limit=5, media_type="audio")
+    assert len(sugs) > 0
+    soundtrack_match = next((s for s in sugs if "bankai" in s["title"].lower() or "bleach" in str(s.get("context_clue")).lower()), None)
+    assert soundtrack_match is not None
+
+
+def test_adaptive_suggestion_history_endpoints(client):
+    """Test REST endpoints for adaptive suggestion history statistics and clearing."""
+    resp = client.get("/api/search/suggestions/history")
+    assert resp.status_code == 200
+    stats = resp.json()
+    assert "history_count" in stats
+    assert "max_capacity" in stats
+
+    del_resp = client.delete("/api/search/suggestions/history")
+    assert del_resp.status_code == 200
+    del_data = del_resp.json()
+    assert del_data["status"] == "cleared"
+    assert del_data["history_count"] == 0

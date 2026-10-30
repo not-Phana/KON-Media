@@ -301,15 +301,15 @@ async def search_suggestions_endpoint(
             "query": "",
             "suggestions": [],
             "count": 0,
-            "product": "KON Search 1.1.0 Rei",
-            "engine": "KON Search 1.1.0 Rei",
+            "product": "KON Search 1.2 Rei",
+            "engine": "KON Search 1.2 Rei",
         }
 
     clamped_limit = min(max(limit, 1), 12)
     from backend.search.suggestions import get_shared_suggestion_engine
 
     engine = get_shared_suggestion_engine()
-    response.headers["X-KON-Search-Engine"] = "KON Search 1.1.0 Rei"
+    response.headers["X-KON-Search-Engine"] = "KON Search 1.2 Rei"
 
     suggestions = await asyncio.to_thread(
         engine.get_suggestions,
@@ -322,9 +322,25 @@ async def search_suggestions_endpoint(
         "query": clean_q,
         "suggestions": suggestions,
         "count": len(suggestions),
-        "product": "KON Search 1.1.0 Rei",
-        "engine": "KON Search 1.1.0 Rei",
+        "product": "KON Search 1.2 Rei",
+        "engine": "KON Search 1.2 Rei",
     }
+
+
+@router.delete("/search/suggestions/history")
+async def clear_suggestion_history_endpoint():
+    """Clear local suggestion memory and query refinements."""
+    from backend.search.adaptive_suggestions import get_shared_adaptive_store
+    store = get_shared_adaptive_store()
+    return store.clear_history()
+
+
+@router.get("/search/suggestions/history")
+async def get_suggestion_history_endpoint():
+    """Get statistics and summary of local adaptive suggestion history."""
+    from backend.search.adaptive_suggestions import get_shared_adaptive_store
+    store = get_shared_adaptive_store()
+    return store.get_stats()
 
 
 @router.get("/search")
@@ -362,8 +378,8 @@ async def search_media_endpoint(
         "media_type": media_type or "all",
         "count": len(results),
         "engine": active_engine,
-        "product": "KON Search 1.1.0 Rei",
-        "model": "KON Search 1.1.0 Rei",
+        "product": "KON Search 1.2 Rei",
+        "model": "KON Search 1.2 Rei",
         "status": "complete" if agg_status.get("is_complete", True) else "partial",
         "providers_completed": agg_status.get("completed", []),
         "providers_timed_out": agg_status.get("timed_out", []),

@@ -40,10 +40,10 @@ export default function ModelInfoModal({ isOpen, onClose }) {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-[#1E293B] m-0">
-                  KON Search 1.1.0 Rei
+                  KON Search 1.2 Rei
                 </h2>
                 <span className="neu-recessed px-2.5 py-0.5 rounded-full text-xs font-mono font-bold text-[#0084FF]">
-                  v1.1.0
+                  v1.2
                 </span>
                 <span className="neu-recessed px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#10B981]">
                   Official Search Model
@@ -114,7 +114,7 @@ export default function ModelInfoModal({ isOpen, onClose }) {
             <span>Architecture &amp; Intelligence</span>
           </div>
           <p className="text-xs text-[#64748B] leading-relaxed m-0 font-medium">
-            <strong>KON Search 1.1.0 Rei</strong> is KON Media's bespoke search ranking architecture, combining a
+            <strong>KON Search 1.2 Rei</strong> is KON Media's bespoke search ranking architecture, combining a
             supervised <em>Gradient Boosted Decision Tree (GBDT)</em> with real-time <em>Stochastic Gradient Descent (SGD)</em>.
             It evaluates multi-dimensional signals across queries and candidate releases with sub-millisecond CPU speed:
           </p>

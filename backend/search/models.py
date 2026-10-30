@@ -117,12 +117,16 @@ class SearchFeedbackEntry:
 
 @dataclass
 class SearchSuggestion:
-    """A search autocomplete suggestion or intelligent song discovery."""
+    """A search autocomplete suggestion, artist discovery, or intelligent song discovery."""
     id: str
     query: str
     title: str
     artist: Optional[str] = None
-    type: str = "query"  # "song", "video", or "query"
+    type: str = "query"  # "song", "video", "artist", or "query" for backwards compatibility
+    category: str = "song"  # "song", "artist", "partial", "version", "context", "query"
+    confidence: str = "possible"  # "strong", "possible", "weak"
+    context_clue: Optional[str] = None
+    version_hint: Optional[str] = None
     platform: str = "youtube"
     thumbnail: Optional[str] = None
     duration: Optional[float] = None
@@ -137,6 +141,10 @@ class SearchSuggestion:
             "title": self.title,
             "artist": self.artist,
             "type": self.type,
+            "category": self.category,
+            "confidence": self.confidence,
+            "context_clue": self.context_clue,
+            "version_hint": self.version_hint,
             "platform": self.platform,
             "thumbnail": self.thumbnail,
             "duration": self.duration,

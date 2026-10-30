@@ -1,4 +1,4 @@
-"""KON Search 1.1.0 Rei — Pure-Python Relevance-First Search Engine.
+"""KON Search 1.2 Rei — Pure-Python Relevance-First Search Engine.
 
 Implements identical ranking semantics, feature extraction, deduplication,
 and deterministic tie-breaking to the kon_search_core Rust engine.
@@ -11,7 +11,7 @@ import unicodedata
 from typing import Any, Dict, List, Optional, Set, Tuple
 from backend.search.models import CandidateResult, SearchQuery
 
-RELEVANCE_ENGINE_VERSION = "1.1.0"
+RELEVANCE_ENGINE_VERSION = "1.2.0"
 
 DISQUALIFYING_VERSION_TERMS: List[Tuple[str, float]] = [
     ("parody", 0.35),
