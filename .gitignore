@@ -4,6 +4,13 @@
 __pycache__/
 *.pyc
 
+# Rust build artifacts
+target/
+crates/**/target/
+*.pyd
+*.so
+*.dylib
+
 # Google OAuth & Credentials Security (STRICTLY UNTRACKED)
 *credentials*.json
 *client_secret*.json

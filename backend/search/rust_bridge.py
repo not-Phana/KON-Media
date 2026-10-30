@@ -2,10 +2,10 @@
 
 Adopts a safe fallback design:
 1. Tries to load compiled native Rust PyO3 extension `kon_search_core`.
-   If loaded: active engine is "rust-core/1.1.0".
+   If loaded: active engine is "rust-core/1.2.0".
 2. If uncompiled or missing from environment: logs an explicit diagnostic and falls back
    to the verified pure-Python relevance engine with identical semantics.
-   Active engine is "python-fallback/1.1.0".
+   Active engine is "python-fallback/1.2.0".
 """
 
 import json
@@ -23,11 +23,11 @@ try:
 
     _RUST_MODULE = _core
     _RUST_AVAILABLE = True
-    log.info("KON Search native Rust extension loaded successfully (version: %s)", getattr(_core, "__version__", "1.1.0"))
+    log.info("KON Search native Rust extension loaded successfully (version: %s)", getattr(_core, "__version__", "1.2.0"))
 except ImportError as err:
     log.info(
         "KON Search native Rust extension (kon_search_core) not compiled or importable (%s). "
-        "Operating with verified Python relevance engine (engine: python-fallback/1.1.0).",
+        "Operating with verified Python relevance engine (engine: python-fallback/1.2.0).",
         err,
     )
 
@@ -40,8 +40,8 @@ def is_rust_available() -> bool:
 def get_active_engine_name() -> str:
     """Return diagnostic identification string of the currently active search engine."""
     if _RUST_AVAILABLE:
-        return "rust-core/1.1.0"
-    return "python-fallback/1.1.0"
+        return f"rust-core/{getattr(_RUST_MODULE, '__version__', '1.2.0')}"
+    return "python-fallback/1.2.0"
 
 
 def rank_candidates(
@@ -49,7 +49,7 @@ def rank_candidates(
     candidates: List[CandidateResult],
     limit: Optional[int] = None,
 ) -> List[CandidateResult]:
-    """Rank candidates using either native Rust core or Python fallback engine."""
+    """Rank candidates using native Rust core or Python fallback engine."""
     if not candidates:
         return []
 

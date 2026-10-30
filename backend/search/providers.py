@@ -8,6 +8,11 @@ import urllib.request
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 import yt_dlp
+
+try:
+    import kon_search_core as _rust_core
+except ImportError:
+    _rust_core = None
 from backend.search.models import CandidateResult
 from backend.security.url_guard import socket_guard_scope
 from backend.engine.ffmpeg_manager import validate_ffmpeg_path
@@ -51,6 +56,11 @@ def parse_view_count(v_str: str) -> Optional[int]:
 
 def normalize_media_url(url: str) -> str:
     """Normalize media URL while preserving essential identifier parameters."""
+    if _rust_core is not None:
+        try:
+            return _rust_core.normalize_media_url(url)
+        except Exception:
+            pass
     clean = url.strip()
     if "youtube.com/watch" in clean and "v=" in clean:
         import urllib.parse

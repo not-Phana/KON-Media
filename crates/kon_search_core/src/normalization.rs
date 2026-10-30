@@ -1,6 +1,27 @@
 use std::collections::HashSet;
 
-/// Normalize a text string: lowercased, non-alphanumeric chars converted to spaces, collapsed whitespace.
+#[inline]
+fn strip_latin_diacritic(c: char) -> char {
+    match c {
+        'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' | 'ă' | 'ą' => 'a',
+        'ç' | 'ć' | 'ĉ' | 'ċ' | 'č' => 'c',
+        'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ĕ' | 'ė' | 'ę' | 'ě' => 'e',
+        'ì' | 'í' | 'î' | 'ï' | 'ĩ' | 'ī' | 'ĭ' | 'į' | 'ı' => 'i',
+        'ñ' | 'ń' | 'ņ' | 'ň' => 'n',
+        'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' | 'ŏ' | 'ő' => 'o',
+        'ù' | 'ú' | 'û' | 'ü' | 'ũ' | 'ū' | 'ŭ' | 'ů' | 'ű' | 'ų' => 'u',
+        'ý' | 'ÿ' | 'ŷ' => 'y',
+        'ź' | 'ż' | 'ž' => 'z',
+        'ś' | 'ŝ' | 'ş' | 'š' => 's',
+        'ř' | 'ŕ' | 'ŗ' => 'r',
+        'ł' | 'ĺ' | 'ļ' | 'ľ' => 'l',
+        'đ' | 'ď' => 'd',
+        'ť' | 'ţ' => 't',
+        other => other,
+    }
+}
+
+/// Normalize a text string: lowercased, Latin diacritics stripped, non-alphanumeric chars converted to spaces, collapsed whitespace.
 pub fn normalize_text(text: &str) -> String {
     if text.is_empty() {
         return String::new();
@@ -12,7 +33,7 @@ pub fn normalize_text(text: &str) -> String {
     for ch in text.chars() {
         if ch.is_alphanumeric() {
             for lower_ch in ch.to_lowercase() {
-                result.push(lower_ch);
+                result.push(strip_latin_diacritic(lower_ch));
             }
             prev_is_space = false;
         } else {
@@ -182,6 +203,7 @@ mod tests {
     fn test_normalize_text() {
         assert_eq!(normalize_text("Number One - Bankai!"), "number one bankai");
         assert_eq!(normalize_text("  The Weeknd   "), "the weeknd");
+        assert_eq!(normalize_text("Céline Dion"), "celine dion");
     }
 
     #[test]

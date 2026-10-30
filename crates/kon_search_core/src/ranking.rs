@@ -67,6 +67,7 @@ mod tests {
                 views: Some(50_000_000),
                 platform: Some("youtube".to_string()),
                 url: Some("https://youtube.com/watch?v=op1".to_string()),
+                ..Default::default()
             },
             CandidateInput {
                 id: "c_bleach".to_string(),
@@ -76,6 +77,7 @@ mod tests {
                 views: Some(5_000_000),
                 platform: Some("youtube".to_string()),
                 url: Some("https://youtube.com/watch?v=bleach1".to_string()),
+                ..Default::default()
             },
         ];
 
@@ -104,6 +106,7 @@ mod tests {
                 views: Some(80_000_000),
                 platform: Some("youtube".to_string()),
                 url: Some("https://youtube.com/watch?v=lp1".to_string()),
+                ..Default::default()
             },
             CandidateInput {
                 id: "c_jumping".to_string(),
@@ -113,6 +116,7 @@ mod tests {
                 views: Some(10_000),
                 platform: Some("youtube".to_string()),
                 url: Some("https://youtube.com/watch?v=jump1".to_string()),
+                ..Default::default()
             },
         ];
 

@@ -5,9 +5,8 @@ pub mod ranking;
 pub mod scoring;
 
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
 
-const CORE_VERSION: &str = "1.1.0";
+const CORE_VERSION: &str = "1.2.0";
 
 /// Returns the Rust engine version.
 #[pyfunction]
