@@ -13,11 +13,15 @@ import {
   SlidersHorizontal,
   ChevronRight,
   Cpu,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 export default function SearchResultsCard({
   query,
   results,
+  searchState = "complete",
+  searchMeta = null,
   onSelectCandidate,
   onDirectDownload,
   onDismiss,
@@ -26,9 +30,57 @@ export default function SearchResultsCard({
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());
 
+  // Distinct lifecycle state: actively querying providers
+  if (searchState === "searching") {
+    return (
+      <div className="neu-card p-6 space-y-4 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Loader2 className="w-5 h-5 text-[#0084FF] animate-spin shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-[#1E293B] m-0">
+                Searching for <span className="text-[#0084FF]">"{query}"</span>
+              </h3>
+              <p className="text-[11px] text-[#64748B] font-medium m-0 mt-0.5">
+                Querying YouTube, SoundCloud &amp; media providers concurrently...
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenModelModal}
+            className="neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+          >
+            <Cpu className="w-3 h-3 text-[#0084FF]" />
+            <span>KON Search 1.1.0 Rei</span>
+          </button>
+        </div>
+
+        {/* Tactile animated progress skeleton */}
+        <div className="space-y-3 pt-2">
+          <div className="p-4 rounded-2xl neu-raised flex items-center gap-3 animate-pulse">
+            <div className="w-14 h-14 rounded-xl neu-recessed shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 bg-slate-200/60 rounded-md w-3/4" />
+              <div className="h-2.5 bg-slate-200/40 rounded-md w-1/2" />
+            </div>
+          </div>
+          <div className="p-4 rounded-2xl neu-raised flex items-center gap-3 animate-pulse opacity-75">
+            <div className="w-14 h-14 rounded-xl neu-recessed shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 bg-slate-200/60 rounded-md w-2/3" />
+              <div className="h-2.5 bg-slate-200/40 rounded-md w-1/3" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Distinct lifecycle state: search completed with no results found
   if (!results || results.length === 0) {
     return (
-      <div className="neu-card p-6 space-y-3">
+      <div className="neu-card p-6 space-y-3 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-[#1E293B]">
             <Search className="w-4 h-4 text-[#0084FF]" />
@@ -37,12 +89,13 @@ export default function SearchResultsCard({
           <button
             onClick={onDismiss}
             className="neu-raised p-1.5 text-[#64748B] hover:text-[#1E293B] cursor-pointer"
+            title="Dismiss search results"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
         <p className="text-xs text-[#64748B] m-0 font-medium">
-          No media candidates found matching this query. Try a different title or paste a direct URL.
+          No media candidates found matching this query across queried providers. Try a different title or paste a direct URL.
         </p>
       </div>
     );
@@ -89,10 +142,10 @@ export default function SearchResultsCard({
             type="button"
             onClick={onOpenModelModal}
             className="neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
-            title="Our Search Model: Scored and ranked by KON Search 1.1.0 Re (Click for model architecture & live weights)"
+            title="Our Search Model: Scored and ranked by KON Search 1.1.0 Rei (Click for model architecture & live weights)"
           >
             <Cpu className="w-3 h-3 text-[#0084FF]" />
-            <span>Ranked by KON Search 1.1.0 Re</span>
+            <span>Ranked by KON Search 1.1.0 Rei</span>
           </button>
         </div>
 
@@ -104,6 +157,13 @@ export default function SearchResultsCard({
           <X className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Partial Provider Timeout Banner */}
+      {searchMeta?.timedOut?.length > 0 && (
+        <div className="neu-recessed px-3 py-2 rounded-xl text-[11px] text-[#F59E0B] flex items-center justify-between gap-2 font-medium">
+          <span>Note: {searchMeta.timedOut.join(", ")} timed out; displaying available candidates.</span>
+        </div>
+      )}
 
       {/* Candidate List */}
       <div className="space-y-3.5">
@@ -156,11 +216,11 @@ export default function SearchResultsCard({
 
                   <h4
                     className="text-sm font-bold text-[#1E293B] truncate m-0"
-                    title={cand.clean_title || cand.title}
+                    title={cand.is_cluttered && cand.clean_title ? cand.clean_title : cand.title}
                   >
-                    {cand.clean_title || cand.title}
+                    {cand.is_cluttered && cand.clean_title ? cand.clean_title : cand.title}
                   </h4>
-                  {cand.clean_title && cand.clean_title !== cand.title && (
+                  {cand.is_cluttered && cand.clean_title && cand.clean_title !== cand.title && (
                     <p className="text-[11px] text-[#94A3B8] truncate m-0 mt-0.5" title={cand.title}>
                       Original: {cand.title}
                     </p>

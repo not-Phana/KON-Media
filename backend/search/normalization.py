@@ -13,11 +13,14 @@ NOISE_PATTERNS = [
 ]
 
 VERSION_KEYWORDS = {
-    "remix": ["remix", "mix", "club mix", "extended mix", "dub"],
-    "live": ["live", "live aid", "in concert", "at wembley", "coachella"],
-    "instrumental": ["instrumental", "backing track", "karaoke", "piano cover"],
-    "acoustic": ["acoustic", "unplugged"],
+    "remix": ["remix", "mix", "club mix", "extended mix", "dub", "flip", "jersey club", "jersey remix", "jersey"],
+    "live": ["live", "live aid", "in concert", "at wembley", "coachella", "acoustic live", "live performance"],
+    "instrumental": ["instrumental", "backing track", "karaoke", "piano cover", "instrumental version"],
+    "acoustic": ["acoustic", "unplugged", "acoustic version"],
     "cover": ["cover", "parody", "tribute"],
+    "slowed": ["slowed", "slowed down", "slowed + reverb", "slowed and reverb", "reverb"],
+    "sped_up": ["sped up", "speed up", "nightcore", "fast version"],
+    "version": ["version", "ver", "edit", "edition"],
 }
 
 # Cultural media, gaming, anime, and soundtrack associations
@@ -85,16 +88,24 @@ def resolve_soundtrack_associations(query_str: str) -> List[str]:
         return [parsed["clean_title"]]
 
     matches = []
-    # Sort keys by length descending so specific combinations (e.g. 'zenless zone zero season 3') match first
+    # Sort keys by length descending so specific combinations match first
     sorted_keys = sorted(SOUNDTRACK_ASSOCIATIONS.keys(), key=len, reverse=True)
     for key in sorted_keys:
-        if len(key) <= 4:
-            # Short keys require exact word boundary match
-            if re.search(r"\b" + re.escape(key) + r"\b", norm):
-                matches.extend(SOUNDTRACK_ASSOCIATIONS[key])
-                break
-        elif key in norm:
-            matches.extend(SOUNDTRACK_ASSOCIATIONS[key])
+        # Require word boundary matching so queries do not falsely trigger via loose substring
+        pattern = r"\b" + re.escape(key) + r"\b"
+        if re.search(pattern, norm):
+            candidates_for_key = SOUNDTRACK_ASSOCIATIONS[key]
+            # If the user query is already requesting a specific song, filter to matching songs
+            query_tokens = [tok for tok in norm.split() if len(tok) >= 3 and tok != key]
+            if query_tokens:
+                filtered = [
+                    c for c in candidates_for_key
+                    if any(tok in normalize_text(c).split() for tok in query_tokens)
+                ]
+                if filtered:
+                    matches.extend(filtered)
+                    break
+            matches.extend(candidates_for_key)
             break
 
     return matches
@@ -120,6 +131,13 @@ def normalize_text(text: Optional[str]) -> str:
     return " ".join(cleaned.split())
 
 
+def compact_text(text: Optional[str]) -> str:
+    """Collapse whitespace to normalize compound words (e.g. 'new jeans' -> 'newjeans')."""
+    if not text:
+        return ""
+    return normalize_text(text).replace(" ", "")
+
+
 def strip_media_noise(title: str) -> str:
     """Strip common promotional noise from titles, e.g. [Official Video] or (HD)."""
     cleaned = title
@@ -131,9 +149,13 @@ def strip_media_noise(title: str) -> str:
 def detect_version_hint(text: str) -> Optional[str]:
     """Detect whether query or title explicitly requests a specific version."""
     norm = normalize_text(text)
+    if "original mix" in norm:
+        return None
+
+    # Check keyword taxonomy, prioritizing longer phrases first within each category
     for version_type, keywords in VERSION_KEYWORDS.items():
-        for kw in keywords:
-            # Word boundary check
+        sorted_kws = sorted(keywords, key=len, reverse=True)
+        for kw in sorted_kws:
             if re.search(r"\b" + re.escape(kw) + r"\b", norm):
                 return version_type
     return None

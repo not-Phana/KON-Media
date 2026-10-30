@@ -315,11 +315,18 @@ async def search_media_endpoint(
         preferred_provider=provider,
         ffmpeg_path=configured_ffmpeg,
     )
+    agg_status = getattr(engine.aggregator, "last_status", {})
     return {
         "query": clean_q,
         "media_type": media_type or "all",
         "count": len(results),
         "engine": active_engine,
+        "product": "KON Search 1.1.0 Rei",
+        "model": "KON Search 1.1.0 Rei",
+        "status": "complete" if agg_status.get("is_complete", True) else "partial",
+        "providers_completed": agg_status.get("completed", []),
+        "providers_timed_out": agg_status.get("timed_out", []),
+        "providers_failed": agg_status.get("failed", []),
         "results": results,
     }
 

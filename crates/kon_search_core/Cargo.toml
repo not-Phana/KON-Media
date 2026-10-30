@@ -3,7 +3,7 @@ name = "kon_search_core"
 version = "1.1.0"
 edition = "2021"
 authors = ["KON Media Search Team"]
-description = "Native Rust search relevance, scoring, feature extraction, and deduplication core for KON Search 1.1.0 Re"
+description = "Native Rust search relevance, scoring, feature extraction, and deduplication core for KON Search 1.1.0 Rei"
 
 [lib]
 name = "kon_search_core"

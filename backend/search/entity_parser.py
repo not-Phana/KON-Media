@@ -186,15 +186,4 @@ def parse_media_entity(raw_title: str, uploader: str = "") -> Dict[str, Any]:
                 })
                 return result
 
-    # If uploader is available and looks like an artist or topic
-    if uploader and " - Topic" in uploader:
-        topic_artist = uploader.replace(" - Topic", "").strip()
-        if " - " not in clean_base:
-            result.update({
-                "clean_title": f"{topic_artist} - {clean_base}",
-                "song_title": clean_base,
-                "artist": topic_artist,
-            })
-            return result
-
     return result

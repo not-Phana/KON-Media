@@ -1,4 +1,4 @@
-"""KON Search 1.1.0 Re — Pure-Python Relevance-First Search Engine.
+"""KON Search 1.1.0 Rei — Pure-Python Relevance-First Search Engine.
 
 Implements identical ranking semantics, feature extraction, deduplication,
 and deterministic tie-breaking to the kon_search_core Rust engine.
@@ -19,6 +19,8 @@ DISQUALIFYING_VERSION_TERMS: List[Tuple[str, float]] = [
     ("roblox", 0.45),
     ("earrape", 0.40),
     ("nightcore", 0.35),
+    ("sped up", 0.40),
+    ("speed up", 0.40),
     ("bass boosted", 0.25),
     ("8d audio", 0.30),
 ]
@@ -167,25 +169,44 @@ def detect_version_hint(text: str) -> Optional[str]:
 
 def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str, float]:
     """Extract quantitative relevance signals for a candidate."""
-    from backend.search.normalization import resolve_soundtrack_associations
+    from backend.search.normalization import (
+        resolve_soundtrack_associations,
+        compact_text,
+        detect_version_hint,
+    )
     raw_q = query.raw_query
     norm_q = query.normalized_query or normalize_text(raw_q)
+    compact_q = compact_text(raw_q)
+    det_title = normalize_text(query.detected_title) if query.detected_title else ""
+    compact_det_title = compact_text(query.detected_title) if query.detected_title else ""
+    det_artist = normalize_text(query.detected_artist) if query.detected_artist else ""
+    compact_det_artist = compact_text(query.detected_artist) if query.detected_artist else ""
+    query_version = query.version_hint or detect_version_hint(raw_q)
+
     clean_title = strip_media_noise(candidate.title)
     norm_title = normalize_text(clean_title)
+    compact_title = compact_text(clean_title)
     norm_clean = normalize_text(candidate.clean_title) if candidate.clean_title else ""
+    compact_clean = compact_text(candidate.clean_title) if candidate.clean_title else ""
     uploader_norm = normalize_text(candidate.uploader)
+    compact_uploader = compact_text(candidate.uploader)
     media_type = (query.media_type or "all").lower()
 
-    # Formulate target query representations: original query + resolved soundtrack songs if any
+    # Formulate target query representations without destructive query expansion
     target_queries = [norm_q]
-    associated_tracks = resolve_soundtrack_associations(raw_q)
-    if associated_tracks:
+    if det_title and det_title not in target_queries:
+        target_queries.append(det_title)
+
+    # Only include franchise theme associations if query explicitly requests franchise role
+    has_franchise = any(k in norm_q for k in ("opening", "ending", "op", "ed", "theme", "ost", "soundtrack"))
+    if has_franchise:
+        associated_tracks = resolve_soundtrack_associations(raw_q)
         for t in associated_tracks:
             norm_t = normalize_text(t)
             if norm_t and norm_t not in target_queries:
                 target_queries.append(norm_t)
 
-    # 1. Exact title match (evaluating across raw title, clean parsed song title, and resolved targets)
+    # 1. Exact title match & phrase match across raw title, clean title, and sub-title targets
     exact_title = 0.0
     phrase_match = 0.0
     token_coverage = 0.0
@@ -196,49 +217,87 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
         cand_title_variants.append(norm_clean)
 
     for tq in target_queries:
+        compact_tq = compact_text(tq)
         for ctv in cand_title_variants:
-            e = 1.0 if tq == ctv else (0.95 if ctv.startswith(tq) else (0.85 if tq in ctv else 0.0))
-            exact_title = max(exact_title, e)
+            compact_ctv = compact_text(ctv)
+            # Exact or prefix match
+            if tq == ctv or (compact_tq and compact_tq == compact_ctv):
+                exact_title = max(exact_title, 1.0)
+            elif ctv.startswith(tq) or (compact_tq and compact_ctv.startswith(compact_tq)):
+                exact_title = max(exact_title, 0.95)
+            elif (tq and tq in ctv) or (compact_tq and compact_tq in compact_ctv):
+                exact_title = max(exact_title, 0.88)
 
-            p = 1.0 if (tq and tq in ctv) else 0.0
-            phrase_match = max(phrase_match, p)
+            # Continuous phrase match
+            if (tq and tq in ctv) or (compact_tq and compact_tq in compact_ctv):
+                phrase_match = max(phrase_match, 1.0)
+            elif det_title and (det_title in ctv or (compact_det_title and compact_det_title in compact_ctv)):
+                phrase_match = max(phrase_match, 0.95)
 
         t_toks = [w for w in tq.split() if w]
         if t_toks:
             all_c_toks = set(norm_title.split())
             if norm_clean:
                 all_c_toks.update(norm_clean.split())
-            matched = sum(1 for w in t_toks if w in all_c_toks)
+            
+            # Sub-token matching (handles compound words like 'new' + 'jeans' <-> 'newjeans')
+            matched = 0
+            for w in t_toks:
+                if w in all_c_toks or any(w in c_tok or c_tok in w for c_tok in all_c_toks if len(c_tok) >= 3):
+                    matched += 1
+                elif compact_title and w in compact_title:
+                    matched += 1
             cov = matched / len(t_toks)
             token_coverage = max(token_coverage, cov)
 
     # 4. Typo similarity
-    ngram_sim = ngram_similarity(norm_q, norm_title, n=3)
+    ngram_sim = max(
+        ngram_similarity(norm_q, norm_title, n=3),
+        ngram_similarity(compact_q, compact_title, n=3) if compact_q and compact_title else 0.0,
+    )
     lev_sim = levenshtein_similarity(norm_q, norm_title)
     typo_similarity = max(ngram_sim, lev_sim)
 
-    # 5. Artist affinity
-    artist_affinity = 0.5
-    target_artist = query.expected_artist or query.detected_artist or candidate.artist
+    # 5. Artist affinity with compound word normalization
+    artist_affinity = 0.50
+    target_artist = det_artist or query.expected_artist or candidate.artist
     if target_artist:
         norm_artist = normalize_text(target_artist)
+        comp_artist = compact_text(target_artist)
         if norm_artist:
-            if norm_artist in uploader_norm or uploader_norm in norm_artist:
+            # Channel/uploader match
+            if (
+                norm_artist in uploader_norm
+                or uploader_norm in norm_artist
+                or (comp_artist and comp_artist in compact_uploader)
+            ):
                 artist_affinity = 1.0
-            elif norm_title.startswith(norm_artist) or (norm_clean and norm_clean.startswith(norm_artist)):
+            # Title prefix match
+            elif (
+                norm_title.startswith(norm_artist)
+                or (comp_artist and compact_title.startswith(comp_artist))
+                or (norm_clean and norm_clean.startswith(norm_artist))
+                or (comp_artist and compact_clean.startswith(comp_artist))
+            ):
                 artist_affinity = 0.95
+            # Substring match in title
+            elif norm_artist in norm_title or (comp_artist and comp_artist in compact_title):
+                artist_affinity = 0.90
             elif ngram_similarity(norm_artist, uploader_norm, 3) > 0.6:
                 artist_affinity = 0.85
             else:
-                artist_affinity = 0.30
+                artist_affinity = 0.35
+    else:
+        artist_affinity = 0.60
 
     # 6. Version compatibility
     cand_version = detect_version_hint(candidate.title)
-    query_version = query.version_hint or detect_version_hint(raw_q)
     version_compat = 1.0
 
+    raw_cand_norm = normalize_text(candidate.title)
+    # Check for disqualifying unrequested terms
     for term, mult in DISQUALIFYING_VERSION_TERMS:
-        if term in norm_title:
+        if term in raw_cand_norm:
             permitted = (query_version and term in query_version)
             if not permitted:
                 version_compat = mult
@@ -246,12 +305,17 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
 
     if version_compat == 1.0:
         if query_version:
-            if cand_version == query_version or query_version in norm_title:
-                version_compat = 1.25
+            # User specifically asked for a version (e.g. 'jersey club', 'live', 'remix')
+            if cand_version == query_version or query_version in raw_cand_norm or (
+                query_version == "jersey club" and any(k in raw_cand_norm for k in ("jersey remix", "jersey club", "jersey"))
+            ):
+                version_compat = 1.30
             else:
                 version_compat = 0.50
-        elif cand_version in ("remix", "live", "instrumental", "cover"):
-            version_compat = 0.65
+        else:
+            # Query did not request a version - preserve official studio releases
+            if cand_version in ("remix", "live", "instrumental", "cover", "slowed", "sped_up"):
+                version_compat = 0.65
 
     # 7. Non-music content penalty (check against raw unstripped title)
     raw_cand_norm = normalize_text(candidate.title)

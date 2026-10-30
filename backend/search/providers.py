@@ -279,6 +279,12 @@ class MultiProviderAggregator:
             YouTubeSearchProvider(),
             SoundCloudSearchProvider(),
         ]
+        self.last_status: Dict[str, Any] = {
+            "completed": [],
+            "timed_out": [],
+            "failed": [],
+            "is_complete": True,
+        }
 
     def aggregate_candidates(
         self,
@@ -287,6 +293,7 @@ class MultiProviderAggregator:
         ffmpeg_path: Optional[str] = None,
         preferred_provider: Optional[str] = None,
         media_type: str = "all",
+        timeout: float = 12.0,
     ) -> List[CandidateResult]:
         """Query providers concurrently with early-exit optimization and deduplication."""
         all_candidates: List[CandidateResult] = []
@@ -301,7 +308,9 @@ class MultiProviderAggregator:
         if preferred_provider:
             active_providers.sort(key=lambda p: 0 if p.name == preferred_provider else 1)
 
-        primary_target_provider = preferred_provider or "youtube"
+        completed_providers: List[str] = []
+        timed_out_providers: List[str] = []
+        failed_providers: List[str] = []
 
         max_pool_target = min(max(limit_per_provider * (len(active_providers) or 1), 24), 60)
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(active_providers) or 2)
@@ -310,10 +319,11 @@ class MultiProviderAggregator:
             for p in active_providers
         }
         try:
-            for future in concurrent.futures.as_completed(future_to_provider, timeout=5.0):
+            for future in concurrent.futures.as_completed(future_to_provider, timeout=timeout):
                 p = future_to_provider[future]
                 try:
                     results = future.result()
+                    completed_providers.append(p.name)
                     for cand in results:
                         norm_url = normalize_media_url(cand.url)
                         if norm_url in seen_urls:
@@ -331,10 +341,22 @@ class MultiProviderAggregator:
                     if len(all_candidates) >= max_pool_target:
                         break
                 except Exception as e:
+                    failed_providers.append(p.name)
                     log.warning("Provider %s search error: %s", p.name, e)
         except TimeoutError:
-            log.warning("Search completed with partial provider results due to timeout.")
+            # Mark remaining outstanding providers as timed out
+            for future, p in future_to_provider.items():
+                if not future.done() and p.name not in timed_out_providers:
+                    timed_out_providers.append(p.name)
+            log.warning("Search completed with partial provider results due to timeout (%s timed out).", timed_out_providers)
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
+
+        self.last_status = {
+            "completed": completed_providers,
+            "timed_out": timed_out_providers,
+            "failed": failed_providers,
+            "is_complete": len(timed_out_providers) == 0 and len(failed_providers) == 0,
+        }
 
         return all_candidates

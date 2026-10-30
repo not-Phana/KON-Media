@@ -85,20 +85,23 @@ class SearchEngine:
             media_type=media_type,
         )
 
-        # 3b. If seeking audio or theme and query resolves to a specific soundtrack song, retrieve the official artist release
-        from backend.search.normalization import resolve_soundtrack_associations
-        associated_songs = resolve_soundtrack_associations(clean_q)
-        if associated_songs and (media_type == "audio" or any(k in clean_q.lower() for k in ("opening", "ending", "op", "ed", "theme", "ost", "song"))):
-            clean_song_target = associated_songs[0]
-            if clean_song_target.lower() != clean_q.lower():
-                extra_candidates = self.aggregator.aggregate_candidates(
-                    query=clean_song_target,
-                    limit_per_provider=min(pool_limit // 2, 8),
-                    ffmpeg_path=ffmpeg_path,
-                    preferred_provider=preferred_provider,
-                    media_type=media_type,
-                )
-                candidates.extend(extra_candidates)
+        # 3b. Only retrieve canonical soundtrack artist release if user specifically asked for an anime/franchise theme
+        # and has not already specified an explicit song title (prevents destructive query expansion)
+        has_franchise_role = any(k in clean_q.lower() for k in ("opening", "ending", " op", " ed", "theme", "ost", "soundtrack"))
+        if has_franchise_role and not (search_query.detected_artist and search_query.detected_title):
+            from backend.search.normalization import resolve_soundtrack_associations
+            associated_songs = resolve_soundtrack_associations(clean_q)
+            if associated_songs:
+                clean_song_target = associated_songs[0]
+                if clean_song_target.lower() != clean_q.lower():
+                    extra_candidates = self.aggregator.aggregate_candidates(
+                        query=clean_song_target,
+                        limit_per_provider=min(pool_limit // 2, 8),
+                        ffmpeg_path=ffmpeg_path,
+                        preferred_provider=preferred_provider,
+                        media_type=media_type,
+                    )
+                    candidates.extend(extra_candidates)
 
         if not candidates:
             return []

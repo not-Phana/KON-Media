@@ -45,8 +45,13 @@ export default function App() {
   const [analyzedMedia, setAnalyzedMedia] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchState, setSearchState] = useState("idle"); // 'idle' | 'searching' | 'complete' | 'no_results' | 'partial' | 'error'
+  const [searchMeta, setSearchMeta] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState(null);
+
+  const searchAbortRef = useRef(null);
+  const searchIdRef = useRef(0);
 
   const [activeTasks, setActiveTasks] = useState([]);
   const [history, setHistory] = useState([]);
@@ -178,7 +183,12 @@ export default function App() {
     const isUrl = input.startsWith("http://") || input.startsWith("https://");
 
     if (isUrl) {
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+      }
+      setSearchState("idle");
       setSearchResults(null);
+      setSearchMeta(null);
       setAnalyzedMedia(null);
       try {
         const info = await analyzeMediaUrl(input);
@@ -189,16 +199,57 @@ export default function App() {
         setIsAnalyzing(false);
       }
     } else {
-      // Execute multi-signal search
+      // Abort any in-flight search to prevent stale race conditions
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+      }
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+      const currentSearchId = ++searchIdRef.current;
+
       setAnalyzedMedia(null);
       setSearchQuery(input);
+      setSearchResults(null);
+      setSearchState("searching");
+      setSearchMeta(null);
+
       try {
-        const res = await searchMedia(input, { limit: 20, mediaType: searchMode });
-        setSearchResults(res.results || []);
+        const res = await searchMedia(input, {
+          limit: 20,
+          mediaType: searchMode,
+          signal: controller.signal,
+        });
+
+        // Discard if superseded by a newer query
+        if (searchIdRef.current !== currentSearchId) return;
+
+        const results = res.results || [];
+        setSearchResults(results);
+        setSearchMeta({
+          status: res.status || "complete",
+          completed: res.providers_completed || [],
+          timedOut: res.providers_timed_out || [],
+          engine: res.engine || "KON Search 1.1.0 Rei",
+        });
+
+        if (results.length === 0) {
+          setSearchState("no_results");
+        } else if (res.status === "partial") {
+          setSearchState("partial");
+        } else {
+          setSearchState("complete");
+        }
       } catch (err) {
+        if (err.name === "AbortError") {
+          return; // Superceded by a newer search
+        }
+        if (searchIdRef.current !== currentSearchId) return;
+        setSearchState("error");
         setAnalyzeError(err.message || "Failed to search media");
       } finally {
-        setIsAnalyzing(false);
+        if (searchIdRef.current === currentSearchId) {
+          setIsAnalyzing(false);
+        }
       }
     }
   };
@@ -216,7 +267,12 @@ export default function App() {
         provider: candidate.platform,
       }).catch(() => {});
 
-      const effectiveTitle = isAudio && candidate.clean_title ? candidate.clean_title : candidate.title;
+      // Use clean song title for cluttered anime/game video titles; preserve authentic title for clean releases
+      const effectiveTitle =
+        isAudio && candidate.is_cluttered && candidate.clean_title
+          ? candidate.clean_title
+          : candidate.title;
+
       await queueDownload({
         url: candidate.url,
         title: effectiveTitle,
@@ -415,15 +471,21 @@ export default function App() {
         />
 
         {/* Ranked Search Discoveries */}
-        {searchResults && (
+        {(searchResults || searchState === "searching" || searchState === "no_results") && (
           <SearchResultsCard
             query={searchQuery}
             results={searchResults}
+            searchState={searchState}
+            searchMeta={searchMeta}
             onSelectCandidate={handleSelectSearchResult}
             onDirectDownload={handleDirectDownload}
-            onDismiss={() => setSearchResults(null)}
+            onDismiss={() => {
+              setSearchResults(null);
+              setSearchState("idle");
+              setSearchMeta(null);
+            }}
             onFeedback={(fb) => submitSearchFeedback(fb).catch(() => {})}
-              onOpenModelModal={() => setIsModelModalOpen(true)}
+            onOpenModelModal={() => setIsModelModalOpen(true)}
           />
         )}
 
@@ -474,7 +536,7 @@ export default function App() {
         onSelectTheme={setTheme}
       />
 
-      {/* KON Search 1.1.0 Re Model Spotlight Modal */}
+      {/* KON Search 1.1.0 Rei Model Spotlight Modal */}
       <ModelInfoModal
         isOpen={isModelModalOpen}
         onClose={() => setIsModelModalOpen(false)}

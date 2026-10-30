@@ -23,12 +23,12 @@ export async function analyzeMediaUrl(url) {
   return data;
 }
 
-export async function searchMedia(query, { limit = 5, provider = null, mediaType = "all" } = {}) {
+export async function searchMedia(query, { limit = 5, provider = null, mediaType = "all", signal = null } = {}) {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
   if (provider) params.append("provider", provider);
   if (mediaType && mediaType !== "all") params.append("media_type", mediaType);
 
-  const res = await fetch(`${API_BASE}/search?${params.toString()}`);
+  const res = await fetch(`${API_BASE}/search?${params.toString()}`, { signal });
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.detail || "Search failed");

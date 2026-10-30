@@ -154,7 +154,7 @@ export default function UrlInputBar({
         </button>
       </form>
 
-      {/* KON Search 1.1.0 Re Model Spotlight Banner */}
+      {/* KON Search 1.1.0 Rei Model Spotlight Banner */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-[11px] text-[#94A3B8]">Search Model:</span>
@@ -162,10 +162,10 @@ export default function UrlInputBar({
             type="button"
             onClick={onOpenModelModal}
             className="neu-recessed px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
-            title="Our Search Model: KON Search 1.1.0 Re (Supervised GBDT & Neural SGD)"
+            title="Our Search Model: KON Search 1.1.0 Rei (Supervised GBDT & Neural SGD)"
           >
             <Cpu className="w-3 h-3 text-[#0084FF]" />
-            <span>KON Search 1.1.0 Re</span>
+            <span>KON Search 1.1.0 Rei</span>
             <span className="text-[10px] opacity-75 font-mono">v1.1.0</span>
           </button>
           <span className="text-[11px] text-[#94A3B8] hidden sm:inline">

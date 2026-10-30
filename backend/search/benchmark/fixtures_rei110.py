@@ -1,4 +1,4 @@
-"""Comprehensive search evaluation fixtures for KON Search 1.1.0 Re.
+"""Comprehensive search evaluation fixtures for KON Search 1.1.0 Rei.
 
 Each fixture provides:
 - SearchQuery intent
