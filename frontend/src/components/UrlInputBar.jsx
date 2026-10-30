@@ -37,8 +37,26 @@ export default function UrlInputBar({
   const abortControllerRef = useRef(null);
   const debounceTimerRef = useRef(null);
   const requestIdRef = useRef(0);
+  const suppressSuggestionsRef = useRef(false);
 
   const isUrl = url.trim().startsWith("http://") || url.trim().startsWith("https://");
+
+  // Immediately dismiss suggestions, cancel debounces, and blur input
+  const dismissSuggestions = useCallback(() => {
+    suppressSuggestionsRef.current = true;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    requestIdRef.current++;
+    setIsOpen(false);
+    setSuggestions([]);
+    setSelectedIndex(-1);
+    setIsLoadingSuggestions(false);
+    inputRef.current?.blur();
+  }, []);
 
   // Dismiss suggestions when clicking outside
   useEffect(() => {
@@ -52,8 +70,30 @@ export default function UrlInputBar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Force suggestions closed whenever an active search is running
+  useEffect(() => {
+    if (isLoading) {
+      dismissSuggestions();
+    }
+  }, [isLoading, dismissSuggestions]);
+
   // Request suggestions as the user types with short debounce and stale cancellation
   useEffect(() => {
+    // If the input update came from selecting a suggestion or submitting search, skip fetching
+    if (suppressSuggestionsRef.current) {
+      suppressSuggestionsRef.current = false;
+      setSuggestions([]);
+      setIsOpen(false);
+      setIsLoadingSuggestions(false);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      return;
+    }
+
     const cleanQ = url.trim();
 
     // Direct URLs or empty strings do not trigger autocomplete
@@ -89,8 +129,8 @@ export default function UrlInputBar({
           limit: 6,
         });
 
-        // Ignore stale responses from older keystrokes
-        if (requestIdRef.current !== currentRequestId) return;
+        // Ignore stale responses or if search has been submitted
+        if (requestIdRef.current !== currentRequestId || suppressSuggestionsRef.current) return;
 
         const results = data.suggestions || [];
         setSuggestions(results);
@@ -101,7 +141,7 @@ export default function UrlInputBar({
         setSuggestions([]);
         setIsOpen(false);
       } finally {
-        if (requestIdRef.current === currentRequestId) {
+        if (requestIdRef.current === currentRequestId && !suppressSuggestionsRef.current) {
           setIsLoadingSuggestions(false);
         }
       }
@@ -118,6 +158,7 @@ export default function UrlInputBar({
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
+        suppressSuggestionsRef.current = false;
         setUrl(text.trim());
         if (onClearError) onClearError();
       }
@@ -127,18 +168,15 @@ export default function UrlInputBar({
   };
 
   const handleClear = () => {
+    dismissSuggestions();
     setUrl("");
-    setSuggestions([]);
-    setIsOpen(false);
-    setSelectedIndex(-1);
     if (onClearError) onClearError();
   };
 
   const handleSelectSuggestion = (sug) => {
     const queryToSearch = sug.query || sug.title;
+    dismissSuggestions();
     setUrl(queryToSearch);
-    setIsOpen(false);
-    setSelectedIndex(-1);
     if (onClearError) onClearError();
     onAnalyze(queryToSearch, searchMode);
   };
@@ -146,8 +184,7 @@ export default function UrlInputBar({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!url.trim()) return;
-    setIsOpen(false);
-    setSelectedIndex(-1);
+    dismissSuggestions();
     onAnalyze(url.trim(), searchMode);
   };
 
@@ -256,12 +293,15 @@ export default function UrlInputBar({
             type="text"
             value={url}
             onChange={(e) => {
+              suppressSuggestionsRef.current = false;
               setUrl(e.target.value);
               if (onClearError) onClearError();
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => {
-              if (suggestions.length > 0 && !isUrl) setIsOpen(true);
+              if (!suppressSuggestionsRef.current && suggestions.length > 0 && !isUrl) {
+                setIsOpen(true);
+              }
             }}
             placeholder={getPlaceholder()}
             className="flex-1 bg-transparent border-none outline-none text-sm text-[#1E293B] placeholder-[#94A3B8] font-medium"
@@ -348,7 +388,7 @@ export default function UrlInputBar({
                   key={sug.id || `sug_${idx}`}
                   role="option"
                   aria-selected={isSelected}
-                  onClick={() => handleSelectSuggestion(sug)}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(sug); }} onClick={() => handleSelectSuggestion(sug)}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`p-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between gap-3 ${
                     isSelected
@@ -389,7 +429,7 @@ export default function UrlInputBar({
                   key={sug.id || `sug_${idx}`}
                   role="option"
                   aria-selected={isSelected}
-                  onClick={() => handleSelectSuggestion(sug)}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(sug); }} onClick={() => handleSelectSuggestion(sug)}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`p-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between gap-3 ${
                     isSelected
@@ -503,7 +543,7 @@ export default function UrlInputBar({
                 key={sug.id || `sug_${idx}`}
                 role="option"
                 aria-selected={isSelected}
-                onClick={() => handleSelectSuggestion(sug)}
+                onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(sug); }} onClick={() => handleSelectSuggestion(sug)}
                 onMouseEnter={() => setSelectedIndex(idx)}
                 className={`px-3 py-2 rounded-xl cursor-pointer transition-all flex items-center justify-between gap-3 ${
                   isSelected
@@ -529,9 +569,13 @@ export default function UrlInputBar({
           {url.trim() && !isUrl && (
             <div
               role="option"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                dismissSuggestions();
+                onAnalyze(url.trim(), searchMode);
+              }}
               onClick={() => {
-                setIsOpen(false);
-                setSelectedIndex(-1);
+                dismissSuggestions();
                 onAnalyze(url.trim(), searchMode);
               }}
               className="p-2.5 mt-1 rounded-xl cursor-pointer neu-recessed hover:neu-raised flex items-center justify-between text-xs text-[#64748B] hover:text-[#0084FF] border-t border-slate-200/50 dark:border-slate-700/50 transition-all"
