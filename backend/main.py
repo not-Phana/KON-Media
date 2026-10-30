@@ -47,15 +47,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS restricted to local development origins
+# CORS configuration supporting local dev and cloud web clients
+cors_origins = [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    "http://127.0.0.1:8899",
+    "http://localhost:8899",
+    "https://not-phana.github.io",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://127.0.0.1:8899",
-        "http://localhost:8899",
-    ],
+    allow_origins=cors_origins,
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

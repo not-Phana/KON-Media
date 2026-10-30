@@ -14,8 +14,9 @@ import {
   Moon,
   Sun,
   Monitor,
+  Globe,
 } from "lucide-react";
-import { validateFFmpeg } from "../api";
+import { validateFFmpeg, getCustomBackendUrl, setCustomBackendUrl } from "../api";
 
 export default function SettingsModal({
   isOpen,
@@ -30,6 +31,7 @@ export default function SettingsModal({
   const [maxConcurrent, setMaxConcurrent] = useState(2);
   const [defaultMediaType, setDefaultMediaType] = useState("video");
   const [ffmpegPath, setFfmpegPath] = useState("");
+  const [backendUrl, setBackendUrlState] = useState(() => getCustomBackendUrl());
   const [isSaved, setIsSaved] = useState(false);
   const [isOpeningFolder, setIsOpeningFolder] = useState(false);
 
@@ -78,6 +80,7 @@ export default function SettingsModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setCustomBackendUrl(backendUrl);
     onSaveSettings({
       downloads_dir: downloadsDir,
       max_concurrent_downloads: Number(maxConcurrent),
@@ -356,6 +359,28 @@ export default function SettingsModal({
                   />
                   <span>Audio (MP3)</span>
                 </label>
+              </div>
+            </div>
+
+            {/* Cloud Backend Server URL */}
+            <div className="space-y-2 pt-2 border-t border-slate-200/40 dark:border-slate-700/40">
+              <div className="flex items-center gap-2">
+                <Globe className="w-3.5 h-3.5 text-[#0084FF]" />
+                <label className="text-xs font-semibold text-[#1E293B] dark:text-[#E2E8F0]">
+                  Cloud / 24-7 Backend Server URL
+                </label>
+              </div>
+              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] leading-relaxed font-medium m-0">
+                Optional: If you deployed a 24/7 cloud instance (e.g. on Hugging Face Spaces or Render), paste the URL here to download songs without your computer running. Leave blank for standard localhost.
+              </p>
+              <div className="neu-recessed flex items-center px-3.5 py-2.5 rounded-xl">
+                <input
+                  type="text"
+                  value={backendUrl}
+                  onChange={(e) => setBackendUrlState(e.target.value)}
+                  placeholder="https://your-space.hf.space (or leave blank for 127.0.0.1:8899)"
+                  className="w-full bg-transparent border-none outline-none text-xs text-[#1E293B] dark:text-[#E2E8F0] font-mono placeholder-[#94A3B8]"
+                />
               </div>
             </div>
           </div>

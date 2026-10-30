@@ -1,3 +1,13 @@
+---
+title: KON Media
+emoji: 🎵
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 8899
+pinned: false
+---
+
 # KON Media
 
 A private, local-first media toolkit for Windows 11 engineered for organizing and downloading media from permitted sources with **$0 recurring operating costs**.

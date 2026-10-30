@@ -2,7 +2,36 @@
  * API client for KON Media backend.
  */
 
-const API_BASE = "/api";
+export function getApiBase() {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("kon_backend_url");
+    if (saved && saved.trim()) {
+      return saved.trim().replace(/\/+$/, "") + "/api";
+    }
+    if (window.__KON_BACKEND_URL__ && typeof window.__KON_BACKEND_URL__ === "string") {
+      return window.__KON_BACKEND_URL__.trim().replace(/\/+$/, "") + "/api";
+    }
+  }
+  return import.meta.env.VITE_API_BASE || "/api";
+}
+
+export const API_BASE = {
+  valueOf() { return getApiBase(); },
+  toString() { return getApiBase(); },
+  [Symbol.toPrimitive]() { return getApiBase(); },
+};
+
+export function setCustomBackendUrl(url) {
+  if (!url || !url.trim()) {
+    localStorage.removeItem("kon_backend_url");
+  } else {
+    localStorage.setItem("kon_backend_url", url.trim().replace(/\/+$/, ""));
+  }
+}
+
+export function getCustomBackendUrl() {
+  return localStorage.getItem("kon_backend_url") || "";
+}
 
 export async function fetchHealth() {
   const res = await fetch(`${API_BASE}/health`);
