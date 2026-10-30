@@ -118,7 +118,8 @@ class SearchSuggestion:
     query: str
     title: str
     artist: Optional[str] = None
-    type: str = "query"  # "song" or "query"
+    type: str = "query"  # "song", "video", or "query"
+    platform: str = "youtube"
     thumbnail: Optional[str] = None
     duration: Optional[float] = None
     url: Optional[str] = None
@@ -132,6 +133,7 @@ class SearchSuggestion:
             "title": self.title,
             "artist": self.artist,
             "type": self.type,
+            "platform": self.platform,
             "thumbnail": self.thumbnail,
             "duration": self.duration,
             "url": self.url,

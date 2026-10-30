@@ -211,7 +211,91 @@ NON_MUSIC_KEYWORDS = [
     "premier league", "backpedal", "riot games", "sports", "tour of", "wins $",
     "last to leave", "cereal bowl", "day 1", "day 2", "day 3", "day 4", "day 5",
     "innings", "wickets", "overs", "1st test", "2nd test", "3rd test",
+    "fights", "crazy anime fights", "anime footage", "moments that broke",
 ]
+
+
+VIDEO_CONTENT_KEYWORDS = [
+    "story of", "entire story", "recap", "season", "episode", "full movie",
+    "just ended", "reaction", "review", "gameplay", "walkthrough", "prologue",
+    "explained", "lore", "analysis", "theory", "documentary", "vlog", "interview",
+    "teaser", "trailer", "pv", "commercial", "short film", "news", "ranking",
+    "tier list", "moments", "scenes", "vs", "fight", "fights", "clip", "full story",
+    "banned", "products", "challenge", "prank", "podcast", "60 minutes",
+    "soloque", "patch notes", "highlights", "test match", "sports",
+    "footage", "scene", "compilation", "all scenes",
+]
+
+
+def classify_candidate_media_type(candidate: Dict[str, Any], query: str = "") -> Tuple[str, str]:
+    """Classify whether a candidate is genuinely a 'song' or a 'video', and return (media_type, platform_label).
+
+    Returns:
+        (media_type, platform_label) e.g. ("song", "Theme Song"), ("song", "Song Discovery"), ("video", "YouTube Video")
+    """
+    duration = candidate.get("duration")
+    raw_title = candidate.get("title") or ""
+    clean_title = strip_media_noise(raw_title)
+    title_lower = clean_title.lower()
+    artist_lower = (candidate.get("artist") or "").lower()
+    source = candidate.get("source")
+    platform = candidate.get("platform") or "youtube"
+    platform_name = "YouTube" if platform == "youtube" else platform.title()
+
+    # 1. Seed discoveries and soundtrack associations are verified authentic songs
+    if source == "seed":
+        match_reason = candidate.get("match_reason") or ""
+        label = "Theme Song" if "theme" in match_reason.lower() or "soundtrack" in match_reason.lower() else "Song Discovery"
+        return ("song", label)
+
+    if source == "soundtrack":
+        return ("song", "Theme Song")
+
+    if source in ("history", "feedback"):
+        if candidate.get("media_type") == "audio" or (duration and duration <= 600):
+            return ("song", "From History" if source == "history" else "Verified Match")
+
+    # 2. Strong video indicators: extreme duration or non-music keywords in title or channel
+    is_video_content = False
+
+    # Duration check: standard songs are 1-8 minutes. > 15 minutes (900s) is almost certainly a video, recap, episode, or vlog
+    if duration and duration > 900:
+        is_video_content = True
+
+    combined_metadata = f"{title_lower} {artist_lower}"
+    if any(ind in combined_metadata for ind in VIDEO_CONTENT_KEYWORDS):
+        is_video_content = True
+
+    # 3. Strong music indicators:
+    music_indicators = [
+        "official audio", "official music video", "mv", "lyrics", "feat.", "ft.",
+        "soundtrack", "ost", "theme", "opening", "ending", "op", "ed", "remix",
+        "acoustic", "instrumental", "karaoke", "orchestra", "symphony",
+        "topic", "records", "vevo", "audio", "song", "music", "prod.", "prod by",
+        "band", "orchestral", "bgm", "cover", "album", "single", "radio edit",
+        "vocal", "vocals",
+    ]
+    has_music_indicator = any(m in title_lower or m in artist_lower for m in music_indicators)
+
+    # If it is video content and not a short song track with explicit music indicator, it is a video!
+    if is_video_content:
+        if not (has_music_indicator and duration and duration <= 600):
+            return ("video", f"{platform_name} Video")
+
+    # If it has music indicators and standard song length
+    if has_music_indicator and (duration is None or duration <= 900):
+        return ("song", "Song Discovery")
+
+    # Channel or artist indicates musical artist or topic
+    if any(kw in artist_lower for kw in ("records", "vevo", "topic", "band", "orchestra", "music")):
+        return ("song", "Song Discovery")
+
+    # If the title has clean music format (e.g. 'Artist - Title') and reasonable duration
+    if " - " in clean_title and (duration is None or (45 <= duration <= 600)) and not is_video_content:
+        return ("song", "Song Discovery")
+
+    # Fallback for general video platform results: tell the user it is a video from that platform!
+    return ("video", f"{platform_name} Video")
 
 
 class SuggestionEngine:
@@ -433,15 +517,21 @@ class SuggestionEngine:
         title_norm = normalize_text(clean_title)
         artist_norm = normalize_text(candidate.get("artist") or "")
 
-        # When searching in audio mode, penalize obvious non-music videos
+        score = 0.0
+
+        # Classify candidate media type honestly
+        cand_type, platform_label = classify_candidate_media_type(candidate, norm_q)
+
+        # When searching in audio mode (Song & Music):
         if media_type == "audio":
             if any(kw in title_norm for kw in NON_MUSIC_KEYWORDS):
-                return -1.0
+                return 0.0
+            if cand_type == "video":
+                # In Song & Music mode, non-music videos and video clips must not pollute song discoveries
+                return 0.0
 
         full_text_norm = f"{title_norm} {artist_norm}".strip()
         full_tokens = full_text_norm.split()
-
-        score = 0.0
 
         # Must have at least one genuine match signal (substring, token, artist, or high n-gram similarity)
         has_token_match = any(
@@ -571,27 +661,27 @@ class SuggestionEngine:
 
         ranked_queries.sort(key=lambda x: x[0], reverse=True)
 
-        # Assemble final results: balance top discovered songs and query refinements
+        # Assemble final results: balance top discovered songs/videos and query refinements
         final_suggestions: List[SearchSuggestion] = []
 
-        # If there are strong song candidates, show top 2-3 discovered songs first
-        top_songs = ranked_songs[:4]
-        for score, cand in top_songs:
+        top_candidates = ranked_songs[:4]
+        for score, cand in top_candidates:
             clean_t = strip_media_noise(cand["title"])
-            reason = cand.get("match_reason") or "Song match"
+            cand_type, platform_label = classify_candidate_media_type(cand, clean_q)
             search_exec_query = f"{clean_t} {cand['artist']}".strip() if cand.get("artist") else clean_t
 
             final_suggestions.append(
                 SearchSuggestion(
-                    id=cand.get("id") or f"song_{len(final_suggestions)}",
+                    id=cand.get("id") or f"{cand_type}_{len(final_suggestions)}",
                     query=search_exec_query,
                     title=clean_t,
                     artist=cand.get("artist"),
-                    type="song",
+                    type=cand_type,
+                    platform=cand.get("platform") or "youtube",
                     thumbnail=cand.get("thumbnail"),
                     duration=cand.get("duration"),
                     url=cand.get("url"),
-                    match_reason=reason,
+                    match_reason=platform_label,
                     score=score,
                 )
             )

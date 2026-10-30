@@ -203,3 +203,42 @@ def test_api_suggestions_empty_query(client):
     data = resp.json()
     assert data["suggestions"] == []
     assert data["count"] == 0
+
+
+def test_video_classification_and_platform_label(suggestion_engine):
+    """Test that non-music YouTube videos (e.g. anime recaps, 11-hour story marathons) are classified as video."""
+    video_candidate = {
+        "id": "vid_bleach_recap",
+        "title": "រឿង Bleach | រដូវកាលទី1 (សង្ខេបមួយរឿងពេញ)",
+        "artist": "JULIASINN",
+        "url": "https://www.youtube.com/watch?v=bleach1",
+        "thumbnail": "https://i.ytimg.com/vi/bleach1/hqdefault.jpg",
+        "duration": 41825.0,  # 697 minutes = 11.6 hours
+        "platform": "youtube",
+    }
+
+    # 1. In audio mode (Song & Music), this long anime recap must be rejected / filtered out
+    audio_score = suggestion_engine._score_song_candidate(
+        video_candidate,
+        norm_q="bleach",
+        query_tokens=["bleach"],
+        detected_version=None,
+        media_type="audio",
+    )
+    assert audio_score == 0.0
+
+    # 2. In video/all mode, it is accepted but accurately classified as a YouTube Video
+    ranked = suggestion_engine.rank_suggestions(
+        query="Bleach",
+        song_candidates=[video_candidate],
+        query_suggestions=[],
+        limit=5,
+        media_type="all",
+    )
+    assert len(ranked) == 1
+    item = ranked[0]
+    assert item.type == "video"
+    assert item.platform == "youtube"
+    assert item.match_reason == "YouTube Video"
+    assert item.artist == "JULIASINN"
+

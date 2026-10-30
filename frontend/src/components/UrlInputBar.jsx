@@ -331,8 +331,10 @@ export default function UrlInputBar({
           {suggestions.map((sug, idx) => {
             const isSelected = selectedIndex === idx;
             const isSong = sug.type === "song";
+            const isVideo = sug.type === "video";
+            const isMedia = isSong || isVideo;
 
-            if (isSong) {
+            if (isMedia) {
               return (
                 <div
                   key={sug.id || `sug_${idx}`}
@@ -347,8 +349,8 @@ export default function UrlInputBar({
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    {/* Verified Media Thumbnail or Music Icon */}
-                    <div className="w-10 h-10 rounded-lg neu-recessed p-0.5 shrink-0 overflow-hidden flex items-center justify-center">
+                    {/* Verified Media Thumbnail or Music/Video Icon */}
+                    <div className="w-10 h-10 rounded-lg neu-recessed p-0.5 shrink-0 overflow-hidden flex items-center justify-center relative">
                       {sug.thumbnail ? (
                         <img
                           src={sug.thumbnail}
@@ -356,8 +358,16 @@ export default function UrlInputBar({
                           className="w-full h-full object-cover rounded-md"
                           referrerPolicy="no-referrer"
                         />
+                      ) : isVideo ? (
+                        <Film className="w-4 h-4 text-[#EF4444]" />
                       ) : (
                         <Music className="w-4 h-4 text-[#0084FF]" />
+                      )}
+                      {/* Platform indicator chip overlay if video */}
+                      {isVideo && (
+                        <span className="absolute bottom-0.5 right-0.5 bg-[#EF4444] text-[8px] font-black text-white px-1 py-0.2 rounded shadow-sm">
+                          YT
+                        </span>
                       )}
                     </div>
 
@@ -372,19 +382,39 @@ export default function UrlInputBar({
                           </span>
                         )}
                       </div>
-                      {sug.artist && (
-                        <p className="text-[11px] text-[#10B981] font-semibold truncate m-0 mt-0.5">
-                          {sug.artist}
+                      {isVideo ? (
+                        <p className="text-[11px] font-semibold truncate m-0 mt-0.5 flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 text-[#EF4444] font-bold">
+                            <Film className="w-3 h-3 text-[#EF4444]" />
+                            <span>YouTube Video</span>
+                          </span>
+                          {sug.artist && (
+                            <>
+                              <span className="text-[#94A3B8]">·</span>
+                              <span className="text-[#64748B] dark:text-[#94A3B8] truncate">{sug.artist}</span>
+                            </>
+                          )}
                         </p>
-                      )}
+                      ) : sug.artist ? (
+                        <p className="text-[11px] text-[#10B981] font-semibold truncate m-0 mt-0.5 flex items-center gap-1">
+                          <Music className="w-3 h-3 text-[#10B981] shrink-0" />
+                          <span>{sug.artist}</span>
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 
-                  {sug.match_reason && (
-                    <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] shrink-0 truncate max-w-[170px] hidden sm:inline-block">
-                      {sug.match_reason}
+                  {isVideo ? (
+                    <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#EF4444] border border-[#EF4444]/30 bg-[#EF4444]/10 shrink-0 truncate max-w-[170px] hidden sm:inline-flex items-center gap-1">
+                      <Film className="w-3 h-3 text-[#EF4444]" />
+                      <span>{sug.match_reason || "YouTube Video"}</span>
                     </span>
-                  )}
+                  ) : sug.match_reason ? (
+                    <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] shrink-0 truncate max-w-[170px] hidden sm:inline-flex items-center gap-1">
+                      <Music className="w-3 h-3 text-[#0084FF]" />
+                      <span>{sug.match_reason}</span>
+                    </span>
+                  ) : null}
                 </div>
               );
             }
