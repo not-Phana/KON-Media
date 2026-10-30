@@ -2,6 +2,10 @@
 
 > **Benchmark Presentation**: Evaluated in the frontier report style of the **Gemini 4 Carbon** announcement (Artificial Analysis Index metrics, multi-generation progression, capability matrix, and latency collapse).
 
+![KON Models Benchmark Bar Chart](kon_models_gemini_barchart.svg)
+
+---
+
 ![KON Models Benchmark Table](kon_models_benchmark_table.svg)
 
 ---
