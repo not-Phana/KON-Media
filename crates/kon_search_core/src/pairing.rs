@@ -4,7 +4,7 @@
 //! optimal muxing, duration synchronization, format tiering, and title alignment.
 
 use serde::{Deserialize, Serialize};
-use crate::normalization::{ngram_similarity, normalize_text};
+use crate::normalization::{ngram_similarity, normalize_text, strip_media_noise};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamCandidate {
@@ -49,8 +49,10 @@ pub fn evaluate_stream_pair(video: &StreamCandidate, audio: &StreamCandidate) ->
     };
 
     // Title similarity
-    let v_norm = normalize_text(&video.title);
-    let a_norm = normalize_text(&audio.title);
+    let v_clean = strip_media_noise(&video.title);
+    let a_clean = strip_media_noise(&audio.title);
+    let v_norm = normalize_text(&v_clean);
+    let a_norm = normalize_text(&a_clean);
     let title_sim = if v_norm == a_norm {
         1.0
     } else {

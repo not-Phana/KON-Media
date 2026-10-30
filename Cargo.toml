@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/kon_search_core",
+    "crates/kon_media_server",
+]
+resolver = "2"

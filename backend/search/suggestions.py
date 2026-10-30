@@ -1139,7 +1139,7 @@ class SuggestionEngine:
             norm_q in kw or kw in norm_q or any(q_tok == kw or kw.startswith(q_tok) for q_tok in query_tokens if len(q_tok) >= 3)
             for kw in cand_keywords
         )
-        has_context_match = bool(norm_q and (norm_q in cand_context or cand_context in norm_q))
+        has_context_match = bool(cand_context and norm_q and (norm_q in cand_context or (len(cand_context) >= 3 and cand_context in norm_q)))
 
         if not has_token_match and not has_substring_match and max(ngram_sim, seq_ratio) < 0.35:
             if not has_keyword_match and not has_context_match and candidate.get("source") != "soundtrack":

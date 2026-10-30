@@ -391,23 +391,32 @@ pub fn search_soundtrack_db(query: &str, limit: usize) -> Vec<&'static Soundtrac
         let t_norm = normalize_text(entry.title);
         let f_norm = normalize_text(entry.franchise);
         let a_norm = normalize_text(entry.artist);
+        let r_norm = normalize_text(entry.role);
+        let clean_f = f_norm.split("season").next().unwrap_or(&f_norm).trim();
 
         let mut score = 0.0;
         if t_norm == norm {
             score = 1.0;
         } else if t_norm.contains(&norm) {
             score = 0.85;
-        } else if f_norm.contains(&norm) || norm.contains(&f_norm) {
+        } else if f_norm.contains(&norm) || norm.contains(&f_norm) || (!clean_f.is_empty() && norm.contains(clean_f)) {
             score = 0.80;
         } else if a_norm.contains(&norm) {
             score = 0.75;
         } else {
             // Check token overlap
             let q_tokens: Vec<&str> = norm.split_whitespace().collect();
-            let all_text = format!("{} {} {}", t_norm, f_norm, a_norm);
+            let all_text = format!("{} {} {} {}", t_norm, f_norm, a_norm, r_norm);
             let matched = q_tokens.iter().filter(|&&t| all_text.contains(t)).count();
             if !q_tokens.is_empty() {
                 score = (matched as f64 / q_tokens.len() as f64) * 0.70;
+            }
+        }
+
+        if !r_norm.is_empty() {
+            let r_tokens: Vec<&str> = r_norm.split_whitespace().collect();
+            if r_tokens.iter().any(|&rt| norm.contains(rt)) {
+                score += 0.15;
             }
         }
 
