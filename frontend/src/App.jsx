@@ -293,7 +293,7 @@ export default function App() {
           ? candidate.clean_title
           : candidate.title;
 
-      await queueDownload({
+      const res = await queueDownload({
         url: candidate.url,
         title: effectiveTitle,
         media_type: mediaType,
@@ -309,12 +309,14 @@ export default function App() {
         type: "success",
       });
       setTimeout(() => setToast(null), 4000);
+      return res;
     } catch (err) {
       setToast({
         message: `Could not queue download: ${err.message}`,
         type: "error",
       });
       setTimeout(() => setToast(null), 4000);
+      throw err;
     }
   };
 
@@ -498,6 +500,9 @@ export default function App() {
             searchState={searchState}
             searchStage={searchStage}
             searchMeta={searchMeta}
+            activeTasks={activeTasks}
+            history={history}
+            onOpenFile={handleOpenFile}
             onSelectCandidate={handleSelectSearchResult}
             onDirectDownload={handleDirectDownload}
             onDismiss={() => {

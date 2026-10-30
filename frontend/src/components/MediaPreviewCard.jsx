@@ -62,12 +62,22 @@ export default function MediaPreviewCard({
     defaultAudioFormat?.bitrate || "320k"
   );
 
+  const [showAdditional, setShowAdditional] = useState(false);
+  const [selectedCustomVideoId, setSelectedCustomVideoId] = useState("");
+  const [selectedCustomAudioId, setSelectedCustomAudioId] = useState("");
+
   useEffect(() => {
     if (defaultVideoFormat?.format_id) {
       setSelectedFormatId(defaultVideoFormat.format_id);
     }
     if (defaultAudioFormat?.bitrate) {
       setSelectedAudioBitrate(defaultAudioFormat.bitrate);
+    }
+    if (activeInfo?.available_video_streams?.length > 0) {
+      setSelectedCustomVideoId(activeInfo.available_video_streams[0].format_id);
+    }
+    if (activeInfo?.available_audio_streams?.length > 0) {
+      setSelectedCustomAudioId(activeInfo.available_audio_streams[0].format_id);
     }
   }, [activeInfo?.webpage_url, activeInfo?.is_alternative_match]);
 
@@ -257,27 +267,10 @@ export default function MediaPreviewCard({
     !ffmpegAvailable &&
     (isVideo ? selectedFormat?.requires_ffmpeg : selectedAudioFormat?.requires_ffmpeg);
 
-  const [showAdditional, setShowAdditional] = useState(false);
   const availableVideoStreams = activeInfo.available_video_streams || [];
   const availableAudioStreams = activeInfo.available_audio_streams || [];
   const hasAdditionalStreams =
     availableVideoStreams.length > 0 || availableAudioStreams.length > 0;
-
-  const [selectedCustomVideoId, setSelectedCustomVideoId] = useState(
-    availableVideoStreams[0]?.format_id || ""
-  );
-  const [selectedCustomAudioId, setSelectedCustomAudioId] = useState(
-    availableAudioStreams[0]?.format_id || ""
-  );
-
-  useEffect(() => {
-    if (activeInfo?.available_video_streams?.length > 0) {
-      setSelectedCustomVideoId(activeInfo.available_video_streams[0].format_id);
-    }
-    if (activeInfo?.available_audio_streams?.length > 0) {
-      setSelectedCustomAudioId(activeInfo.available_audio_streams[0].format_id);
-    }
-  }, [activeInfo?.webpage_url, activeInfo?.is_alternative_match]);
 
   const selectedCustomVideo = availableVideoStreams.find(
     (s) => s.format_id === selectedCustomVideoId

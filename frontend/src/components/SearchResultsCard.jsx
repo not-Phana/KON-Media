@@ -15,7 +15,155 @@ import {
   Cpu,
   Loader2,
   AlertCircle,
+  FolderOpen,
 } from "lucide-react";
+
+/**
+ * Matches a search candidate item against an active task or history item.
+ */
+function isCandidateTaskMatch(cand, task, mediaType) {
+  if (!cand || !task) return false;
+  const taskMediaType = task.media_type || "video";
+  if (taskMediaType !== mediaType) return false;
+  if (task.url && cand.url && task.url === cand.url) return true;
+  if (cand.id && cand.id.length >= 5 && task.url && (task.url.includes(cand.id) || task.id === cand.id)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Interactive Download Action Button for Songs (Audio) or Video
+ * Displays real-time states: Idle -> Queued -> Downloading (with % and live fill bar) -> Processing -> Downloaded (with open folder) / Retry
+ */
+function DownloadActionButton({
+  candidate,
+  mediaType,
+  statusInfo,
+  onDownload,
+  onOpenFile,
+}) {
+  const isAudio = mediaType === "audio";
+  const { status, percent = 0, filePath } = statusInfo;
+
+  // 1. Queued / Starting state (instant click feedback)
+  if (status === "starting" || status === "queued") {
+    return (
+      <button
+        type="button"
+        disabled
+        className="neu-recessed px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold text-[#0084FF] rounded-xl cursor-not-allowed select-none border border-[#0084FF]/30 animate-pulse"
+        title={isAudio ? "Preparing audio download..." : "Preparing video download..."}
+      >
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0084FF] shrink-0" />
+        <span>Queued...</span>
+      </button>
+    );
+  }
+
+  // 2. Actively Downloading state with live percentage & animated fill track
+  if (status === "downloading") {
+    return (
+      <div
+        className={`relative overflow-hidden rounded-xl neu-recessed border border-[#0084FF]/40 flex items-center ${
+          isAudio ? "min-w-[140px]" : "min-w-[125px]"
+        }`}
+        title={`Downloading ${isAudio ? "song" : "video"}: ${percent}%`}
+      >
+        {/* Progress fill bar */}
+        <div
+          className="absolute inset-y-0 left-0 bg-[#0084FF]/25 transition-all duration-300 ease-out"
+          style={{ width: `${percent}%` }}
+        />
+        <div className="relative px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold text-[#0084FF] select-none z-10 w-full justify-center">
+          <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0 text-[#0084FF]" />
+          <span>{isAudio ? "Downloading" : "Video"} {percent > 0 ? `${percent}%` : "..."}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Processing / Converting / Verifying state
+  if (status === "processing" || status === "verifying") {
+    return (
+      <div
+        className="neu-recessed px-3.5 py-2.5 rounded-xl flex items-center gap-2 text-xs font-bold text-[#F59E0B] border border-[#F59E0B]/30 select-none animate-pulse"
+        title={isAudio ? "Encoding high-quality MP3 audio..." : "Merging video & audio streams..."}
+      >
+        <Sparkles className="w-3.5 h-3.5 animate-spin text-[#F59E0B] shrink-0" />
+        <span>{isAudio ? "Converting MP3..." : "Merging streams..."}</span>
+      </div>
+    );
+  }
+
+  // 4. Completed / Downloaded state with quick folder reveal & re-download
+  if (status === "completed") {
+    return (
+      <div className="flex items-center gap-1.5 animate-fade-in">
+        <button
+          type="button"
+          onClick={() => filePath && onOpenFile && onOpenFile(filePath)}
+          className="neu-recessed px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold text-[#10B981] rounded-xl border border-[#10B981]/35 hover:border-[#10B981]/60 hover:bg-[#10B981]/10 transition-all cursor-pointer group shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+          title={`${isAudio ? "Song" : "Video"} downloaded! Click to reveal in folder`}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+          <span>{isAudio ? "Downloaded" : "MP4 Ready"}</span>
+          <FolderOpen className="w-3 h-3 text-[#10B981] opacity-75 group-hover:opacity-100 transition-opacity ml-0.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDownload(candidate, mediaType, true)}
+          className="neu-raised p-2.5 text-[#64748B] hover:text-[#0084FF] rounded-xl cursor-pointer text-xs transition-colors"
+          title={`Download ${isAudio ? "Song (MP3)" : "Video (MP4)"} again`}
+        >
+          <Download className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  // 5. Failed state with retry option
+  if (status === "failed") {
+    return (
+      <button
+        type="button"
+        onClick={() => onDownload(candidate, mediaType, true)}
+        className="neu-raised px-3.5 py-2.5 flex items-center gap-1.5 text-xs font-semibold text-[#EF4444] rounded-xl cursor-pointer hover:bg-red-500/10 border border-red-500/20 transition-all"
+        title="Download failed. Click to retry"
+      >
+        <AlertCircle className="w-3.5 h-3.5 text-[#EF4444] shrink-0" />
+        <span>Retry {isAudio ? "Song" : "Video"}</span>
+      </button>
+    );
+  }
+
+  // 6. Default idle button
+  if (isAudio) {
+    return (
+      <button
+        type="button"
+        onClick={() => onDownload(candidate, "audio")}
+        className="neu-accent px-4 py-2.5 flex items-center gap-2 text-xs font-semibold cursor-pointer rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,132,255,0.25)]"
+        title="Direct 1-click download as MP3 audio"
+      >
+        <Music className="w-3.5 h-3.5" />
+        <span>Download Song</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onDownload(candidate, "video")}
+      className="neu-raised px-3.5 py-2.5 flex items-center gap-1.5 text-xs font-semibold text-[#334155] hover:text-[#0084FF] cursor-pointer rounded-xl active:scale-95 transition-all"
+      title="Direct 1-click download as MP4 video"
+    >
+      <Film className="w-3.5 h-3.5" />
+      <span>Video</span>
+    </button>
+  );
+}
 
 export default function SearchResultsCard({
   query,
@@ -23,6 +171,9 @@ export default function SearchResultsCard({
   searchState = "complete",
   searchStage = null,
   searchMeta = null,
+  activeTasks = [],
+  history = [],
+  onOpenFile,
   onSelectCandidate,
   onDirectDownload,
   onDismiss,
@@ -30,6 +181,91 @@ export default function SearchResultsCard({
   onOpenModelModal,
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());
+  const [localPending, setLocalPending] = useState({});
+
+  // Helper to resolve live status for candidate & mediaType
+  const getCandidateStatus = (cand, mediaType) => {
+    const key = `${cand.id || cand.url}_${mediaType}`;
+    const pending = localPending[key];
+
+    // 1. Check live active tasks (SSE-updated)
+    const activeTask = activeTasks?.find((t) => isCandidateTaskMatch(cand, t, mediaType));
+    if (activeTask) {
+      return {
+        status: activeTask.status, // 'queued', 'downloading', 'processing', 'verifying', 'completed', 'failed', 'cancelled'
+        percent: Math.min(100, Math.max(0, Math.round(activeTask.percentage || 0))),
+        stage: activeTask.stage,
+        filePath: activeTask.file_path,
+        task: activeTask,
+      };
+    }
+
+    // 2. Check local pending state (instant click responsiveness)
+    if (pending) {
+      if (pending.status === "starting" || pending.status === "queued") {
+        return {
+          status: pending.status,
+          percent: pending.percent || 0,
+          task: null,
+        };
+      }
+      if (pending.status === "failed") {
+        return {
+          status: "failed",
+          percent: 0,
+          error: pending.error,
+          task: null,
+        };
+      }
+    }
+
+    // 3. Check persistent history for completed downloads
+    const historyItem = history?.find(
+      (h) => isCandidateTaskMatch(cand, h, mediaType) && h.status === "completed"
+    );
+    if (historyItem) {
+      return {
+        status: "completed",
+        percent: 100,
+        filePath: historyItem.file_path,
+        task: historyItem,
+        fromHistory: true,
+      };
+    }
+
+    return { status: "idle" };
+  };
+
+  const handleDownloadClick = async (cand, mediaType, isRetry = false) => {
+    const key = `${cand.id || cand.url}_${mediaType}`;
+    if (
+      !isRetry &&
+      (localPending[key]?.status === "starting" || localPending[key]?.status === "queued")
+    ) {
+      return; // Prevent duplicate rapid clicks
+    }
+
+    // Optimistically mark starting immediately
+    setLocalPending((prev) => ({
+      ...prev,
+      [key]: { status: "starting", percent: 0, timestamp: Date.now() },
+    }));
+
+    try {
+      const res = await onDirectDownload(cand, mediaType);
+      if (res?.task_id) {
+        setLocalPending((prev) => ({
+          ...prev,
+          [key]: { status: "queued", taskId: res.task_id, percent: 0, timestamp: Date.now() },
+        }));
+      }
+    } catch (err) {
+      setLocalPending((prev) => ({
+        ...prev,
+        [key]: { status: "failed", error: err.message || "Could not queue download" },
+      }));
+    }
+  };
 
   // Distinct lifecycle state: actively querying providers with zero results arrived yet
   if ((searchState === "searching" || searchState === "updating") && (!results || results.length === 0)) {
@@ -230,14 +466,34 @@ export default function SearchResultsCard({
           const isTopRanked = idx === 0;
           const isReported = reportedIds.has(cand.id);
 
+          const audioStatus = getCandidateStatus(cand, "audio");
+          const videoStatus = getCandidateStatus(cand, "video");
+          const isCandidateDownloading =
+            audioStatus.status === "downloading" ||
+            videoStatus.status === "downloading" ||
+            audioStatus.status === "starting" ||
+            videoStatus.status === "starting" ||
+            audioStatus.status === "queued" ||
+            videoStatus.status === "queued" ||
+            audioStatus.status === "processing" ||
+            videoStatus.status === "processing";
+          const isCandidateCompleted =
+            (audioStatus.status === "completed" || videoStatus.status === "completed") &&
+            !isCandidateDownloading;
+
+          let cardBorderClass = "neu-raised";
+          if (isCandidateDownloading) {
+            cardBorderClass = "neu-raised border border-[#0084FF]/40 shadow-[0_0_15px_rgba(0,132,255,0.12)]";
+          } else if (isCandidateCompleted) {
+            cardBorderClass = "neu-raised border border-[#10B981]/35 shadow-[0_0_12px_rgba(16,185,129,0.08)]";
+          } else if (isTopRanked) {
+            cardBorderClass = "neu-raised border border-[#0084FF]/25";
+          }
+
           return (
             <div
               key={cand.id}
-              className={`p-4 rounded-2xl transition-all ${
-                isTopRanked
-                  ? "neu-raised border border-[#0084FF]/25"
-                  : "neu-raised"
-              } flex flex-col md:flex-row items-start md:items-center justify-between gap-4`}
+              className={`p-4 rounded-2xl transition-all ${cardBorderClass} flex flex-col md:flex-row items-start md:items-center justify-between gap-4`}
             >
               {/* Media Info */}
               <div className="flex items-start gap-4 min-w-0 flex-1">
@@ -269,6 +525,18 @@ export default function SearchResultsCard({
                     {cand.context_source && (
                       <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] truncate max-w-[240px]">
                         {cand.context_source}
+                      </span>
+                    )}
+                    {isCandidateDownloading && (
+                      <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] inline-flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin text-[#0084FF]" />
+                        Active Download
+                      </span>
+                    )}
+                    {isCandidateCompleted && (
+                      <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#10B981] inline-flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-[#10B981]" />
+                        Saved
                       </span>
                     )}
                   </div>
@@ -304,33 +572,29 @@ export default function SearchResultsCard({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-stretch sm:self-end md:self-center justify-end">
-                {/* Download Song Button */}
-                <button
-                  type="button"
-                  onClick={() => onDirectDownload(cand, "audio")}
-                  className="neu-accent px-4 py-2.5 flex items-center gap-2 text-xs font-semibold cursor-pointer rounded-xl"
-                  title="Direct 1-click download as MP3 audio"
-                >
-                  <Music className="w-3.5 h-3.5" />
-                  <span>Download Song</span>
-                </button>
+                {/* Download Song Button with Live Feedback */}
+                <DownloadActionButton
+                  candidate={cand}
+                  mediaType="audio"
+                  statusInfo={audioStatus}
+                  onDownload={handleDownloadClick}
+                  onOpenFile={onOpenFile}
+                />
 
-                {/* Video Button */}
-                <button
-                  type="button"
-                  onClick={() => onDirectDownload(cand, "video")}
-                  className="neu-raised px-3.5 py-2.5 flex items-center gap-1.5 text-xs font-semibold text-[#334155] hover:text-[#0084FF] cursor-pointer rounded-xl"
-                  title="Direct 1-click download as MP4 video"
-                >
-                  <Film className="w-3.5 h-3.5" />
-                  <span>Video</span>
-                </button>
+                {/* Video Button with Live Feedback */}
+                <DownloadActionButton
+                  candidate={cand}
+                  mediaType="video"
+                  statusInfo={videoStatus}
+                  onDownload={handleDownloadClick}
+                  onOpenFile={onOpenFile}
+                />
 
                 {/* Format Inspector */}
                 <button
                   type="button"
                   onClick={() => onSelectCandidate(cand)}
-                  className="neu-raised p-2.5 text-xs text-[#64748B] hover:text-[#0084FF] cursor-pointer rounded-xl"
+                  className="neu-raised p-2.5 text-xs text-[#64748B] hover:text-[#0084FF] cursor-pointer rounded-xl transition-colors"
                   title="Open format options & stream pairing"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -341,7 +605,7 @@ export default function SearchResultsCard({
                   type="button"
                   onClick={(e) => handleReportMismatch(e, cand)}
                   disabled={isReported}
-                  className={`neu-raised p-2.5 text-xs rounded-xl cursor-pointer ${
+                  className={`neu-raised p-2.5 text-xs rounded-xl cursor-pointer transition-colors ${
                     isReported
                       ? "opacity-40 cursor-not-allowed text-[#EF4444]"
                       : "text-[#94A3B8] hover:text-[#EF4444]"
