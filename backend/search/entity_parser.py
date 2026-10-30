@@ -54,6 +54,15 @@ def parse_media_entity(raw_title: str, uploader: str = "") -> Dict[str, Any]:
     """Parse cluttered candidate title into clean artist, song, and franchise context."""
     title = raw_title.strip()
 
+    # Fast path: native Rust entity parser
+    try:
+        from backend.search.rust_bridge import parse_rust_entity
+        rust_parsed = parse_rust_entity(title, uploader)
+        if rust_parsed is not None:
+            return rust_parsed
+    except Exception:
+        pass
+
     # Default fallback
     result: Dict[str, Any] = {
         "raw_title": title,

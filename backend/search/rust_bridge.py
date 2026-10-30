@@ -126,3 +126,55 @@ def rank_candidates(
     from backend.search.relevance_engine import rank_candidates as py_rank_candidates
 
     return py_rank_candidates(query, candidates, limit=limit)
+
+
+def get_rust_suggestions(query: str, media_type: str = "audio", limit: int = 6) -> Optional[List[Dict[str, Any]]]:
+    """Retrieve search suggestions from native Rust core if available."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            res_json = _RUST_MODULE.get_search_suggestions_json(query, media_type, limit)
+            return json.loads(res_json)
+        except Exception as err:
+            log.warning("Rust suggestions call failed (%s); falling back to Python pipeline.", err)
+    return None
+
+
+def parse_rust_intent(query: str) -> Optional[Dict[str, Any]]:
+    """Parse query intent using native Rust engine."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            res_json = _RUST_MODULE.parse_query_intent_json(query)
+            return json.loads(res_json)
+        except Exception as err:
+            log.warning("Rust intent parsing failed (%s); falling back to Python.", err)
+    return None
+
+
+def parse_rust_entity(title: str, uploader: str = "") -> Optional[Dict[str, Any]]:
+    """Parse cluttered candidate title into clean song/artist/context using native Rust."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            res_json = _RUST_MODULE.parse_media_entity_json(title, uploader)
+            return json.loads(res_json)
+        except Exception as err:
+            log.warning("Rust entity parsing failed (%s); falling back to Python.", err)
+    return None
+
+
+def rust_cache_get(key: str) -> Optional[str]:
+    """Get value from global native Rust cache."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            return _RUST_MODULE.cache_get(key)
+        except Exception:
+            pass
+    return None
+
+
+def rust_cache_insert(key: str, value: str, ttl_secs: Optional[int] = None) -> None:
+    """Insert key-value pair into global native Rust cache."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            _RUST_MODULE.cache_insert(key, value, ttl_secs)
+        except Exception:
+            pass

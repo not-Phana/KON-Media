@@ -1,0 +1,25 @@
+# GitHub Linguist Language Configuration
+
+# Treat test suites and synthetic benchmark evaluation fixtures as vendored
+tests/** linguist-vendored
+backend/search/benchmark/** linguist-vendored
+
+# Treat development scripts, offline training, and experiment runners as vendored
+scripts/** linguist-vendored
+kon_search/** linguist-vendored
+data/** linguist-vendored
+
+# Treat superseded Python fallback modules as vendored (delegated to native Rust kon_search_core)
+backend/search/relevance_engine.py linguist-vendored
+backend/search/normalization.py linguist-vendored
+backend/search/suggestions.py linguist-vendored
+backend/search/entity_parser.py linguist-vendored
+backend/search/learning_model.py linguist-vendored
+backend/search/doc_learner.py linguist-vendored
+backend/search/ranking.py linguist-vendored
+backend/search/adaptive_suggestions.py linguist-vendored
+backend/security/url_guard.py linguist-vendored
+
+# Explicitly ensure native Rust search core is detectable and indexed as primary
+*.rs linguist-detectable=true
+crates/** linguist-detectable=true
