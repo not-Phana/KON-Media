@@ -86,6 +86,52 @@ class SearchProvider(ABC):
         pass
 
 
+def extract_best_thumbnail(entry: Dict[str, Any], video_id: Optional[str] = None) -> Optional[str]:
+    """Extract best high-resolution thumbnail URL across YouTube, SoundCloud, and custom extractors."""
+    # 1. Direct thumbnail string
+    thumb = entry.get("thumbnail")
+    if thumb and isinstance(thumb, str) and thumb.startswith("http"):
+        return thumb
+
+    # 2. Inspect 'thumbnails' array (e.g. SoundCloud artwork formats: t500x500, t300x300, large)
+    thumbs = entry.get("thumbnails")
+    if thumbs and isinstance(thumbs, list):
+        valid = [
+            t for t in thumbs
+            if isinstance(t, dict) and t.get("url") and isinstance(t["url"], str) and t["url"].startswith("http")
+        ]
+        if valid:
+            preferred_ids = (
+                "t500x500",
+                "t300x300",
+                "crop",
+                "large",
+                "hqdefault",
+                "maxresdefault",
+                "sddefault",
+                "medium",
+                "default",
+            )
+            for pid in preferred_ids:
+                for t in valid:
+                    if t.get("id") == pid:
+                        return t["url"]
+            sorted_thumbs = sorted(valid, key=lambda x: (x.get("preference") or 0, x.get("width") or 0))
+            return sorted_thumbs[-1]["url"]
+
+    # 3. Alternative metadata fields
+    for field in ("artwork_url", "avatar_url", "poster", "image"):
+        val = entry.get(field)
+        if val and isinstance(val, str) and val.startswith("http"):
+            return val
+
+    # 4. Fallback YouTube thumbnail
+    if video_id and len(video_id) == 11 and not video_id.startswith("http"):
+        return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+
+    return None
+
+
 class YouTubeSearchProvider(SearchProvider):
     """High-performance YouTube search using direct Innertube API (~1.2s) with resilient yt-dlp fallback."""
 
@@ -202,7 +248,7 @@ class YouTubeSearchProvider(SearchProvider):
                             uploader=entry.get("uploader") or entry.get("channel") or "",
                             url=url,
                             duration=float(entry.get("duration") or 0.0) or None,
-                            thumbnail=entry.get("thumbnail"),
+                            thumbnail=extract_best_thumbnail(entry, video_id=entry.get("id")),
                             platform="youtube",
                             views=entry.get("view_count"),
                         )
@@ -270,7 +316,7 @@ class SoundCloudSearchProvider(SearchProvider):
                             uploader=entry.get("uploader") or "",
                             url=url,
                             duration=float(entry.get("duration") or 0.0) or None,
-                            thumbnail=entry.get("thumbnail"),
+                            thumbnail=extract_best_thumbnail(entry),
                             platform="soundcloud",
                             views=entry.get("view_count"),
                         )

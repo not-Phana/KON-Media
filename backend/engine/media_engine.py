@@ -15,6 +15,7 @@ from typing import Any, Callable, Dict, List, Optional
 import yt_dlp
 from backend.engine.ffmpeg_manager import validate_ffmpeg_path, inspect_media_streams
 from backend.security.url_guard import detect_spotify_source, socket_guard_scope
+from backend.search.providers import extract_best_thumbnail
 try:
     from yt_dlp.version import __version__ as ytdlp_version
 except ImportError:
@@ -682,7 +683,7 @@ def extract_media_info(
                 "uploader": info.get("uploader") or info.get("channel") or "Unknown Creator",
                 "duration": info.get("duration"),
                 "duration_formatted": format_duration(info.get("duration")),
-                "thumbnail": info.get("thumbnail"),
+                "thumbnail": extract_best_thumbnail(info),
                 "extractor": info.get("extractor_key") or info.get("extractor") or "Generic",
                 "webpage_url": info.get("webpage_url", url),
                 "video_formats": video_options,
@@ -769,6 +770,8 @@ def find_spotify_match(
         matched_info["match_explanation"] = top_cand.get("explanation")
         if original_thumbnail and not matched_info.get("thumbnail"):
             matched_info["thumbnail"] = original_thumbnail
+        elif not matched_info.get("thumbnail"):
+            matched_info["thumbnail"] = extract_best_thumbnail(matched_info)
         matched_info["match_banner"] = f"Alternative Match for: {original_title or clean_query}"
         return matched_info
     except MediaEngineError:

@@ -88,6 +88,12 @@ class TaskManager:
         safe_base_name = sanitize_filename(title, "")
         final_ext = f".{ext.lstrip('.')}"
 
+        if not thumbnail and url:
+            import re
+            yt_m = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11})(?:[&?]|$)", url)
+            if yt_m:
+                thumbnail = f"https://i.ytimg.com/vi/{yt_m.group(1)}/hqdefault.jpg"
+
         task_record = {
             "id": task_id,
             "url": url,
