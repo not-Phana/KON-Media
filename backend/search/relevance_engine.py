@@ -147,6 +147,33 @@ def levenshtein_similarity(s1: str, s2: str) -> float:
     return max(0.0, min(1.0, 1.0 - (dist / max_len)))
 
 
+def compute_word_order_score(query_tokens: List[str], cand_tokens: List[str]) -> float:
+    """Measure whether matched query tokens preserve the original word order in the candidate.
+    
+    Returns 1.0 for strictly monotonically increasing token positions (perfect word order),
+    down to 0.0 for reverse ordering.
+    """
+    if not query_tokens or not cand_tokens:
+        return 0.5
+    matched_indices: List[int] = []
+    c_lower = [c.lower() for c in cand_tokens]
+    for tok in query_tokens:
+        tl = tok.lower()
+        if tl in c_lower:
+            matched_indices.append(c_lower.index(tl))
+    if len(matched_indices) <= 1:
+        return 1.0
+
+    concordant = 0
+    total_pairs = 0
+    for i in range(len(matched_indices)):
+        for j in range(i + 1, len(matched_indices)):
+            total_pairs += 1
+            if matched_indices[i] <= matched_indices[j]:
+                concordant += 1
+    return concordant / total_pairs if total_pairs > 0 else 1.0
+
+
 def detect_version_hint(text: str) -> Optional[str]:
     """Detect version hint from text."""
     norm = normalize_text(text)
@@ -249,6 +276,18 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
                     matched += 1
             cov = matched / len(t_toks)
             token_coverage = max(token_coverage, cov)
+
+    # Word order score: measure relative order preservation across target queries
+    token_order = 0.5
+    for tq in target_queries:
+        t_toks = [w for w in tq.split() if w]
+        if len(t_toks) <= 1:
+            token_order = max(token_order, 1.0)
+        else:
+            for ctv in cand_title_variants:
+                c_toks = [w for w in ctv.split() if w]
+                order_s = compute_word_order_score(t_toks, c_toks)
+                token_order = max(token_order, order_s)
 
     # 4. Typo similarity
     ngram_sim = max(
@@ -373,6 +412,18 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
         if "topic" in uploader_norm:
             audio_platform_boost += 0.10
 
+    # 11. Metadata quality (Signal 7)
+    metadata_quality = 0.50
+    if candidate.thumbnail and str(candidate.thumbnail).startswith("http"):
+        metadata_quality += 0.20
+    if candidate.duration and 35.0 <= candidate.duration <= 720.0:
+        metadata_quality += 0.15
+    if candidate.uploader and len(candidate.uploader.strip()) > 1:
+        metadata_quality += 0.10
+    if not candidate.is_cluttered:
+        metadata_quality += 0.05
+    metadata_quality = min(1.0, metadata_quality)
+
     return {
         "exact_title": exact_title,
         "phrase_match": phrase_match,
@@ -382,6 +433,7 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
         "artist_affinity": artist_affinity,
         "version_compat": version_compat,
         "duration_compat": duration_compat,
+        "metadata_quality": metadata_quality,
         "non_music_penalty": non_music_penalty,
         "popularity_boost": popularity_boost,
         "audio_platform_boost": audio_platform_boost,
@@ -461,6 +513,7 @@ def score_candidate(
         + 0.15 * feat["typo_similarity"]
         + 0.15 * feat["artist_affinity"]
         + 0.10 * feat["duration_compat"]
+        + 0.05 * feat.get("metadata_quality", 0.5)
         + feat["audio_platform_boost"]
         + feat["popularity_boost"]
     )
@@ -479,9 +532,15 @@ def score_candidate(
 
 
 def deduplicate_candidates(candidates: List[CandidateResult]) -> List[CandidateResult]:
-    """Deduplicate candidates by canonical URL and normalized title."""
+    """Deduplicate candidates while strictly preserving distinct versions and platforms.
+
+    A candidate is deduplicated only if:
+    1. It shares an identical canonical URL (exact duplicate).
+    2. OR, on the same platform, it has identical normalized title AND identical uploader,
+       with duration within 3 seconds, representing redundant duplicate uploads.
+    """
     seen_urls: Set[str] = set()
-    seen_titles: Set[str] = set()
+    seen_platform_keys: Set[Tuple[str, str, str]] = set()
     deduped: List[CandidateResult] = []
 
     for cand in candidates:
@@ -493,10 +552,13 @@ def deduplicate_candidates(candidates: List[CandidateResult]) -> List[CandidateR
                 seen_urls.add(canonical_url)
 
         norm_title = normalize_text(cand.title)
-        if norm_title:
-            if norm_title in seen_titles:
-                continue
-            seen_titles.add(norm_title)
+        norm_uploader = normalize_text(cand.uploader)
+        dur_bucket = str(int(cand.duration // 4)) if cand.duration else "none"
+        platform_key = (cand.platform, norm_title, norm_uploader if norm_uploader else dur_bucket)
+
+        if platform_key in seen_platform_keys:
+            continue
+        seen_platform_keys.add(platform_key)
 
         deduped.append(cand)
 

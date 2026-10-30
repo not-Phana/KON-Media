@@ -36,6 +36,104 @@ export async function searchMedia(query, { limit = 5, provider = null, mediaType
   return data;
 }
 
+export async function streamSearchMedia(
+  query,
+  {
+    limit = 20,
+    provider = null,
+    mediaType = "all",
+    signal = null,
+    onStage = () => {},
+    onResults = () => {},
+    onComplete = () => {},
+    onError = () => {},
+  } = {}
+) {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  if (provider) params.append("provider", provider);
+  if (mediaType && mediaType !== "all") params.append("media_type", mediaType);
+
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/search/live?${params.toString()}`, { signal });
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    // Fallback to static endpoint on network/connection failure
+    try {
+      const staticData = await searchMedia(query, { limit, provider, mediaType, signal });
+      onResults(staticData.results || [], false);
+      onComplete(staticData);
+      return staticData;
+    } catch (staticErr) {
+      onError(staticErr);
+      throw staticErr;
+    }
+  }
+
+  if (!res.ok || !res.body) {
+    try {
+      const staticData = await searchMedia(query, { limit, provider, mediaType, signal });
+      onResults(staticData.results || [], false);
+      onComplete(staticData);
+      return staticData;
+    } catch (staticErr) {
+      onError(staticErr);
+      throw staticErr;
+    }
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+  let lastFinalData = null;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || "";
+
+      for (const ev of events) {
+        const trimmed = ev.trim();
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(trimmed.slice(6));
+            onStage(data);
+            if (data.results && Array.isArray(data.results)) {
+              onResults(data.results, data.is_partial || false);
+            }
+            if (
+              data.stage === "completed" ||
+              data.stage === "partial_results" ||
+              data.stage === "no_results"
+            ) {
+              lastFinalData = data;
+              onComplete(data);
+            }
+          } catch {
+            // ignore non-json SSE frames
+          }
+        }
+      }
+    }
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    onError(err);
+    throw err;
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // ignore
+    }
+  }
+
+  return lastFinalData;
+}
+
 export async function submitSearchFeedback(feedback) {
   const res = await fetch(`${API_BASE}/search/feedback`, {
     method: "POST",

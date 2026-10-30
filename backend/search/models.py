@@ -60,11 +60,14 @@ class SearchQuery:
     normalized_query: str = ""
     detected_artist: Optional[str] = None
     detected_title: Optional[str] = None
-    version_hint: Optional[str] = None  # e.g., "live", "remix", "instrumental", "acoustic", "cover"
+    version_hint: Optional[str] = None  # e.g., "live", "remix", "instrumental", "acoustic", "cover", "slowed", "sped_up"
+    qualifier: Optional[str] = None  # e.g., "jersey club", "speed up", "slowed + reverb", "live aid"
+    edition: Optional[str] = None  # e.g., "version", "deluxe", "remaster"
     expected_duration: Optional[float] = None
     expected_artist: Optional[str] = None
     expected_title: Optional[str] = None
     media_type: str = "all"  # "all", "audio", "video"
+    exact_phrases: List[str] = field(default_factory=list)
 
 
 @dataclass

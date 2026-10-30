@@ -31,10 +31,10 @@ pub fn normalize_media_url(raw_url: &str) -> String {
     trimmed.to_string()
 }
 
-/// Deduplicate candidates by canonical URL and normalized title.
+/// Deduplicate candidates while strictly preserving distinct versions and platforms.
 pub fn deduplicate_candidates(candidates: Vec<CandidateInput>) -> Vec<CandidateInput> {
     let mut seen_urls: HashSet<String> = HashSet::new();
-    let mut seen_titles: HashSet<String> = HashSet::new();
+    let mut seen_platform_keys: HashSet<(String, String, String)> = HashSet::new();
     let mut deduped: Vec<CandidateInput> = Vec::with_capacity(candidates.len());
 
     for cand in candidates {
@@ -49,14 +49,25 @@ pub fn deduplicate_candidates(candidates: Vec<CandidateInput>) -> Vec<CandidateI
             }
         }
 
-        // Title dedup
+        // Platform-scoped title and uploader dedup
         let norm_title = normalize_text(&cand.title);
-        if !norm_title.is_empty() {
-            if seen_titles.contains(&norm_title) {
-                continue;
-            }
-            seen_titles.insert(norm_title);
+        let norm_uploader = normalize_text(cand.uploader.as_deref().unwrap_or(""));
+        let dur_bucket = match cand.duration {
+            Some(d) => ((d / 4.0) as i64).to_string(),
+            None => "none".to_string(),
+        };
+        let platform_name = cand.platform.as_deref().unwrap_or("unknown").to_string();
+        let uploader_key = if !norm_uploader.is_empty() {
+            norm_uploader
+        } else {
+            dur_bucket
+        };
+        let platform_key = (platform_name, norm_title, uploader_key);
+
+        if seen_platform_keys.contains(&platform_key) {
+            continue;
         }
+        seen_platform_keys.insert(platform_key);
 
         deduped.push(cand);
     }

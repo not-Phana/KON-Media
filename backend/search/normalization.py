@@ -146,6 +146,101 @@ def strip_media_noise(title: str) -> str:
     return " ".join(cleaned.split())
 
 
+SPECIFIC_QUALIFIERS = [
+    "jersey club",
+    "jersey remix",
+    "sped up",
+    "speed up",
+    "slowed down",
+    "slowed + reverb",
+    "slowed and reverb",
+    "slowed",
+    "nightcore",
+    "club mix",
+    "extended mix",
+    "acoustic live",
+    "live aid",
+    "piano cover",
+    "instrumental version",
+    "radio edit",
+    "deluxe edition",
+    "remastered",
+]
+
+EDITION_KEYWORDS = [
+    "version",
+    "ver",
+    "edit",
+    "edition",
+    "deluxe",
+    "remaster",
+    "remastered",
+]
+
+COMMON_ARTIST_CUES = [
+    "arctic monkeys",
+    "porter robinson madeon",
+    "porter robinson",
+    "madeon",
+    "daft punk",
+    "the weeknd",
+    "queen",
+    "eminem",
+    "newjeans",
+    "new jeans",
+    "shiro sagisu",
+    "yoasobi",
+    "lisa",
+    "aimer",
+    "kenshi yonezu",
+    "king gnu",
+    "vaundy",
+    "tatsuya kitani",
+    "linked horizon",
+    "sim",
+    "creepy nuts",
+    "zutomayo",
+    "eve",
+    "imagine dragons",
+    "linkin park",
+    "hans zimmer",
+    "kate bush",
+    "steve lacy",
+    "chase atlantic",
+    "billie eilish",
+    "taylor swift",
+    "post malone",
+    "travis scott",
+    "drake",
+    "kendrick lamar",
+    "joji",
+    "jo0ji",
+    "against the current",
+    "k/da",
+    "celine dion",
+    "adele",
+    "rick astley",
+]
+
+
+def detect_specific_qualifier(text: str) -> Optional[str]:
+    """Detect specific multi-word version qualifier phrase if present."""
+    norm = normalize_text(text)
+    for q in SPECIFIC_QUALIFIERS:
+        if re.search(r"\b" + re.escape(q) + r"\b", norm):
+            return q
+    return None
+
+
+def detect_edition(text: str) -> Optional[str]:
+    """Detect release edition keyword if present."""
+    norm = normalize_text(text)
+    for ed in EDITION_KEYWORDS:
+        if re.search(r"\b" + re.escape(ed) + r"\b", norm):
+            return ed
+    return None
+
+
 def detect_version_hint(text: str) -> Optional[str]:
     """Detect whether query or title explicitly requests a specific version."""
     norm = normalize_text(text)
@@ -168,34 +263,105 @@ def parse_query_intent(
     expected_duration: Optional[float] = None,
     media_type: str = "all",
 ) -> SearchQuery:
-    """Parse query into structured intent: artist, title, version hint, media type."""
-    norm_query = normalize_text(query_str)
-    version_hint = detect_version_hint(query_str)
+    """Parse query into structured intent: artist, title, version hint, qualifier, edition."""
+    raw = query_str.strip()
+    norm_query = normalize_text(raw)
+    version_hint = detect_version_hint(raw)
+    qualifier = detect_specific_qualifier(raw)
+    edition = detect_edition(raw)
+
+    # Extract quoted exact phrases
+    exact_phrases = re.findall(r'"([^"]+)"', raw)
 
     detected_artist = expected_artist
     detected_title = expected_title
 
-    # If no expected artist/title provided, try parsing "Artist - Title" or "Title by Artist"
+    # 1. Check parenthetical edition/version (e.g. 'NewJeans - Jersey Club (Version)')
+    core_text = raw
+    paren_match = re.search(r"[\(\[【]([^\)\]】]+)[\)\]】]$", core_text)
+    if paren_match:
+        tag_inside = paren_match.group(1).strip().lower()
+        if any(ed in tag_inside for ed in EDITION_KEYWORDS) or detect_version_hint(tag_inside):
+            if not edition:
+                edition = tag_inside
+            # Strip trailing tag to isolate core artist and song
+            core_text = core_text[:paren_match.start()].strip()
+
+    # 2. Check explicit delimiters: " - ", " – ", " — ", " / ", " by "
     if not detected_artist or not detected_title:
-        if " - " in query_str:
-            parts = query_str.split(" - ", 1)
-            detected_artist = parts[0].strip()
-            detected_title = parts[1].strip()
-        elif " by " in query_str.lower():
-            parts = re.split(r"\s+by\s+", query_str, flags=re.IGNORECASE, maxsplit=1)
+        delimiter_matched = False
+        for sep in (" - ", " – ", " — ", " / "):
+            if sep in core_text:
+                parts = core_text.split(sep, 1)
+                detected_artist = parts[0].strip()
+                detected_title = parts[1].strip()
+                delimiter_matched = True
+                break
+
+        if not delimiter_matched and " by " in core_text.lower():
+            parts = re.split(r"\s+by\s+", core_text, flags=re.IGNORECASE, maxsplit=1)
             detected_title = parts[0].strip()
             detected_artist = parts[1].strip()
+            delimiter_matched = True
+
+    # 3. Check featuring tokens: " feat. ", " feat ", " ft. ", " ft "
+    if detected_title and any(f in detected_title.lower() for f in (" feat. ", " feat ", " ft. ", " ft ")):
+        ft_parts = re.split(r"\s+(?:feat\.?|ft\.?)\s+", detected_title, flags=re.IGNORECASE, maxsplit=1)
+        detected_title = ft_parts[0].strip()
+
+    # 4. Non-delimited queries: test against common artist cues (e.g. 'I Wanna Be Yours Arctic Monkeys', 'Shelter Porter Robinson Madeon')
+    if not detected_artist or not detected_title:
+        core_norm = normalize_text(core_text)
+        found_cue = False
+        for cue in sorted(COMMON_ARTIST_CUES, key=len, reverse=True):
+            cue_norm = normalize_text(cue)
+            # Suffix match: "<Title> <Artist>"
+            pattern_end = r"^(.*?)\s+\b" + re.escape(cue_norm) + r"\b$"
+            m_end = re.search(pattern_end, core_norm)
+            if m_end and len(m_end.group(1).strip()) >= 2:
+                # Find matching character slice in core_text
+                cut_idx = len(m_end.group(1).strip())
+                # Reconstruct capitalization
+                detected_title = core_text[:cut_idx].strip()
+                detected_artist = core_text[cut_idx:].strip()
+                found_cue = True
+                break
+
+            # Prefix match: "<Artist> <Title>"
+            pattern_start = r"^\b" + re.escape(cue_norm) + r"\b\s+(.*)$"
+            m_start = re.search(pattern_start, core_norm)
+            if m_start and len(m_start.group(1).strip()) >= 2:
+                cut_idx = len(cue_norm)
+                detected_artist = core_text[:cut_idx].strip()
+                detected_title = core_text[cut_idx:].strip()
+                found_cue = True
+                break
+
+        if not found_cue:
+            # Check if query ends with trailing version term (e.g. "song title live" -> title="song title")
+            if version_hint and not detected_title:
+                clean_no_version = core_text
+                for kw in VERSION_KEYWORDS.get(version_hint, []):
+                    clean_no_version = re.sub(r"\b" + re.escape(kw) + r"\b", "", clean_no_version, flags=re.IGNORECASE).strip()
+                if len(clean_no_version) >= 2:
+                    detected_title = clean_no_version
+
+            if not detected_title:
+                detected_title = core_text
 
     return SearchQuery(
-        raw_query=query_str,
+        raw_query=raw,
         normalized_query=norm_query,
         detected_artist=detected_artist,
         detected_title=detected_title,
         version_hint=version_hint,
+        qualifier=qualifier,
+        edition=edition,
         expected_duration=expected_duration,
         expected_artist=expected_artist,
         expected_title=expected_title,
         media_type=media_type,
+        exact_phrases=exact_phrases,
     )
 
 

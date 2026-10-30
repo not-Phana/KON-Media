@@ -12,6 +12,7 @@ import {
   fetchHealth,
   analyzeMediaUrl,
   searchMedia,
+  streamSearchMedia,
   submitSearchFeedback,
   queueDownload,
   cancelTask,
@@ -45,7 +46,8 @@ export default function App() {
   const [analyzedMedia, setAnalyzedMedia] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchState, setSearchState] = useState("idle"); // 'idle' | 'searching' | 'complete' | 'no_results' | 'partial' | 'error'
+  const [searchState, setSearchState] = useState("idle"); // 'idle' | 'searching' | 'updating' | 'complete' | 'no_results' | 'partial' | 'error'
+  const [searchStage, setSearchStage] = useState(null);
   const [searchMeta, setSearchMeta] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState(null);
@@ -211,37 +213,55 @@ export default function App() {
       setSearchQuery(input);
       setSearchResults(null);
       setSearchState("searching");
+      setSearchStage({ stage: "understanding", message: "Understanding your search..." });
       setSearchMeta(null);
 
       try {
-        const res = await searchMedia(input, {
+        await streamSearchMedia(input, {
           limit: 20,
           mediaType: searchMode,
           signal: controller.signal,
+          onStage: (stageData) => {
+            if (searchIdRef.current !== currentSearchId) return;
+            setSearchStage(stageData);
+            if (stageData.stage === "updating") {
+              setSearchState("updating");
+            }
+          },
+          onResults: (results) => {
+            if (searchIdRef.current !== currentSearchId) return;
+            setSearchResults(results);
+          },
+          onComplete: (finalData) => {
+            if (searchIdRef.current !== currentSearchId) return;
+            const results = finalData.results || [];
+            setSearchResults(results);
+            setSearchMeta({
+              status: finalData.status || "complete",
+              completed: finalData.providers_completed || [],
+              timedOut: finalData.providers_timed_out || [],
+              failed: finalData.providers_failed || [],
+              engine: finalData.engine || "KON Search 1.1.0 Rei",
+            });
+
+            if (results.length === 0) {
+              setSearchState("no_results");
+            } else if (finalData.status === "partial") {
+              setSearchState("partial");
+            } else {
+              setSearchState("complete");
+            }
+          },
+          onError: (err) => {
+            if (err.name === "AbortError") return;
+            if (searchIdRef.current !== currentSearchId) return;
+            setSearchState("error");
+            setAnalyzeError(err.message || "Failed to search media");
+          },
         });
-
-        // Discard if superseded by a newer query
-        if (searchIdRef.current !== currentSearchId) return;
-
-        const results = res.results || [];
-        setSearchResults(results);
-        setSearchMeta({
-          status: res.status || "complete",
-          completed: res.providers_completed || [],
-          timedOut: res.providers_timed_out || [],
-          engine: res.engine || "KON Search 1.1.0 Rei",
-        });
-
-        if (results.length === 0) {
-          setSearchState("no_results");
-        } else if (res.status === "partial") {
-          setSearchState("partial");
-        } else {
-          setSearchState("complete");
-        }
       } catch (err) {
         if (err.name === "AbortError") {
-          return; // Superceded by a newer search
+          return; // Superseded by a newer search
         }
         if (searchIdRef.current !== currentSearchId) return;
         setSearchState("error");
@@ -471,11 +491,12 @@ export default function App() {
         />
 
         {/* Ranked Search Discoveries */}
-        {(searchResults || searchState === "searching" || searchState === "no_results") && (
+        {(searchResults || searchState === "searching" || searchState === "updating" || searchState === "no_results") && (
           <SearchResultsCard
             query={searchQuery}
             results={searchResults}
             searchState={searchState}
+            searchStage={searchStage}
             searchMeta={searchMeta}
             onSelectCandidate={handleSelectSearchResult}
             onDirectDownload={handleDirectDownload}

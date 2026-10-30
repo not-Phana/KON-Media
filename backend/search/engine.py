@@ -1,7 +1,8 @@
 """Unified SearchEngine coordinating providers, normalization, ranking, and feedback."""
 
+import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 from backend.search.models import CandidateResult, RankerConfig, SearchQuery
 from backend.search.normalization import parse_query_intent
 from backend.search.ranking import rank_candidates
@@ -76,7 +77,7 @@ class SearchEngine:
         search_term = clean_q
 
         # 3. Retrieve candidates from providers concurrently with broad candidate pool
-        pool_limit = min(max(limit * 3, 24), 60)
+        pool_limit = min(max(limit + 8, 15), 30)
         candidates = self.aggregator.aggregate_candidates(
             query=search_term,
             limit_per_provider=pool_limit,
@@ -137,6 +138,183 @@ class SearchEngine:
     def get_active_engine(self) -> str:
         """Return diagnostic engine identifier."""
         return rust_bridge.get_active_engine_name()
+
+    async def search_live_stream(
+        self,
+        query: str,
+        limit: int = 20,
+        media_type: str = "all",
+        preferred_provider: Optional[str] = None,
+        ffmpeg_path: Optional[str] = None,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Stream real-time search progress, multi-provider candidates, and live re-ranking."""
+        clean_q = query.strip()
+        if not clean_q:
+            yield {
+                "stage": "no_results",
+                "message": "Search query cannot be empty",
+                "status": "no_results",
+                "results": [],
+                "count": 0,
+            }
+            return
+
+        # 0. Check cache
+        cache_key = self.cache.make_key(clean_q, media_type=media_type, provider=preferred_provider, limit=limit)
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            yield {
+                "stage": "completed",
+                "message": "Completed from high-speed cache",
+                "status": "complete",
+                "results": cached,
+                "count": len(cached),
+                "providers_completed": ["cache"],
+                "providers_timed_out": [],
+                "providers_failed": [],
+                "engine": self.get_active_engine(),
+                "product": "KON Search 1.1.0 Rei",
+            }
+            return
+
+        # 1. Stage: Understanding your search
+        search_query = parse_query_intent(
+            clean_q,
+            media_type=media_type,
+        )
+        yield {
+            "stage": "understanding",
+            "message": "Understanding your search",
+            "details": {
+                "detected_title": search_query.detected_title,
+                "detected_artist": search_query.detected_artist,
+                "version_hint": search_query.version_hint,
+                "qualifier": search_query.qualifier,
+                "edition": search_query.edition,
+            },
+            "query": clean_q,
+        }
+
+        # 2. Stage: Searching providers
+        active_providers = list(self.aggregator.providers)
+        if media_type == "video":
+            active_providers = [p for p in active_providers if p.name != "soundcloud"]
+        if preferred_provider:
+            active_providers.sort(key=lambda p: 0 if p.name == preferred_provider else 1)
+
+        provider_names = [p.name for p in active_providers]
+        yield {
+            "stage": "searching",
+            "message": f"Querying {len(active_providers)} providers: {', '.join(provider_names)}",
+            "providers": provider_names,
+        }
+
+        pool_limit = min(max(limit + 8, 15), 30)
+        accumulated_candidates: List[CandidateResult] = []
+        completed_providers: List[str] = []
+        timed_out_providers: List[str] = []
+        failed_providers: List[str] = []
+
+        async def run_single_provider(provider):
+            try:
+                res = await asyncio.wait_for(
+                    asyncio.to_thread(provider.search, clean_q, pool_limit, ffmpeg_path),
+                    timeout=12.0,
+                )
+                return provider.name, res, None
+            except asyncio.TimeoutError:
+                return provider.name, [], "timeout"
+            except Exception as e:
+                return provider.name, [], str(e)
+
+        tasks = [asyncio.create_task(run_single_provider(p)) for p in active_providers]
+
+        for coro in asyncio.as_completed(tasks):
+            p_name, candidates, err = await coro
+            if err == "timeout":
+                timed_out_providers.append(p_name)
+            elif err:
+                failed_providers.append(p_name)
+            else:
+                completed_providers.append(p_name)
+                if candidates:
+                    accumulated_candidates.extend(candidates)
+                    from backend.search.relevance_engine import deduplicate_candidates
+                    accumulated_candidates = deduplicate_candidates(accumulated_candidates)
+
+                    yield {
+                        "stage": "collecting",
+                        "message": f"Collected {len(candidates)} candidates from {p_name}",
+                        "provider": p_name,
+                        "candidate_count": len(candidates),
+                        "total_candidates": len(accumulated_candidates),
+                    }
+
+                    yield {
+                        "stage": "matching",
+                        "message": "Matching & ranking candidates by relevance",
+                        "provider": p_name,
+                    }
+
+                    ranked = rust_bridge.rank_candidates(query=search_query, candidates=accumulated_candidates)
+                    partial_results = [c.to_dict() for c in ranked[:limit]]
+                    pending = [p for p in provider_names if p not in completed_providers and p not in timed_out_providers and p not in failed_providers]
+
+                    yield {
+                        "stage": "updating",
+                        "message": f"Updated results with {p_name}",
+                        "results": partial_results,
+                        "count": len(partial_results),
+                        "is_partial": len(pending) > 0,
+                        "providers_completed": list(completed_providers),
+                        "providers_pending": pending,
+                    }
+
+        # Final ranking and completion
+        if accumulated_candidates:
+            ranked = rust_bridge.rank_candidates(query=search_query, candidates=accumulated_candidates)
+            final_results = [c.to_dict() for c in ranked[:limit]]
+            self.cache.set(cache_key, final_results)
+
+            if timed_out_providers or failed_providers:
+                yield {
+                    "stage": "partial_results",
+                    "message": f"Search completed with partial results ({', '.join(timed_out_providers + failed_providers)} timed out or failed)",
+                    "status": "partial",
+                    "results": final_results,
+                    "count": len(final_results),
+                    "providers_completed": completed_providers,
+                    "providers_timed_out": timed_out_providers,
+                    "providers_failed": failed_providers,
+                    "engine": self.get_active_engine(),
+                    "product": "KON Search 1.1.0 Rei",
+                }
+            else:
+                yield {
+                    "stage": "completed",
+                    "message": "Search completed",
+                    "status": "complete",
+                    "results": final_results,
+                    "count": len(final_results),
+                    "providers_completed": completed_providers,
+                    "providers_timed_out": timed_out_providers,
+                    "providers_failed": failed_providers,
+                    "engine": self.get_active_engine(),
+                    "product": "KON Search 1.1.0 Rei",
+                }
+        else:
+            yield {
+                "stage": "no_results",
+                "message": "No good matches found",
+                "status": "no_results",
+                "results": [],
+                "count": 0,
+                "providers_completed": completed_providers,
+                "providers_timed_out": timed_out_providers,
+                "providers_failed": failed_providers,
+                "engine": self.get_active_engine(),
+                "product": "KON Search 1.1.0 Rei",
+            }
 
     def record_feedback(
         self,

@@ -303,6 +303,7 @@ async def search_media_endpoint(
 
     clamped_limit = min(max(limit, 1), 50)
     configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
+    from backend.search.engine import SearchEngine
     engine = SearchEngine()
     active_engine = engine.get_active_engine()
     response.headers["X-KON-Search-Engine"] = active_engine
@@ -329,6 +330,53 @@ async def search_media_endpoint(
         "providers_failed": agg_status.get("failed", []),
         "results": results,
     }
+
+
+@router.get("/search/live")
+async def search_live_endpoint(
+    request: Request,
+    response: Response,
+    q: str,
+    limit: int = 20,
+    media_type: Optional[str] = "all",
+    provider: Optional[str] = None,
+):
+    """Server-Sent Events (SSE) live search streaming real-time status and incremental candidates."""
+    clean_q = q.strip()
+    if not clean_q:
+        raise HTTPException(status_code=400, detail="Search query cannot be empty.")
+
+    clamped_limit = min(max(limit, 1), 50)
+    configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
+    from backend.search.engine import SearchEngine
+    engine = SearchEngine()
+    active_engine = engine.get_active_engine()
+
+    async def event_generator():
+        try:
+            async for event in engine.search_live_stream(
+                query=clean_q,
+                limit=clamped_limit,
+                media_type=media_type or "all",
+                preferred_provider=provider,
+                ffmpeg_path=configured_ffmpeg,
+            ):
+                if await request.is_disconnected():
+                    break
+                payload = json.dumps(event, ensure_ascii=False)
+                yield f"data: {payload}\n\n"
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-KON-Search-Engine": active_engine,
+        },
+    )
 
 
 @router.post("/search/feedback")
