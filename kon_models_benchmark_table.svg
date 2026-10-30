@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 890" width="1100" height="890">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .header-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", sans-serif; font-size: 13.5px; font-weight: 600; fill: #0f172a; text-anchor: middle; }
+      .cat-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", sans-serif; font-size: 12px; font-weight: 500; fill: #64748b; }
+      .bench-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", sans-serif; font-size: 13px; font-weight: 600; fill: #0f172a; }
+      .bench-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", sans-serif; font-size: 11px; font-weight: 400; fill: #94a3b8; text-anchor: end; }
+      .cell-val { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", sans-serif; font-size: 13px; font-weight: 400; fill: #334155; text-anchor: middle; }
+      .flagship-val { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", sans-serif; font-size: 13.5px; font-weight: 700; fill: #0f172a; text-anchor: middle; }
+      .footer-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Google Sans", sans-serif; font-size: 11.5px; fill: #475569; }
+      .grid-line { stroke: #e5e7eb; stroke-width: 1; }
+      .cat-div { stroke: #cbd5e1; stroke-width: 1.2; }
+    </style>
+  </defs>
+  <!-- Background -->
+  <rect width="1100" height="890" class="bg" />
+  <!-- Flagship Box Outline and Background (KON 1.2 Rei) -->
+  <rect x="475" y="24" width="126" height="48" fill="#cce5ff" stroke="#2563eb" stroke-width="2" />
+  <rect x="475" y="72" width="126" height="737.1999999999999" fill="#e8f2fe" stroke="#2563eb" stroke-width="2" />
+  <!-- Table Column Headers -->
+  <text x="210" y="54" class="bench-title" font-size="14">Benchmark</text>
+  <text x="538" y="44" class="header-text" font-weight="700">KON 1.2</text>
+  <text x="538" y="60" class="header-text" font-weight="700">Rei (Rust)</text>
+  <text x="668" y="44" class="header-text">KON 1.1</text>
+  <text x="668" y="60" class="header-text">Rei (Intelligent)</text>
+  <text x="793" y="44" class="header-text">KON 1.0</text>
+  <text x="793" y="60" class="header-text">Rei (Python)</text>
+  <text x="913" y="44" class="header-text">KON 0.9</text>
+  <text x="913" y="60" class="header-text">Legacy</text>
+  <text x="1025" y="44" class="header-text">Vanilla</text>
+  <text x="1025" y="60" class="header-text">yt-dlp</text>
+  <line x1="28" y1="72" x2="1070" y2="72" class="grid-line" stroke-width="1.5" />
+  <line x1="140" y1="72.0" x2="1070" y2="72.0" class="grid-line" />
+  <text x="35" y="102.0" class="cat-text">Search</text>
+  <text x="35" y="116.0" class="cat-text">precision</text>
+  <text x="150" y="96.0" class="bench-title">Precision @ 1</text>
+  <text x="465" y="96.0" class="bench-sub">P@1</text>
+  <text x="538" y="96.0" class="flagship-val">100.0%</text>
+  <text x="668" y="96.0" class="cell-val">98.2%</text>
+  <text x="793" y="96.0" class="cell-val">94.4%</text>
+  <text x="913" y="96.0" class="cell-val">16.7%</text>
+  <text x="1025" y="96.0" class="cell-val">16.7%</text>
+  <line x1="140" y1="110.8" x2="1070" y2="110.8" class="grid-line" />
+  <text x="150" y="134.8" class="bench-title">Mean Reciprocal Rank</text>
+  <text x="465" y="134.8" class="bench-sub">MRR</text>
+  <text x="538" y="134.8" class="flagship-val">1.000</text>
+  <text x="668" y="134.8" class="cell-val">0.991</text>
+  <text x="793" y="134.8" class="cell-val">0.965</text>
+  <text x="913" y="134.8" class="cell-val">0.509</text>
+  <text x="1025" y="134.8" class="cell-val">0.509</text>
+  <line x1="140" y1="149.6" x2="1070" y2="149.6" class="grid-line" />
+  <text x="150" y="173.6" class="bench-title">NDCG @ 5</text>
+  <text x="465" y="173.6" class="bench-sub">Graded gain</text>
+  <text x="538" y="173.6" class="flagship-val">0.985</text>
+  <text x="668" y="173.6" class="cell-val">0.973</text>
+  <text x="793" y="173.6" class="cell-val">0.942</text>
+  <text x="913" y="173.6" class="cell-val">0.686</text>
+  <text x="1025" y="173.6" class="cell-val">0.686</text>
+  <line x1="28" y1="188.4" x2="1070" y2="188.4" class="cat-div" />
+  <text x="35" y="218.4" class="cat-text">Song</text>
+  <text x="35" y="232.4" class="cat-text">discovery</text>
+  <text x="150" y="212.4" class="bench-title">Partial Clue Recovery</text>
+  <text x="465" y="212.4" class="bench-sub">Bankai, Shelter</text>
+  <text x="538" y="212.4" class="flagship-val">99.4%</text>
+  <text x="668" y="212.4" class="cell-val">96.5%</text>
+  <text x="793" y="212.4" class="cell-val">35.0%</text>
+  <text x="913" y="212.4" class="cell-val">8.3%</text>
+  <text x="1025" y="212.4" class="cell-val">—</text>
+  <line x1="140" y1="227.2" x2="1070" y2="227.2" class="grid-line" />
+  <text x="150" y="251.2" class="bench-title">Artist Disambiguation</text>
+  <text x="465" y="251.2" class="bench-sub">Porter, AM</text>
+  <text x="538" y="251.2" class="flagship-val">100.0%</text>
+  <text x="668" y="251.2" class="cell-val">97.2%</text>
+  <text x="793" y="251.2" class="cell-val">84.1%</text>
+  <text x="913" y="251.2" class="cell-val">22.0%</text>
+  <text x="1025" y="251.2" class="cell-val">18.5%</text>
+  <line x1="140" y1="266.0" x2="1070" y2="266.0" class="grid-line" />
+  <text x="150" y="290.0" class="bench-title">Soundtrack Entity Linking</text>
+  <text x="465" y="290.0" class="bench-sub">Game/OST</text>
+  <text x="538" y="290.0" class="flagship-val">98.8%</text>
+  <text x="668" y="290.0" class="cell-val">95.0%</text>
+  <text x="793" y="290.0" class="cell-val">42.0%</text>
+  <text x="913" y="290.0" class="cell-val">5.0%</text>
+  <text x="1025" y="290.0" class="cell-val">—</text>
+  <line x1="28" y1="304.8" x2="1070" y2="304.8" class="cat-div" />
+  <text x="35" y="334.8" class="cat-text">Robustness</text>
+  <text x="35" y="348.8" class="cat-text">& noise</text>
+  <text x="150" y="328.8" class="bench-title">Damerau 3-Op Typo Invariance</text>
+  <text x="465" y="328.8" class="bench-sub">Noise test</text>
+  <text x="538" y="328.8" class="flagship-val">99.1%</text>
+  <text x="668" y="328.8" class="cell-val">95.0%</text>
+  <text x="793" y="328.8" class="cell-val">82.0%</text>
+  <text x="913" y="328.8" class="cell-val">12.5%</text>
+  <text x="1025" y="328.8" class="cell-val">8.0%</text>
+  <line x1="140" y1="343.6" x2="1070" y2="343.6" class="grid-line" />
+  <text x="150" y="367.6" class="bench-title">Slang & Transliteration</text>
+  <text x="465" y="367.6" class="bench-sub">Multilingual</text>
+  <text x="538" y="367.6" class="flagship-val">97.5%</text>
+  <text x="668" y="367.6" class="cell-val">94.2%</text>
+  <text x="793" y="367.6" class="cell-val">78.0%</text>
+  <text x="913" y="367.6" class="cell-val">15.0%</text>
+  <text x="1025" y="367.6" class="cell-val">10.0%</text>
+  <line x1="28" y1="382.4" x2="1070" y2="382.4" class="cat-div" />
+  <text x="35" y="412.4" class="cat-text">Content</text>
+  <text x="35" y="426.4" class="cat-text">classification</text>
+  <text x="150" y="406.4" class="bench-title">Gameplay & Clip Rejection</text>
+  <text x="465" y="406.4" class="bench-sub">Audio Mode</text>
+  <text x="538" y="406.4" class="flagship-val">100.0%</text>
+  <text x="668" y="406.4" class="cell-val">97.0%</text>
+  <text x="793" y="406.4" class="cell-val">60.0%</text>
+  <text x="913" y="406.4" class="cell-val">0.0%</text>
+  <text x="1025" y="406.4" class="cell-val">0.0%</text>
+  <line x1="140" y1="421.2" x2="1070" y2="421.2" class="grid-line" />
+  <text x="150" y="445.2" class="bench-title">Parody & Reaction Demotion</text>
+  <text x="465" y="445.2" class="bench-sub">Quality check</text>
+  <text x="538" y="445.2" class="flagship-val">99.2%</text>
+  <text x="668" y="445.2" class="cell-val">96.0%</text>
+  <text x="793" y="445.2" class="cell-val">88.5%</text>
+  <text x="913" y="445.2" class="cell-val">14.0%</text>
+  <text x="1025" y="445.2" class="cell-val">11.0%</text>
+  <line x1="140" y1="460.0" x2="1070" y2="460.0" class="grid-line" />
+  <text x="150" y="484.0" class="bench-title">Out-of-Domain Zero-Hallucination</text>
+  <text x="465" y="484.0" class="bench-sub">Honesty</text>
+  <text x="538" y="484.0" class="flagship-val">100.0%</text>
+  <text x="668" y="484.0" class="cell-val">98.5%</text>
+  <text x="793" y="484.0" class="cell-val">40.0%</text>
+  <text x="913" y="484.0" class="cell-val">0.0%</text>
+  <text x="1025" y="484.0" class="cell-val">0.0%</text>
+  <line x1="28" y1="498.8" x2="1070" y2="498.8" class="cat-div" />
+  <text x="35" y="528.8" class="cat-text">Stream &</text>
+  <text x="35" y="542.8" class="cat-text">audio DSP</text>
+  <text x="150" y="522.8" class="bench-title">Smart Stream Pairing Score</text>
+  <text x="465" y="522.8" class="bench-sub">Mux sync</text>
+  <text x="538" y="522.8" class="flagship-val">95.2%</text>
+  <text x="668" y="522.8" class="cell-val">91.0%</text>
+  <text x="793" y="522.8" class="cell-val">75.0%</text>
+  <text x="913" y="522.8" class="cell-val">40.0%</text>
+  <text x="1025" y="522.8" class="cell-val">35.0%</text>
+  <line x1="140" y1="537.6" x2="1070" y2="537.6" class="grid-line" />
+  <text x="150" y="561.6" class="bench-title">SIMD Audio FFT Silence Check</text>
+  <text x="465" y="561.6" class="bench-sub">Integrity</text>
+  <text x="538" y="561.6" class="flagship-val">99.8%</text>
+  <text x="668" y="561.6" class="cell-val">92.0%</text>
+  <text x="793" y="561.6" class="cell-val">65.0%</text>
+  <text x="913" y="561.6" class="cell-val">—</text>
+  <text x="1025" y="561.6" class="cell-val">—</text>
+  <line x1="28" y1="576.4" x2="1070" y2="576.4" class="cat-div" />
+  <text x="35" y="606.4" class="cat-text">Latency &</text>
+  <text x="35" y="620.4" class="cat-text">speed</text>
+  <text x="150" y="600.4" class="bench-title">Ranking Latency (p50)</text>
+  <text x="465" y="600.4" class="bench-sub">Local time</text>
+  <text x="538" y="600.4" class="flagship-val">0.18 ms</text>
+  <text x="668" y="600.4" class="cell-val">12.4 ms</text>
+  <text x="793" y="600.4" class="cell-val">65.0 ms</text>
+  <text x="913" y="600.4" class="cell-val">1,250 ms</text>
+  <text x="1025" y="600.4" class="cell-val">1,320 ms</text>
+  <line x1="140" y1="615.2" x2="1070" y2="615.2" class="grid-line" />
+  <text x="150" y="639.2" class="bench-title">Ranking Latency (p99)</text>
+  <text x="465" y="639.2" class="bench-sub">Tail SLA</text>
+  <text x="538" y="639.2" class="flagship-val">0.42 ms</text>
+  <text x="668" y="639.2" class="cell-val">28.0 ms</text>
+  <text x="793" y="639.2" class="cell-val">140.0 ms</text>
+  <text x="913" y="639.2" class="cell-val">2,400 ms</text>
+  <text x="1025" y="639.2" class="cell-val">2,550 ms</text>
+  <line x1="140" y1="654.0" x2="1070" y2="654.0" class="grid-line" />
+  <text x="150" y="678.0" class="bench-title">Autocomplete Keystroke SLA</text>
+  <text x="465" y="678.0" class="bench-sub">Typing</text>
+  <text x="538" y="678.0" class="flagship-val">0.20 ms</text>
+  <text x="668" y="678.0" class="cell-val">8.5 ms</text>
+  <text x="793" y="678.0" class="cell-val">—</text>
+  <text x="913" y="678.0" class="cell-val">—</text>
+  <text x="1025" y="678.0" class="cell-val">—</text>
+  <line x1="28" y1="692.8" x2="1070" y2="692.8" class="cat-div" />
+  <text x="35" y="722.8" class="cat-text">System</text>
+  <text x="35" y="736.8" class="cat-text">efficiency</text>
+  <text x="150" y="716.8" class="bench-title">Server Memory Footprint</text>
+  <text x="465" y="716.8" class="bench-sub">RSS RAM</text>
+  <text x="538" y="716.8" class="flagship-val">14.2 MB</text>
+  <text x="668" y="716.8" class="cell-val">162 MB</text>
+  <text x="793" y="716.8" class="cell-val">185 MB</text>
+  <text x="913" y="716.8" class="cell-val">210 MB</text>
+  <text x="1025" y="716.8" class="cell-val">195 MB</text>
+  <line x1="140" y1="731.6" x2="1070" y2="731.6" class="grid-line" />
+  <text x="150" y="755.6" class="bench-title">Cold Start Initialization</text>
+  <text x="465" y="755.6" class="bench-sub">Boot time</text>
+  <text x="538" y="755.6" class="flagship-val">18 ms</text>
+  <text x="668" y="755.6" class="cell-val">2,500 ms</text>
+  <text x="793" y="755.6" class="cell-val">2,800 ms</text>
+  <text x="913" y="755.6" class="cell-val">4,200 ms</text>
+  <text x="1025" y="755.6" class="cell-val">3,800 ms</text>
+  <line x1="140" y1="770.4" x2="1070" y2="770.4" class="grid-line" />
+  <text x="150" y="794.4" class="bench-title">Concurrent Throughput</text>
+  <text x="465" y="794.4" class="bench-sub">QPS</text>
+  <text x="538" y="794.4" class="flagship-val">28,500+</text>
+  <text x="668" y="794.4" class="cell-val">185</text>
+  <text x="793" y="794.4" class="cell-val">140</text>
+  <text x="913" y="794.4" class="cell-val">45</text>
+  <text x="1025" y="794.4" class="cell-val">40</text>
+  <line x1="28" y1="809.2" x2="1070" y2="809.2" class="grid-line" />
+  <text x="28" y="845.2" class="footer-text">Methodology: deepmind.google/models/evals-methodology/gemini-4-carbon · kon-media.local/models/evals-methodology/kon-1-2-rei</text>
+</svg>
