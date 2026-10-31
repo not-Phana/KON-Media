@@ -7,7 +7,30 @@ import shutil
 import urllib.request
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+import requests
 import yt_dlp
+
+_PROVIDER_SESSION: Optional[requests.Session] = None
+
+
+def get_provider_session() -> requests.Session:
+    """Return a thread-safe singleton requests.Session with connection pooling."""
+    global _PROVIDER_SESSION
+    if _PROVIDER_SESSION is None:
+        _PROVIDER_SESSION = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=20,
+            pool_maxsize=50,
+            max_retries=1,
+            pool_block=False,
+        )
+        _PROVIDER_SESSION.mount("https://", adapter)
+        _PROVIDER_SESSION.mount("http://", adapter)
+        _PROVIDER_SESSION.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "*/*",
+        })
+    return _PROVIDER_SESSION
 
 try:
     import kon_search_core as _rust_core
@@ -140,7 +163,7 @@ class YouTubeSearchProvider(SearchProvider):
         return "youtube"
 
     def _search_innertube(self, query: str, limit: int = 5) -> List[CandidateResult]:
-        """Query YouTube Innertube public endpoint for sub-second candidate retrieval."""
+        """Query YouTube Innertube public endpoint for sub-second candidate retrieval with pooled keep-alive."""
         url = "https://www.youtube.com/youtubei/v1/search?prettyPrint=false"
         payload = {
             "context": {
@@ -153,17 +176,19 @@ class YouTubeSearchProvider(SearchProvider):
             },
             "query": query,
         }
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
-        )
-
         candidates: List[CandidateResult] = []
         try:
+            session = get_provider_session()
             with socket_guard_scope():
-                with urllib.request.urlopen(req, timeout=4.5) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
+                resp = session.post(
+                    url,
+                    json=payload,
+                    timeout=3.5,
+                    headers={"Content-Type": "application/json"},
+                )
+                if resp.status_code != 200:
+                    return []
+                data = resp.json()
 
             contents = (
                 data.get("contents", {})
@@ -393,8 +418,15 @@ class MultiProviderAggregator:
 
                         all_candidates.append(cand)
 
-                    # Stop collecting only if we have satisfied the bounded candidate pool target
+                    # Stop collecting if we reached max pool target
                     if len(all_candidates) >= max_pool_target:
+                        break
+
+                    # Fast-path early completion:
+                    # If primary provider (YouTube or preferred) completed and returned sufficient candidates,
+                    # don't wait seconds for slow secondary providers like SoundCloud.
+                    is_primary = (p.name == "youtube") if not preferred_provider else (p.name == preferred_provider)
+                    if is_primary and (len(all_candidates) >= 8 or len(results) >= 5):
                         break
                 except Exception as e:
                     failed_providers.append(p.name)

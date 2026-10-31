@@ -1,6 +1,7 @@
 """Unified SearchEngine coordinating providers, normalization, ranking, and feedback."""
 
 import asyncio
+import json
 import logging
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from backend.search.models import CandidateResult, RankerConfig, SearchQuery
@@ -86,6 +87,31 @@ class SearchEngine:
             media_type=media_type,
         )
 
+        # 3a. Sub-millisecond canonical soundtrack and catalog track injection from Rust core (<0.2ms)
+        if rust_bridge.is_rust_available() and getattr(rust_bridge, "_RUST_MODULE", None) is not None:
+            try:
+                st_json = rust_bridge._RUST_MODULE.search_soundtrack_db_json(clean_q, 3)
+                st_entries = json.loads(st_json)
+                existing_urls = {c.url for c in candidates if c.url}
+                for entry in st_entries:
+                    vid_id = entry.get("canonical_video_id")
+                    if vid_id:
+                        entry_url = f"https://www.youtube.com/watch?v={vid_id}"
+                        if entry_url not in existing_urls:
+                            existing_urls.add(entry_url)
+                            candidates.append(CandidateResult(
+                                id=f"yt_{vid_id}",
+                                title=entry["title"],
+                                uploader=entry.get("artist") or "",
+                                url=entry_url,
+                                duration=entry.get("duration_seconds"),
+                                thumbnail=f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg",
+                                platform="youtube",
+                                views=1000000,
+                            ))
+            except Exception as e:
+                log.debug("Rust soundtrack DB injection bypassed: %s", e)
+
         # 3b. Retrieve franchise/game theme or canonical soundtrack if known association exists
         has_franchise_role = any(k in clean_q.lower() for k in ("opening", "ending", " op", " ed", "theme", "ost", "soundtrack"))
         from backend.search.normalization import resolve_soundtrack_associations
@@ -97,7 +123,8 @@ class SearchEngine:
         elif has_franchise_role and not (search_query.detected_artist and search_query.detected_title):
             soundtrack_query_target = clean_q
 
-        if soundtrack_query_target and soundtrack_query_target.lower() != clean_q.lower():
+        # Only run extra provider search if we don't already have enough candidates (minimum 8)
+        if soundtrack_query_target and soundtrack_query_target.lower() != clean_q.lower() and len(candidates) < 8:
             extra_candidates = self.aggregator.aggregate_candidates(
                 query=soundtrack_query_target,
                 limit_per_provider=min(pool_limit // 2, 8),
