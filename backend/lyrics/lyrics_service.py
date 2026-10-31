@@ -70,19 +70,37 @@ def parse_lrc(lrc_text: str) -> List[Dict[str, Any]]:
     return parsed_lines
 
 
+def clean_artist_name(raw_artist: Optional[str]) -> str:
+    """Clean channel/artist name by stripping common YouTube/VEVO channel suffixes."""
+    if not raw_artist:
+        return ""
+    a = raw_artist.strip()
+    # Strip VEVO, Official, Topic, Channel, Records, etc.
+    a = re.sub(
+        r"\b(official(?:\s+(?:channel|audio|video|music))?|vevo|topic|channel|records|music)\b",
+        "",
+        a,
+        flags=re.IGNORECASE,
+    ).strip()
+    # Strip brackets e.g. [Official] or (Topic)
+    a = re.sub(r"[\[\(].*?[\]\)]", "", a).strip()
+    a = re.sub(r"^[-\s\"']+|[-\s\"']+$", "", a)
+    return a
+
+
 def clean_music_title(raw_title: str, raw_artist: Optional[str] = None) -> Tuple[str, str]:
     """Clean video title clutter and extract title and artist if bundled as 'Artist - Title'."""
     title = raw_title.strip() if raw_title else ""
-    artist = raw_artist.strip() if raw_artist else ""
+    artist = clean_artist_name(raw_artist)
 
-    # Strip bracketed clutter
+    # Strip bracketed clutter from title
     for pat in CLUTTER_PATTERNS:
         title = re.sub(pat, "", title, flags=re.IGNORECASE).strip()
 
     # If title contains ' - ' and artist is empty or matches part of it, split them
     if " - " in title:
         parts = title.split(" - ", 1)
-        potential_artist = parts[0].strip()
+        potential_artist = clean_artist_name(parts[0].strip())
         potential_title = parts[1].strip()
 
         if not artist or artist.lower() in ["youtube", "topic", "various artists"]:
@@ -127,10 +145,10 @@ class LyricsCache:
 
     def _make_key(self, title: str, artist: str) -> str:
         clean_t = re.sub(r"[^\w\s]", "", title.lower()).strip()
-        clean_a = re.sub(r"[^\w\s]", "", artist.lower()).strip()
+        clean_a = re.sub(r"[^\w\s]", "", artist.lower()).strip() if artist else ""
         return f"{clean_a}::{clean_t}"
 
-    def get(self, title: str, artist: str) -> Optional[Dict[str, Any]]:
+    def get(self, title: str, artist: str = "") -> Optional[Dict[str, Any]]:
         key = self._make_key(title, artist)
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -208,14 +226,7 @@ class LyricsService:
         duration: Optional[float] = None,
         file_path: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Fetch synchronized or plain lyrics for a track.
-        
-        1. Checks for local sidecar .lrc file if file_path is given.
-        2. Checks local SQLite cache.
-        3. Queries LRCLIB exact get endpoint (/api/get).
-        4. If not found, queries LRCLIB search endpoint (/api/search).
-        5. Parses LRC timestamps and caches successful results.
-        """
+        """Fetch synchronized or plain lyrics for a track with intelligent multi-stage discovery."""
         title, artist = clean_music_title(raw_title, raw_artist)
         if not title:
             return {
@@ -237,21 +248,80 @@ class LyricsService:
         if cached:
             return cached
 
-        # 3. Network fetch via LRCLIB
-        data = await self._fetch_from_lrclib(title, artist, duration)
-        if data:
-            synced_text = data.get("syncedLyrics")
-            plain_text = data.get("plainLyrics")
-            has_synced = bool(synced_text)
-            lines = parse_lrc(synced_text) if has_synced else []
-            track_name = data.get("trackName") or title
-            artist_name = data.get("artistName") or artist
-            instrumental = bool(data.get("instrumental", False))
+        # 3. If artist is empty, discover candidate artists from local search engine
+        candidate_artists = [artist] if artist else []
+        if not artist:
+            discovered = self._discover_potential_artists(title)
+            candidate_artists.extend([a for a in discovered if a not in candidate_artists])
 
-            # Store in cache
+        # 4. Query LRCLIB with candidate artists
+        for cand_artist in candidate_artists:
+            data = await self._fetch_from_lrclib(title, cand_artist, duration)
+            if data and (data.get("syncedLyrics") or data.get("plainLyrics")):
+                return self._process_and_cache(data, title, cand_artist)
+
+        # 5. If still not found and duration is known, try structured search by track_name and match duration
+        fallback_data = await self._search_by_track_and_duration(title, duration)
+        if fallback_data:
+            return self._process_and_cache(fallback_data, title, fallback_data.get("artistName", ""))
+
+        return {
+            "found": False,
+            "synced": False,
+            "error": "No lyrics found for this track",
+            "lines": [],
+            "plain_lyrics": None,
+        }
+
+    def _discover_potential_artists(self, title: str) -> List[str]:
+        """Use KON Media's search engine to discover likely artist names for an ambiguous title."""
+        candidates = []
+        try:
+            from backend.search.engine import SearchEngine
+            engine = SearchEngine()
+            results = engine.search(title, limit=4)
+            for res in results:
+                # 1. From uploader
+                u = clean_artist_name(res.get("uploader", ""))
+                if u and u not in candidates and u.lower() not in ["youtube", "topic"]:
+                    candidates.append(u)
+
+                # 2. From 'Artist - Title' in candidate title
+                raw_t = res.get("title", "")
+                if " - " in raw_t:
+                    parts = raw_t.split(" - ", 1)
+                    pot_a = clean_artist_name(parts[0])
+                    if pot_a and pot_a not in candidates:
+                        candidates.append(pot_a)
+        except Exception as e:
+            log.debug(f"Artist discovery error: {e}")
+        return candidates
+
+    def _process_and_cache(self, data: Dict[str, Any], query_title: str, query_artist: str) -> Dict[str, Any]:
+        synced_text = data.get("syncedLyrics")
+        plain_text = data.get("plainLyrics")
+        has_synced = bool(synced_text)
+        lines = parse_lrc(synced_text) if has_synced else []
+        track_name = data.get("trackName") or query_title
+        artist_name = data.get("artistName") or query_artist
+        instrumental = bool(data.get("instrumental", False))
+
+        # Store in cache under both original query key and resolved metadata key
+        self.cache.set(
+            title=query_title,
+            artist=query_artist,
+            track_name=track_name,
+            artist_name=artist_name,
+            synced=has_synced,
+            plain_lyrics=plain_text,
+            synced_lyrics=synced_text,
+            instrumental=instrumental,
+            source="lrclib",
+        )
+        if query_artist != artist_name:
             self.cache.set(
-                title=title,
-                artist=artist,
+                title=query_title,
+                artist=artist_name,
                 track_name=track_name,
                 artist_name=artist_name,
                 synced=has_synced,
@@ -261,24 +331,16 @@ class LyricsService:
                 source="lrclib",
             )
 
-            return {
-                "found": True,
-                "synced": has_synced,
-                "track_name": track_name,
-                "artist_name": artist_name,
-                "lines": lines,
-                "plain_lyrics": plain_text,
-                "instrumental": instrumental,
-                "source": "lrclib",
-                "cached": False,
-            }
-
         return {
-            "found": False,
-            "synced": False,
-            "error": "No lyrics found for this track",
-            "lines": [],
-            "plain_lyrics": None,
+            "found": True,
+            "synced": has_synced,
+            "track_name": track_name,
+            "artist_name": artist_name,
+            "lines": lines,
+            "plain_lyrics": plain_text,
+            "instrumental": instrumental,
+            "source": "lrclib",
+            "cached": False,
         }
 
     def _check_local_lrc(self, file_path_str: str) -> Optional[Dict[str, Any]]:
@@ -313,35 +375,34 @@ class LyricsService:
         artist: str,
         duration: Optional[float] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Query LRCLIB API with User-Agent header and fallback queries."""
+        """Query LRCLIB API with exact track_name and artist_name."""
         headers = {
             "User-Agent": USER_AGENT,
             "Accept": "application/json",
         }
 
         async with httpx.AsyncClient(timeout=8.0, headers=headers) as client:
-            # Attempt 1: Exact /api/get with artist, title, duration
-            params = {
-                "track_name": title,
-                "artist_name": artist,
-            }
-            if duration and duration > 0:
-                params["duration"] = int(duration)
-
-            try:
-                res = await client.get(f"{LRCLIB_BASE_URL}/get", params=params)
-                if res.status_code == 200:
-                    data = res.json()
-                    if data.get("plainLyrics") or data.get("syncedLyrics"):
-                        return data
-            except Exception as e:
-                log.debug(f"LRCLIB get with duration failed: {e}")
-
-            # Attempt 2: Exact /api/get without duration if duration was included
-            if "duration" in params:
-                del params["duration"]
+            # 1. Exact GET with duration
+            if duration and duration > 0 and artist:
                 try:
-                    res = await client.get(f"{LRCLIB_BASE_URL}/get", params=params)
+                    res = await client.get(
+                        f"{LRCLIB_BASE_URL}/get",
+                        params={"track_name": title, "artist_name": artist, "duration": int(duration)}
+                    )
+                    if res.status_code == 200:
+                        data = res.json()
+                        if data.get("plainLyrics") or data.get("syncedLyrics"):
+                            return data
+                except Exception as e:
+                    log.debug(f"LRCLIB get with duration failed: {e}")
+
+            # 2. Exact GET without duration
+            if artist:
+                try:
+                    res = await client.get(
+                        f"{LRCLIB_BASE_URL}/get",
+                        params={"track_name": title, "artist_name": artist}
+                    )
                     if res.status_code == 200:
                         data = res.json()
                         if data.get("plainLyrics") or data.get("syncedLyrics"):
@@ -349,26 +410,70 @@ class LyricsService:
                 except Exception as e:
                     log.debug(f"LRCLIB get without duration failed: {e}")
 
-            # Attempt 3: /api/search with combined query
-            query_str = f"{title} {artist}".strip()
+            # 3. Structured search by track_name and artist_name
+            if artist:
+                try:
+                    res = await client.get(
+                        f"{LRCLIB_BASE_URL}/search",
+                        params={"track_name": title, "artist_name": artist}
+                    )
+                    if res.status_code == 200:
+                        results = res.json()
+                        if isinstance(results, list) and len(results) > 0:
+                            for item in results:
+                                if item.get("syncedLyrics"):
+                                    return item
+                            for item in results:
+                                if item.get("plainLyrics"):
+                                    return item
+                except Exception as e:
+                    log.debug(f"LRCLIB structured search failed: {e}")
+
+        return None
+
+    async def _search_by_track_and_duration(
+        self,
+        title: str,
+        duration: Optional[float] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Structured search using track_name, matching duration when available."""
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+        }
+
+        async with httpx.AsyncClient(timeout=8.0, headers=headers) as client:
             try:
                 res = await client.get(
                     f"{LRCLIB_BASE_URL}/search",
-                    params={"q": query_str}
+                    params={"track_name": title}
                 )
                 if res.status_code == 200:
                     results = res.json()
                     if isinstance(results, list) and len(results) > 0:
-                        # Prefer items with synced lyrics
+                        # If duration is known, find closest candidate
+                        if duration and duration > 0:
+                            best_match = None
+                            best_diff = 999.0
+                            for item in results:
+                                item_dur = item.get("duration")
+                                if item_dur:
+                                    diff = abs(float(item_dur) - float(duration))
+                                    if diff < best_diff and diff <= 4.0:
+                                        best_diff = diff
+                                        best_match = item
+                            if best_match and (best_match.get("syncedLyrics") or best_match.get("plainLyrics")):
+                                return best_match
+
+                        # Otherwise return first synced result
                         for item in results:
                             if item.get("syncedLyrics"):
                                 return item
-                        # Otherwise return first result with plain lyrics
                         for item in results:
                             if item.get("plainLyrics"):
                                 return item
             except Exception as e:
-                log.debug(f"LRCLIB search fallback failed: {e}")
+                log.debug(f"Search by track name fallback failed: {e}")
 
         return None
 

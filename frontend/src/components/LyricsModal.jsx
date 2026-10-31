@@ -14,7 +14,10 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
+  Search,
+  RotateCcw,
 } from "lucide-react";
+import { fetchLyrics } from "../api";
 
 function formatTime(seconds) {
   if (!seconds || isNaN(seconds) || seconds < 0) return "0:00";
@@ -30,9 +33,9 @@ export default function LyricsModal({
   currentTrack,
   isPlaying,
   onTogglePlay,
-  lyricsData,
-  isLoadingLyrics,
-  lyricsError,
+  lyricsData: initialLyricsData,
+  isLoadingLyrics: initialLoading,
+  lyricsError: initialError,
 }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -41,6 +44,33 @@ export default function LyricsModal({
   const containerRef = useRef(null);
   const userScrolledRef = useRef(false);
   const userScrollTimeoutRef = useRef(null);
+
+  // Local override state for instant in-modal search & retries
+  const [lyricsData, setLyricsData] = useState(initialLyricsData);
+  const [isLoading, setIsLoading] = useState(initialLoading);
+  const [errorMsg, setErrorMsg] = useState(initialError);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchingManually, setIsSearchingManually] = useState(false);
+
+  // Sync with prop updates
+  useEffect(() => {
+    setLyricsData(initialLyricsData);
+  }, [initialLyricsData]);
+
+  useEffect(() => {
+    setIsLoading(initialLoading);
+  }, [initialLoading]);
+
+  useEffect(() => {
+    setErrorMsg(initialError);
+  }, [initialError]);
+
+  useEffect(() => {
+    if (currentTrack) {
+      const defaultQ = `${currentTrack.clean_title || currentTrack.title || ""} ${currentTrack.artist || currentTrack.uploader || ""}`.trim();
+      setSearchQuery(defaultQ);
+    }
+  }, [currentTrack]);
 
   // Listen to audio time updates from persistent player
   useEffect(() => {
@@ -116,6 +146,47 @@ export default function LyricsModal({
     userScrolledRef.current = false;
   };
 
+  // Perform in-modal manual search / retry
+  const handleManualSearch = async (e) => {
+    if (e) e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    try {
+      // Split artist if query contains ' - ' or by words
+      let t = q;
+      let a = "";
+      if (q.includes(" - ")) {
+        const parts = q.split(" - ");
+        a = parts[0].trim();
+        t = parts[1].trim();
+      } else if (currentTrack?.artist) {
+        a = currentTrack.artist;
+      }
+
+      const res = await fetchLyrics({
+        title: t,
+        artist: a,
+        duration: currentTrack?.duration,
+      });
+
+      setIsLoading(false);
+      if (res && res.found) {
+        setLyricsData(res);
+        setErrorMsg(null);
+        setIsSearchingManually(false);
+      } else {
+        setErrorMsg(res?.error || "No lyrics found. Try refining title or artist.");
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMsg(err.message || "Failed to search lyrics");
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -130,7 +201,7 @@ export default function LyricsModal({
         <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-[#0084FF]/20 via-[#6366F1]/10 to-transparent blur-3xl rounded-full" />
       </div>
 
-      {/* TOP BAR: Song Meta, Sync Badge & Close Controls */}
+      {/* TOP BAR: Song Meta, Sync Badge, Search Toggle & Close Controls */}
       <header className="relative z-10 flex items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
         <div className="flex items-center gap-3.5 min-w-0">
           <div className="w-12 h-12 rounded-xl neu-recessed overflow-hidden shrink-0 flex items-center justify-center bg-slate-900 shadow-md">
@@ -170,6 +241,21 @@ export default function LyricsModal({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
+          {/* Quick Manual Search Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsSearchingManually((prev) => !prev)}
+            className={`p-2.5 rounded-xl transition-all cursor-pointer neu-btn-elastic border ${
+              isSearchingManually
+                ? "neu-recessed text-[#0084FF] border-[#0084FF]/40 bg-[#0084FF]/10"
+                : "neu-raised text-[#94A3B8] hover:text-[#0084FF] border-slate-700/60"
+            }`}
+            title="Refine Lyrics Search"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+
+          {/* Minimize */}
           <button
             type="button"
             onClick={onClose}
@@ -178,6 +264,8 @@ export default function LyricsModal({
           >
             <Minimize2 className="w-5 h-5 transition-transform duration-200 group-hover:scale-90" />
           </button>
+
+          {/* Close */}
           <button
             type="button"
             onClick={onClose}
@@ -189,25 +277,76 @@ export default function LyricsModal({
         </div>
       </header>
 
+      {/* MANUAL SEARCH DRAWER / BAR */}
+      {isSearchingManually && (
+        <form
+          onSubmit={handleManualSearch}
+          className="relative z-20 mt-4 max-w-xl mx-auto w-full flex items-center gap-2 p-1.5 rounded-2xl neu-recessed border border-[#0084FF]/30 bg-[#090D14]/90 animate-in fade-in duration-200"
+        >
+          <Search className="w-4 h-4 text-[#0084FF] ml-3 shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Type song title or artist (e.g., Thank You!! Home Made Kazoku)..."
+            className="flex-1 bg-transparent border-none text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none px-2 py-1.5"
+            autoFocus
+          />
+          <button
+            type="submit"
+            className="neu-accent px-4 py-1.5 rounded-xl text-xs font-bold text-white cursor-pointer neu-btn-elastic shrink-0 shadow-md"
+          >
+            Search
+          </button>
+        </form>
+      )}
+
       {/* CENTER STAGE: LYRICS SCROLLER */}
       <main
         ref={containerRef}
         onScroll={handleScroll}
-        className="relative z-10 flex-1 overflow-y-auto py-12 px-2 sm:px-8 space-y-6 neu-custom-scrollbar max-w-4xl mx-auto w-full text-center"
+        className="relative z-10 flex-1 overflow-y-auto py-10 px-2 sm:px-8 space-y-6 neu-custom-scrollbar max-w-4xl mx-auto w-full text-center"
       >
-        {isLoadingLyrics ? (
+        {isLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-3 py-20">
             <Loader2 className="w-8 h-8 text-[#0084FF] animate-spin" />
             <p className="text-sm font-semibold text-[#94A3B8]">
               Retrieving lyrics from LRCLIB...
             </p>
           </div>
-        ) : lyricsError ? (
-          <div className="h-full flex flex-col items-center justify-center space-y-3 py-20">
-            <AlertCircle className="w-8 h-8 text-[#EF4444]" />
-            <p className="text-sm font-semibold text-[#94A3B8] max-w-md">
-              {lyricsError}
-            </p>
+        ) : errorMsg && !lyricsData?.lines?.length && !lyricsData?.plain_lyrics ? (
+          <div className="h-full flex flex-col items-center justify-center space-y-4 py-16 max-w-md mx-auto">
+            <div className="w-14 h-14 rounded-2xl neu-recessed flex items-center justify-center text-[#EF4444] border border-[#EF4444]/30 shadow-inner">
+              <AlertCircle className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-[#F8FAFC] m-0">
+                {errorMsg}
+              </h3>
+              <p className="text-xs text-[#94A3B8] m-0">
+                Try searching with artist name or refining the title below.
+              </p>
+            </div>
+
+            <form
+              onSubmit={handleManualSearch}
+              className="w-full flex items-center gap-2 p-1.5 rounded-2xl neu-recessed border border-slate-700/60"
+            >
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Song title or artist..."
+                className="flex-1 bg-transparent border-none text-xs text-white placeholder-slate-500 focus:outline-none px-3 py-1.5"
+              />
+              <button
+                type="submit"
+                className="neu-accent px-3 py-1.5 rounded-xl text-xs font-bold text-white cursor-pointer neu-btn-elastic shrink-0"
+              >
+                Find
+              </button>
+            </form>
           </div>
         ) : isSynced ? (
           <div className="space-y-4 py-8">
@@ -248,14 +387,29 @@ export default function LyricsModal({
             </div>
           </div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center space-y-3 py-20">
+          <div className="h-full flex flex-col items-center justify-center space-y-4 py-16 max-w-md mx-auto">
             <Mic2 className="w-10 h-10 text-[#64748B] opacity-50" />
-            <p className="text-base font-bold text-[#CBD5E1]">
+            <p className="text-sm font-bold text-[#CBD5E1] m-0">
               No lyrics found for this song.
             </p>
-            <p className="text-xs text-[#64748B]">
-              Lyrics are queried from the open LRCLIB database by title and artist.
-            </p>
+            <form
+              onSubmit={handleManualSearch}
+              className="w-full flex items-center gap-2 p-1.5 rounded-2xl neu-recessed border border-slate-700/60"
+            >
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search song title or artist..."
+                className="flex-1 bg-transparent border-none text-xs text-white placeholder-slate-500 focus:outline-none px-3 py-1.5"
+              />
+              <button
+                type="submit"
+                className="neu-accent px-3 py-1.5 rounded-xl text-xs font-bold text-white cursor-pointer neu-btn-elastic shrink-0"
+              >
+                Find
+              </button>
+            </form>
           </div>
         )}
       </main>

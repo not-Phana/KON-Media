@@ -493,10 +493,11 @@ export function subscribeToEvents(onEvent, onError) {
   return () => es.close();
 }
 
-export async function resolveAudioStream(url, { title, id, signal } = {}) {
+export async function resolveAudioStream(url, { title, id, artist, signal } = {}) {
   const params = new URLSearchParams({ url });
   if (title) params.append("title", title);
   if (id) params.append("id", id);
+  if (artist) params.append("artist", artist);
 
   const res = await fetch(`${API_BASE}/audio/resolve?${params.toString()}`, { signal });
   const data = await res.json();

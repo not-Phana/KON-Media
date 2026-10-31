@@ -775,6 +775,7 @@ async def resolve_audio_endpoint(
     url: str = Query(..., description="Media or song URL to resolve for playback"),
     title: Optional[str] = Query(None, description="Song title"),
     id: Optional[str] = Query(None, description="Candidate ID"),
+    artist: Optional[str] = Query(None, description="Artist name"),
 ):
     """Resolve an audio stream for preview playback before downloading."""
     from backend.engine.audio_service import resolve_audio_stream
@@ -786,6 +787,7 @@ async def resolve_audio_endpoint(
         candidate_id=id,
         downloads_dir=configured_dir,
         history_store=history_store,
+        artist=artist,
     )
     return result
 

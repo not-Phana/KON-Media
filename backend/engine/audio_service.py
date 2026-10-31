@@ -50,6 +50,7 @@ def find_local_downloaded_audio(
     candidate_id: Optional[str] = None,
     downloads_dir: Optional[Path] = None,
     history_store: Any = None,
+    artist: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Check if the requested song has already been downloaded locally."""
     target_dir = downloads_dir or DOWNLOADS_DIR
@@ -81,7 +82,7 @@ def find_local_downloaded_audio(
                                     "source_type": "local",
                                     "stream_url": f"/api/stream/{quote(rec_path.name)}",
                                     "title": rec.get("title") or title or rec_path.stem,
-                                    "artist": rec.get("artist") or rec.get("uploader") or "",
+                                    "artist": rec.get("artist") or rec.get("uploader") or artist or "",
                                     "duration": rec.get("duration"),
                                     "thumbnail": rec.get("thumbnail"),
                                     "format": mime_ext or "mp3",
@@ -102,7 +103,7 @@ def find_local_downloaded_audio(
                         "source_type": "local",
                         "stream_url": f"/api/stream/{quote(item.name)}",
                         "title": title or item.stem,
-                        "artist": "",
+                        "artist": artist or "",
                         "duration": None,
                         "thumbnail": None,
                         "format": item.suffix.lstrip(".").lower(),
@@ -121,6 +122,7 @@ async def resolve_audio_stream(
     candidate_id: Optional[str] = None,
     downloads_dir: Optional[Path] = None,
     history_store: Any = None,
+    artist: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Resolve an audio stream for in-browser music playback.
 
@@ -141,6 +143,7 @@ async def resolve_audio_stream(
         candidate_id=candidate_id,
         downloads_dir=downloads_dir,
         history_store=history_store,
+        artist=artist,
     )
     if local_match:
         return local_match
@@ -222,7 +225,7 @@ async def resolve_audio_stream(
                 return {"playable": False, "error": "No playable audio stream found"}
 
             track_title = info.get("title") or title or "Audio Preview"
-            artist = info.get("artist") or info.get("uploader") or info.get("channel") or ""
+            resolved_artist = artist or info.get("artist") or info.get("uploader") or info.get("channel") or ""
             thumbnail = info.get("thumbnail")
             duration = info.get("duration")
             fmt = info.get("ext") or "m4a"
@@ -233,7 +236,7 @@ async def resolve_audio_stream(
                 "direct_url": direct_audio_url,
                 "stream_url": f"/api/audio/stream?url={quote(direct_audio_url, safe='')}",
                 "title": track_title,
-                "artist": artist,
+                "artist": resolved_artist,
                 "duration": duration,
                 "thumbnail": thumbnail,
                 "format": fmt,

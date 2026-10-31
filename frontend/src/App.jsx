@@ -294,8 +294,10 @@ export default function App() {
     setIsPlaying(false);
 
     try {
+      const candArtist = cand.artist || cand.uploader || "";
       const resolved = await resolveAudioStream(cand.url, {
         title: cand.clean_title || cand.title,
+        artist: candArtist,
         id: cand.id,
       });
 
@@ -304,7 +306,8 @@ export default function App() {
           ...prev,
           ...resolved,
           title: resolved.title || prev.title,
-          artist: resolved.artist || prev.artist,
+          artist: resolved.artist || candArtist || prev.artist || "",
+          uploader: cand.uploader || prev.uploader || "",
           thumbnail: resolved.thumbnail || prev.thumbnail,
           duration: resolved.duration || prev.duration,
           stream_url: resolved.stream_url,
