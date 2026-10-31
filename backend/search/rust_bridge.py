@@ -85,6 +85,11 @@ def rank_candidates(
                     "uploader": c.uploader,
                     "duration": c.duration,
                     "views": c.views,
+                    "likes": getattr(c, "likes", None),
+                    "listeners": getattr(c, "listeners", None),
+                    "chart_rank": getattr(c, "chart_rank", None),
+                    "release_year": getattr(c, "release_year", None),
+                    "is_trending": getattr(c, "is_trending", False),
                     "platform": c.platform,
                     "url": c.url,
                 }
@@ -108,6 +113,8 @@ def rank_candidates(
                     original.confidence = item.get("confidence", "medium")
                     original.features = item.get("features", {})
                     original.explanation = item.get("explanations", [])
+                    if item.get("popularity") is not None:
+                        original.popularity = float(item["popularity"])
                     if item.get("clean_title"):
                         original.clean_title = item.get("clean_title")
                     if item.get("song_title"):
@@ -124,6 +131,8 @@ def rank_candidates(
                         original.is_music = bool(item.get("is_music"))
                     if item.get("content_type"):
                         original.content_type = item.get("content_type")
+                    if item.get("popularity") is not None:
+                        original.popularity = float(item["popularity"])
                     ranked.append(original)
 
             if limit is not None:
@@ -171,6 +180,11 @@ def rank_candidates_flash(
                     "uploader": c.uploader,
                     "duration": c.duration,
                     "views": c.views,
+                    "likes": getattr(c, "likes", None),
+                    "listeners": getattr(c, "listeners", None),
+                    "chart_rank": getattr(c, "chart_rank", None),
+                    "release_year": getattr(c, "release_year", None),
+                    "is_trending": getattr(c, "is_trending", False),
                     "platform": c.platform,
                     "url": c.url,
                 }
@@ -194,6 +208,8 @@ def rank_candidates_flash(
                     original.confidence = item.get("confidence", "medium")
                     original.features = item.get("features", {})
                     original.explanation = item.get("explanations", [])
+                    if item.get("popularity") is not None:
+                        original.popularity = float(item["popularity"])
                     if item.get("clean_title"):
                         original.clean_title = item.get("clean_title")
                     if item.get("song_title"):
@@ -210,6 +226,8 @@ def rank_candidates_flash(
                         original.is_music = bool(item.get("is_music"))
                     if item.get("content_type"):
                         original.content_type = item.get("content_type")
+                    if item.get("popularity") is not None:
+                        original.popularity = float(item["popularity"])
                     ranked.append(original)
 
             if limit is not None:

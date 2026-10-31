@@ -314,3 +314,4 @@ def test_api_suggestions_engine_modes():
     d_flash = res_sug_flash.json()
     assert "suggestions" in d_flash
     assert d_flash["engine_mode"] == "flash"
+

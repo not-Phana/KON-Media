@@ -1,0 +1,75 @@
+{
+  "title": "KON Search 1.2 \u2014 Popularity-Aware Ranking Benchmark",
+  "timestamp": "2026-10-31 03:23:59",
+  "ranking_consistency": "90.0%",
+  "systems": {
+    "Baseline (Un-boosted)": {
+      "ndcg10": 0.744,
+      "mrr": 0.5583,
+      "p5": 96.67,
+      "r10": 100.0,
+      "p50_ms": 0.5292,
+      "p95_ms": 2.9402
+    },
+    "KON Search 1.2 Rei": {
+      "ndcg10": 0.9889,
+      "mrr": 1.0,
+      "p5": 100.0,
+      "r10": 100.0,
+      "p50_ms": 0.2777,
+      "p95_ms": 1.0447
+    },
+    "KON Search 1.2 Rei Flash": {
+      "ndcg10": 0.989,
+      "mrr": 1.0,
+      "p5": 100.0,
+      "r10": 100.0,
+      "p50_ms": 0.1405,
+      "p95_ms": 0.3939
+    }
+  },
+  "categories": {
+    "Broad searches": {
+      "baseline_p1": 0,
+      "rei_p1": 2,
+      "flash_p1": 2,
+      "total": 2
+    },
+    "Exact title searches": {
+      "baseline_p1": 0,
+      "rei_p1": 2,
+      "flash_p1": 2,
+      "total": 2
+    },
+    "Title + artist searches": {
+      "baseline_p1": 1,
+      "rei_p1": 2,
+      "flash_p1": 2,
+      "total": 2
+    },
+    "Ambiguous song titles": {
+      "baseline_p1": 0,
+      "rei_p1": 1,
+      "flash_p1": 1,
+      "total": 1
+    },
+    "New trending vs older hits": {
+      "baseline_p1": 0,
+      "rei_p1": 1,
+      "flash_p1": 1,
+      "total": 1
+    },
+    "Popular vs obscure songs": {
+      "baseline_p1": 0,
+      "rei_p1": 1,
+      "flash_p1": 1,
+      "total": 1
+    },
+    "Missing popularity metadata": {
+      "baseline_p1": 1,
+      "rei_p1": 1,
+      "flash_p1": 1,
+      "total": 1
+    }
+  }
+}

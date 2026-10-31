@@ -16,6 +16,12 @@ class CandidateResult:
     thumbnail: Optional[str] = None
     platform: str = "youtube"
     views: Optional[int] = None
+    likes: Optional[int] = None
+    listeners: Optional[int] = None
+    chart_rank: Optional[int] = None
+    release_year: Optional[int] = None
+    is_trending: bool = False
+    popularity: Optional[float] = None
     score: float = 0.0
     confidence: str = "low"  # "low", "medium", "high"
     features: Dict[str, float] = field(default_factory=dict)
@@ -49,6 +55,12 @@ class CandidateResult:
             "thumbnail": self.thumbnail,
             "platform": self.platform,
             "views": self.views,
+            "likes": self.likes,
+            "listeners": self.listeners,
+            "chart_rank": self.chart_rank,
+            "release_year": self.release_year,
+            "is_trending": self.is_trending,
+            "popularity": round(self.popularity, 4) if self.popularity is not None else None,
             "score": round(self.score, 4),
             "confidence": self.confidence,
             "features": {k: round(v, 4) for k, v in self.features.items()},

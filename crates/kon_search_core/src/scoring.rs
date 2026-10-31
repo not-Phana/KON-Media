@@ -24,6 +24,18 @@ pub struct ScoredCandidate {
     pub uploader: Option<String>,
     pub duration: Option<f64>,
     pub views: Option<u64>,
+    #[serde(default)]
+    pub likes: Option<u64>,
+    #[serde(default)]
+    pub listeners: Option<u64>,
+    #[serde(default)]
+    pub chart_rank: Option<u32>,
+    #[serde(default)]
+    pub release_year: Option<u32>,
+    #[serde(default)]
+    pub is_trending: Option<bool>,
+    #[serde(default)]
+    pub popularity: Option<f64>,
     pub platform: Option<String>,
     pub url: Option<String>,
     pub score: f64,
@@ -125,7 +137,37 @@ pub fn score_candidate(
         explanations.push("Demoted non-music video in audio mode".to_string());
     }
 
-    let final_score = (base_score * feat.version_compat * feat.non_music_penalty * duration_multiplier * audio_mode_multiplier).max(0.0);
+    let is_text_match = feat.token_coverage > 0.0 || feat.phrase_match > 0.0 || feat.exact_title > 0.0 || feat.typo_similarity >= 0.50;
+    let raw_relevance = if !is_text_match {
+        0.0
+    } else {
+        (base_score * feat.version_compat * feat.non_music_penalty * duration_multiplier * audio_mode_multiplier).max(0.0)
+    };
+
+    // Popularity-Aware Combined Ranking
+    let norm_q = query.normalized_query.as_deref().unwrap_or(&query.raw_query);
+    let is_broad = crate::features::is_broad_discovery_query(norm_q);
+
+    let final_score = if is_broad {
+        explanations.push("Broad discovery search: prioritized by streaming popularity".to_string());
+        (0.25 * raw_relevance + 0.75 * feat.popularity_score).max(0.0)
+    } else if raw_relevance < 0.15 {
+        // Prevent unrelated songs from ranking highly just because they share a word or have views
+        raw_relevance * 0.50
+    } else {
+        let pop_mult = if feat.has_popularity_data {
+            if feat.popularity_score >= 0.75 {
+                explanations.push("High streaming popularity boost".to_string());
+            } else if feat.popularity_score <= 0.25 {
+                explanations.push("Low playcount demoted relative to major releases".to_string());
+            }
+            1.0 + 0.50 * (feat.popularity_score - 0.50)
+        } else {
+            explanations.push("Neutral baseline (unpenalized missing popularity data)".to_string());
+            1.0
+        };
+        (raw_relevance * pop_mult).max(0.0)
+    };
 
     let confidence = if final_score >= 0.65 {
         "high".to_string()
@@ -149,6 +191,12 @@ pub fn score_candidate(
         uploader: cand.uploader.clone(),
         duration: cand.duration,
         views: cand.views,
+        likes: cand.likes,
+        listeners: cand.listeners,
+        chart_rank: cand.chart_rank,
+        release_year: cand.release_year,
+        is_trending: cand.is_trending,
+        popularity: Some(feat.popularity_score),
         platform: cand.platform.clone(),
         url: cand.url.clone(),
         score: (final_score * 10000.0).round() / 10000.0,

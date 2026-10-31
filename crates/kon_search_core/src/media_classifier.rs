@@ -128,7 +128,7 @@ pub fn classify_candidate(title: &str, uploader: &str, duration_secs: f64) -> Me
         || lower_uploader.contains("vevo");
 
     if has_non_music_cue && !has_music_override {
-        let is_reaction = lower_title.contains("reaction") || lower_title.contains("reacts");
+        let is_reaction = lower_title.contains("reaction") || lower_title.contains("reacts") || lower_title.contains("react to") || lower_title.contains("react");
         return MediaClassification {
             category: if is_reaction {
                 MediaCategory::ReactionOrReview

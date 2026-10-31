@@ -32,6 +32,12 @@ pub fn rank_candidates(
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
             .then_with(|| {
+                b.features
+                    .popularity_score
+                    .partial_cmp(&a.features.popularity_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
                 let v_a = a.views.unwrap_or(0);
                 let v_b = b.views.unwrap_or(0);
                 v_b.cmp(&v_a)
@@ -57,6 +63,7 @@ pub fn rank_candidates_flash(
         .unwrap_or_else(|| crate::normalization::normalize_text(&query.raw_query));
     let q_tokens = crate::normalization::tokenize(&norm_q);
     let is_audio_mode = query.media_type.as_deref() == Some("audio");
+    let is_broad = crate::features::is_broad_discovery_query(&norm_q);
 
     let mut scored: Vec<ScoredCandidate> = deduped
         .into_iter()
@@ -69,12 +76,36 @@ pub fn rank_candidates_flash(
             let is_exact = norm_title == norm_q;
             let starts_with = norm_title.starts_with(&norm_q);
             let contains_phrase = norm_title.contains(&norm_q);
+            let all_tokens_in_order = if q_tokens.len() >= 2 {
+                let mut last_pos: Option<usize> = None;
+                let mut in_order = true;
+                for qt in &q_tokens {
+                    if let Some(pos) = title_tokens.iter().position(|x| x == qt) {
+                        if let Some(prev) = last_pos {
+                            if pos < prev {
+                                in_order = false;
+                                break;
+                            }
+                        }
+                        last_pos = Some(pos);
+                    } else {
+                        in_order = false;
+                        break;
+                    }
+                }
+                in_order
+            } else {
+                false
+            };
+
             let phrase_score = if is_exact {
                 1.0
             } else if starts_with {
                 0.90
             } else if contains_phrase {
-                0.75
+                0.80
+            } else if all_tokens_in_order {
+                0.70
             } else {
                 0.0
             };
@@ -128,13 +159,34 @@ pub fn rank_candidates_flash(
                 explanations.push("Demoted non-music video in audio mode (Flash)".to_string());
             }
 
-            // Weighted composite flash score
-            let base_score = (phrase_score * 0.45) + (token_coverage * 0.40) + artist_bonus;
-            let final_score = ((base_score * audio_mode_mult) * 10000.0).round() / 10000.0;
+            let query_wants_live = norm_q.contains("live");
+            let is_unrequested_live = !query_wants_live && (norm_title.contains("live") || norm_title.contains("piano live") || norm_title.contains("acoustic live"));
+            let version_mult = if is_unrequested_live { 0.75 } else { 1.0 };
 
-            let confidence = if final_score >= 0.70 {
+            // Weighted composite flash relevance
+            let raw_relevance = (((phrase_score * 0.45) + (token_coverage * 0.40) + artist_bonus) * version_mult) * audio_mode_mult;
+
+            // Popularity normalization (exact same principles as Rei)
+            let (pop_score, has_pop_data) = crate::features::normalize_popularity(&c);
+
+            let final_score = if is_broad {
+                explanations.push("Broad discovery search (Flash)".to_string());
+                (0.25 * raw_relevance + 0.75 * pop_score).max(0.0)
+            } else if raw_relevance < 0.15 {
+                raw_relevance * 0.50
+            } else {
+                let pop_mult = if has_pop_data {
+                    1.0 + 0.50 * (pop_score - 0.50)
+                } else {
+                    1.0
+                };
+                raw_relevance * pop_mult
+            };
+
+            let rounded_score = ((final_score) * 10000.0).round() / 10000.0;
+            let confidence = if rounded_score >= 0.70 {
                 "high".to_string()
-            } else if final_score >= 0.40 {
+            } else if rounded_score >= 0.40 {
                 "medium".to_string()
             } else {
                 "low".to_string()
@@ -156,8 +208,10 @@ pub fn rank_candidates_flash(
                 version_compat: 1.0,
                 duration_compat: 1.0,
                 non_music_penalty: if is_music { 1.0 } else { 0.25 },
-                popularity_boost: 0.0,
+                popularity_boost: (pop_score * 0.05).min(0.05),
                 audio_platform_boost: 0.0,
+                popularity_score: pop_score,
+                has_popularity_data: has_pop_data,
             };
 
             ScoredCandidate {
@@ -174,9 +228,15 @@ pub fn rank_candidates_flash(
                 uploader: c.uploader,
                 duration: c.duration,
                 views: c.views,
+                likes: c.likes,
+                listeners: c.listeners,
+                chart_rank: c.chart_rank,
+                release_year: c.release_year,
+                is_trending: c.is_trending,
+                popularity: Some(pop_score),
                 platform: c.platform,
                 url: c.url,
-                score: final_score,
+                score: rounded_score,
                 confidence,
                 features: feat,
                 explanations,
@@ -188,6 +248,18 @@ pub fn rank_candidates_flash(
         b.score
             .partial_cmp(&a.score)
             .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                b.features
+                    .exact_title
+                    .partial_cmp(&a.features.exact_title)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                b.features
+                    .popularity_score
+                    .partial_cmp(&a.features.popularity_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .then_with(|| {
                 let v_a = a.views.unwrap_or(0);
                 let v_b = b.views.unwrap_or(0);
@@ -322,6 +394,156 @@ mod tests {
         assert_eq!(ranked[0].id, "c_theme", "CS2 theme song must rank above gameplay trailer in Flash audio mode");
         assert!(ranked[0].is_music.unwrap_or(false));
         assert!(!ranked[1].is_music.unwrap_or(true));
+    }
+
+
+    #[test]
+    fn test_ambiguous_bad_guy_popular_vs_obscure() {
+        let query = QueryInput {
+            raw_query: "bad guy".to_string(),
+            normalized_query: Some("bad guy".to_string()),
+            expected_artist: None,
+            expected_title: Some("bad guy".to_string()),
+            expected_duration: None,
+            version_hint: None,
+            media_type: Some("audio".to_string()),
+        };
+
+        let candidates = vec![
+            CandidateInput {
+                id: "c_obscure".to_string(),
+                title: "bad guy - Local Garage Band Demo".to_string(),
+                uploader: Some("Unknown Band".to_string()),
+                duration: Some(195.0),
+                views: Some(120),
+                platform: Some("youtube".to_string()),
+                ..Default::default()
+            },
+            CandidateInput {
+                id: "c_billie".to_string(),
+                title: "Billie Eilish - bad guy (Official Video)".to_string(),
+                uploader: Some("Billie Eilish".to_string()),
+                duration: Some(205.0),
+                views: Some(1_400_000_000),
+                chart_rank: Some(1),
+                platform: Some("youtube".to_string()),
+                ..Default::default()
+            },
+            CandidateInput {
+                id: "c_missing_data".to_string(),
+                title: "bad guy - Unlabeled Stream Rip".to_string(),
+                uploader: Some("IndieUploader".to_string()),
+                duration: Some(200.0),
+                views: None, // Missing popularity data
+                platform: Some("youtube".to_string()),
+                ..Default::default()
+            },
+        ];
+
+        // 1. Rei Precision Mode
+        let ranked_rei = rank_candidates(&query, candidates.clone(), None);
+        assert_eq!(ranked_rei[0].id, "c_billie", "Billie Eilish must rank #1 on ambiguous title in Rei");
+        assert_eq!(ranked_rei[1].id, "c_missing_data", "Missing data must not be unfairly penalized below obscure 120-view track in Rei");
+        assert_eq!(ranked_rei[2].id, "c_obscure", "120-view obscure demo must rank lowest among title matches in Rei");
+
+        // 2. Rei Flash Speed Mode
+        let ranked_flash = rank_candidates_flash(&query, candidates, None);
+        assert_eq!(ranked_flash[0].id, "c_billie", "Billie Eilish must rank #1 on ambiguous title in Flash");
+        assert_eq!(ranked_flash[1].id, "c_missing_data", "Missing data must not be unfairly penalized in Flash");
+        assert_eq!(ranked_flash[2].id, "c_obscure", "Obscure track must rank lowest in Flash");
+    }
+
+    #[test]
+    fn test_broad_search_popular_songs() {
+        let query = QueryInput {
+            raw_query: "popular songs".to_string(),
+            normalized_query: Some("popular songs".to_string()),
+            expected_artist: None,
+            expected_title: None,
+            expected_duration: None,
+            version_hint: None,
+            media_type: Some("audio".to_string()),
+        };
+
+        let candidates = vec![
+            CandidateInput {
+                id: "c_random_compilation".to_string(),
+                title: "Popular Songs 2026 - Top 10 Playlist Mix".to_string(),
+                uploader: Some("RandomUser123".to_string()),
+                duration: Some(300.0),
+                views: Some(500),
+                platform: Some("youtube".to_string()),
+                ..Default::default()
+            },
+            CandidateInput {
+                id: "c_blinding_lights".to_string(),
+                title: "The Weeknd - Blinding Lights (Official Audio)".to_string(),
+                uploader: Some("The Weeknd".to_string()),
+                duration: Some(200.0),
+                views: Some(4_200_000_000),
+                chart_rank: Some(1),
+                platform: Some("youtube".to_string()),
+                ..Default::default()
+            },
+            CandidateInput {
+                id: "c_bohemian".to_string(),
+                title: "Queen - Bohemian Rhapsody (Official Video)".to_string(),
+                uploader: Some("Queen Official".to_string()),
+                duration: Some(355.0),
+                views: Some(1_600_000_000),
+                platform: Some("youtube".to_string()),
+                ..Default::default()
+            },
+        ];
+
+        let ranked_rei = rank_candidates(&query, candidates.clone(), None);
+        assert_eq!(ranked_rei[0].id, "c_blinding_lights", "Blinding Lights must rank #1 on broad discovery query 'popular songs' in Rei");
+        assert_eq!(ranked_rei[1].id, "c_bohemian", "Bohemian Rhapsody must rank #2 in Rei");
+        assert_eq!(ranked_rei[2].id, "c_random_compilation", "500-view compilation must rank last despite keyword 'popular songs'");
+
+        let ranked_flash = rank_candidates_flash(&query, candidates, None);
+        assert_eq!(ranked_flash[0].id, "c_blinding_lights", "Blinding Lights must rank #1 in Flash");
+        assert_eq!(ranked_flash[1].id, "c_bohemian", "Bohemian Rhapsody must rank #2 in Flash");
+    }
+
+    #[test]
+    fn test_specific_search_preserves_relevance_over_popularity() {
+        let query = QueryInput {
+            raw_query: "Number One by Bankai".to_string(),
+            normalized_query: Some("number one by bankai".to_string()),
+            expected_artist: None,
+            expected_title: None,
+            expected_duration: None,
+            version_hint: None,
+            media_type: Some("audio".to_string()),
+        };
+
+        let candidates = vec![
+            CandidateInput {
+                id: "c_ed_sheeran".to_string(),
+                title: "Ed Sheeran - Shape of You (Official Music Video)".to_string(),
+                uploader: Some("Ed Sheeran".to_string()),
+                duration: Some(235.0),
+                views: Some(6_000_000_000), // Huge views, completely unrelated
+                platform: Some("youtube".to_string()),
+                ..Default::default()
+            },
+            CandidateInput {
+                id: "c_number_one".to_string(),
+                title: "Bleach TYBW - Number One (Bankai Version) - Shiro SAGISU".to_string(),
+                uploader: Some("Shiro Sagisu - Topic".to_string()),
+                duration: Some(305.0),
+                views: Some(14_000_000),
+                platform: Some("youtube".to_string()),
+                ..Default::default()
+            },
+        ];
+
+        let ranked_rei = rank_candidates(&query, candidates.clone(), None);
+        assert_eq!(ranked_rei[0].id, "c_number_one", "Relevant song must decisively outrank 6B-view unrelated track in Rei");
+
+        let ranked_flash = rank_candidates_flash(&query, candidates, None);
+        assert_eq!(ranked_flash[0].id, "c_number_one", "Relevant song must decisively outrank 6B-view unrelated track in Flash");
     }
 
 }

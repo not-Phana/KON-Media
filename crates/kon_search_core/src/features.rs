@@ -10,6 +10,16 @@ pub struct CandidateInput {
     pub uploader: Option<String>,
     pub duration: Option<f64>,
     pub views: Option<u64>,
+    #[serde(default)]
+    pub likes: Option<u64>,
+    #[serde(default)]
+    pub listeners: Option<u64>,
+    #[serde(default)]
+    pub chart_rank: Option<u32>,
+    #[serde(default)]
+    pub release_year: Option<u32>,
+    #[serde(default)]
+    pub is_trending: Option<bool>,
     pub platform: Option<String>,
     pub url: Option<String>,
     #[serde(default)]
@@ -50,6 +60,10 @@ pub struct ExtractedFeatures {
     pub non_music_penalty: f64,
     pub popularity_boost: f64,
     pub audio_platform_boost: f64,
+    #[serde(default)]
+    pub popularity_score: f64,
+    #[serde(default)]
+    pub has_popularity_data: bool,
 }
 
 const DISQUALIFYING_VERSION_TERMS: &[(&str, f64)] = &[
@@ -73,6 +87,9 @@ const NON_MUSIC_TERMS: &[(&str, f64)] = &[
     ("interview", 0.30),
     ("podcast", 0.30),
     ("reaction", 0.25),
+    ("reacts", 0.25),
+    ("react to", 0.25),
+    ("react", 0.25),
     ("scene", 0.30),
     ("movie clip", 0.25),
     ("ending scene", 0.25),
@@ -81,6 +98,105 @@ const NON_MUSIC_TERMS: &[(&str, f64)] = &[
     ("routine", 0.25),
     ("exercise", 0.25),
 ];
+
+/// Normalize all available verifiable popularity signals into a unified [0.0, 1.0] score.
+/// Returns (normalized_popularity, has_popularity_data).
+/// If no popularity data is available, returns (0.50, false) as a neutral prior without unfair penalty.
+pub fn normalize_popularity(candidate: &CandidateInput) -> (f64, bool) {
+    let mut signals: Vec<(f64, f64)> = Vec::with_capacity(4);
+
+    // 1. Total streams / view count (log-scale normalized from 1k to 3B)
+    if let Some(v) = candidate.views {
+        if v > 0 {
+            let log_v = (v as f64).log10();
+            let v_score = ((log_v - 3.0) / (9.5 - 3.0)).clamp(0.0, 1.0);
+            signals.push((v_score, 1.0));
+        }
+    }
+
+    // 2. Monthly listeners count (log-scale normalized from 1k to 100M)
+    if let Some(l) = candidate.listeners {
+        if l > 0 {
+            let log_l = (l as f64).log10();
+            let l_score = ((log_l - 3.0) / (8.0 - 3.0)).clamp(0.0, 1.0);
+            signals.push((l_score, 1.0));
+        }
+    }
+
+    // 3. Chart position (1..100, where 1 is top of chart)
+    if let Some(rank) = candidate.chart_rank {
+        if (1..=100).contains(&rank) {
+            let c_score = 1.0 - ((rank - 1) as f64 / 100.0);
+            signals.push((c_score, 1.2));
+        }
+    }
+
+    // 4. Likes / favorites count (log-scale normalized)
+    if let Some(k) = candidate.likes {
+        if k > 0 {
+            let log_k = (k as f64).log10();
+            let k_score = ((log_k - 2.0) / (7.5 - 2.0)).clamp(0.0, 1.0);
+            signals.push((k_score, 0.7));
+        }
+    }
+
+    if signals.is_empty() {
+        // Neutral prior when no data is provided: never assume unknown is unpopular
+        return (0.50, false);
+    }
+
+    let total_weight: f64 = signals.iter().map(|(_, w)| w).sum();
+    let weighted_sum: f64 = signals.iter().map(|(s, w)| s * w).sum();
+    let mut base_pop = weighted_sum / total_weight;
+
+    // Fresh popularity & trend velocity:
+    // Avoid allowing an old hit to automatically outrank every new trending song.
+    if candidate.is_trending.unwrap_or(false) {
+        base_pop = (base_pop + 0.18).min(1.0);
+    }
+
+    if let Some(year) = candidate.release_year {
+        if year >= 2025 {
+            base_pop = (base_pop * 1.12).min(1.0);
+        } else if year >= 2023 {
+            base_pop = (base_pop * 1.05).min(1.0);
+        }
+    }
+
+    (base_pop.clamp(0.0, 1.0), true)
+}
+
+/// Check if query represents a broad discovery search (e.g. "popular songs", "trending music").
+pub fn is_broad_discovery_query(text: &str) -> bool {
+    let norm = normalize_text(text);
+    let terms = [
+        "popular songs",
+        "popular music",
+        "popular tracks",
+        "trending songs",
+        "trending music",
+        "top songs",
+        "top music",
+        "top hits",
+        "best songs",
+        "best music",
+        "hit songs",
+        "viral songs",
+        "billboard hits",
+        "chart hits",
+        "most played",
+        "most popular",
+    ];
+    for t in terms {
+        if norm.contains(t) {
+            return true;
+        }
+    }
+    if norm == "popular" || norm == "trending" || norm == "hits" || norm == "top hits" {
+        return true;
+    }
+    false
+}
 
 /// Detect version keyword in title or query.
 pub fn detect_version_hint(text: &str) -> Option<String> {
@@ -127,17 +243,34 @@ pub fn extract_candidate_features(query: &QueryInput, candidate: &CandidateInput
     let stripped_title = strip_media_noise(&candidate.title);
     let norm_stripped_title = normalize_text(&stripped_title);
 
-    // 1. Exact title match (1.0 for perfect, 0.95 for stripped match)
+    let parsed_entity = if candidate.song_title.is_none() || candidate.clean_title.is_none() {
+        Some(crate::entity_parser::parse_media_entity(
+            &candidate.title,
+            candidate.uploader.as_deref().unwrap_or(""),
+        ))
+    } else {
+        None
+    };
+
+    let song_title_ref = candidate
+        .song_title
+        .as_deref()
+        .or_else(|| parsed_entity.as_ref().and_then(|p| p.song_title.as_deref()));
+    let song_title_norm = song_title_ref.map(normalize_text);
+
+    // 1. Exact title match (1.0 for perfect, 0.98 for parsed song title, 0.95 for stripped match)
     let exact_title = if norm_title == norm_q {
         1.0
-    } else if norm_stripped_title == norm_q {
-        0.95
-    } else if let Some(song_t) = &candidate.song_title {
-        if normalize_text(song_t) == norm_q {
+    } else if let Some(ref st_norm) = song_title_norm {
+        if st_norm == &norm_q {
             0.98
+        } else if norm_stripped_title == norm_q {
+            0.95
         } else {
             0.0
         }
+    } else if norm_stripped_title == norm_q {
+        0.95
     } else {
         0.0
     };
@@ -152,7 +285,6 @@ pub fn extract_candidate_features(query: &QueryInput, candidate: &CandidateInput
     };
 
     // 3. Token coverage: fraction of query tokens present in title or uploader/artist
-    let mut covered = 0;
     let uploader_norm = candidate
         .uploader
         .as_deref()
@@ -164,18 +296,21 @@ pub fn extract_candidate_features(query: &QueryInput, candidate: &CandidateInput
         .map(normalize_text)
         .unwrap_or_default();
 
+    let mut covered_f: f64 = 0.0;
     for t in &q_tokens {
         if title_tokens.contains(t)
             || uploader_norm.contains(t.as_str())
             || artist_norm.contains(t.as_str())
         {
-            covered += 1;
+            covered_f += 1.0;
+        } else if title_tokens.iter().any(|tt| crate::normalization::levenshtein_similarity(t, tt) >= 0.70) {
+            covered_f += 0.85;
         }
     }
     let token_coverage = if q_tokens.is_empty() {
         0.0
     } else {
-        covered as f64 / q_tokens.len() as f64
+        (covered_f / q_tokens.len() as f64).min(1.0)
     };
 
     // 4. Token order agreement
@@ -255,7 +390,7 @@ pub fn extract_candidate_features(query: &QueryInput, candidate: &CandidateInput
             }
             penalty
         }
-        _ => 0.8,
+        _ => 1.0,
     };
 
     // 8. Duration compatibility
@@ -297,15 +432,12 @@ pub fn extract_candidate_features(query: &QueryInput, candidate: &CandidateInput
         }
     }
 
-    // 10. Popularity / view count boost (strictly bounded log bonus, max 0.05)
-    let popularity_boost = if let Some(v) = candidate.views {
-        if v > 100 {
-            (((v as f64).log10() / 10.0) * 0.05).min(0.05)
-        } else {
-            0.0
-        }
+    // 10. Popularity / view count normalization & bounded tie-breaker
+    let (popularity_score, has_popularity_data) = normalize_popularity(candidate);
+    let popularity_boost = if has_popularity_data {
+        (popularity_score * 0.05).min(0.05)
     } else {
-        0.0
+        0.025
     };
 
     // 11. Audio platform boost
@@ -327,6 +459,8 @@ pub fn extract_candidate_features(query: &QueryInput, candidate: &CandidateInput
         non_music_penalty,
         popularity_boost,
         audio_platform_boost,
+        popularity_score,
+        has_popularity_data,
     }
 }
 

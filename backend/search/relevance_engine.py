@@ -166,6 +166,75 @@ def levenshtein_distance(s1: str, s2: str) -> int:
     return prev_row[l2]
 
 
+def normalize_popularity(candidate: CandidateResult) -> Tuple[float, bool]:
+    """Normalize all available verifiable popularity signals into a unified [0.0, 1.0] score.
+    Returns (normalized_popularity, has_popularity_data).
+    If no popularity data is available, returns (0.50, False) as a neutral unpenalized prior.
+    """
+    signals = []
+
+    # 1. Total streams / view count (log-scale normalized from 1k to 3B)
+    v = candidate.views
+    if v is not None and v > 0:
+        log_v = math.log10(v)
+        v_score = max(0.0, min(1.0, (log_v - 3.0) / (9.5 - 3.0)))
+        signals.append((v_score, 1.0))
+
+    # 2. Monthly listeners count (log-scale normalized from 1k to 100M)
+    l = getattr(candidate, "listeners", None)
+    if l is not None and l > 0:
+        log_l = math.log10(l)
+        l_score = max(0.0, min(1.0, (log_l - 3.0) / (8.0 - 3.0)))
+        signals.append((l_score, 1.0))
+
+    # 3. Chart position (1..100, where 1 is top of chart)
+    r = getattr(candidate, "chart_rank", None)
+    if r is not None and 1 <= r <= 100:
+        c_score = 1.0 - ((r - 1) / 100.0)
+        signals.append((c_score, 1.2))
+
+    # 4. Likes / favorites count
+    k = getattr(candidate, "likes", None)
+    if k is not None and k > 0:
+        log_k = math.log10(k)
+        k_score = max(0.0, min(1.0, (log_k - 2.0) / (7.5 - 2.0)))
+        signals.append((k_score, 0.7))
+
+    if not signals:
+        return 0.50, False
+
+    total_weight = sum(w for _, w in signals)
+    weighted_sum = sum(s * w for s, w in signals)
+    base_pop = weighted_sum / total_weight
+
+    # Fresh popularity & trend velocity
+    if getattr(candidate, "is_trending", False):
+        base_pop = min(1.0, base_pop + 0.18)
+
+    year = getattr(candidate, "release_year", None)
+    if year is not None:
+        if year >= 2025:
+            base_pop = min(1.0, base_pop * 1.12)
+        elif year >= 2023:
+            base_pop = min(1.0, base_pop * 1.05)
+
+    return max(0.0, min(1.0, base_pop)), True
+
+
+def is_broad_discovery_query(text: str) -> bool:
+    """Check if query represents a broad discovery search (e.g. 'popular songs', 'trending music')."""
+    norm = normalize_text(text)
+    terms = [
+        "popular songs", "popular music", "popular tracks",
+        "trending songs", "trending music", "top songs", "top music",
+        "top hits", "best songs", "best music", "hit songs", "viral songs",
+        "billboard hits", "chart hits", "most played", "most popular",
+    ]
+    for t in terms:
+        if t in norm:
+            return True
+    return norm in ("popular", "trending", "hits", "top hits")
+
 def levenshtein_similarity(s1: str, s2: str) -> float:
     """Character-level edit similarity (0.0 to 1.0)."""
     n1 = normalize_text(s1)
@@ -489,13 +558,9 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
         else:
             duration_compat = 0.95
 
-    # 9. Bounded popularity tie-breaker (max 0.05 bonus)
-    views = candidate.views or 0
-    if views > 100:
-        log_v = math.log10(views + 1)
-        popularity_boost = min(0.05, (log_v / 10.0) * 0.05)
-    else:
-        popularity_boost = 0.0
+    # 9. Popularity score & bounded tie-breaker
+    popularity_score, has_popularity_data = normalize_popularity(candidate)
+    popularity_boost = min(0.05, popularity_score * 0.05) if has_popularity_data else 0.025
 
     # 10. Audio platform / Topic boost
     audio_platform_boost = 0.0
@@ -532,6 +597,8 @@ def extract_features(query: SearchQuery, candidate: CandidateResult) -> Dict[str
         "non_music_penalty": non_music_penalty,
         "popularity_boost": popularity_boost,
         "audio_platform_boost": audio_platform_boost,
+        "popularity_score": popularity_score,
+        "has_popularity_data": has_popularity_data,
     }
 
 
@@ -618,7 +685,29 @@ def score_candidate(
     )
 
     duration_multiplier = feat["duration_compat"] if feat["duration_compat"] < 0.50 else 1.0
-    final_score = max(0.0, (base_score + soundtrack_boost) * feat["version_compat"] * feat["non_music_penalty"] * duration_multiplier * cutscene_penalty * clutter_multiplier)
+    raw_relevance = max(0.0, (base_score + soundtrack_boost) * feat["version_compat"] * feat["non_music_penalty"] * duration_multiplier * cutscene_penalty * clutter_multiplier)
+
+    norm_q = query.normalized_query or normalize_text(query.raw_query)
+    is_broad = is_broad_discovery_query(norm_q)
+
+    if is_broad:
+        explanations.append("Broad discovery search: prioritized by streaming popularity")
+        final_score = max(0.0, 0.25 * raw_relevance + 0.75 * feat["popularity_score"])
+    elif raw_relevance < 0.15:
+        final_score = raw_relevance * 0.50
+    else:
+        if feat["has_popularity_data"]:
+            if feat["popularity_score"] >= 0.75:
+                explanations.append("High streaming popularity boost")
+            elif feat["popularity_score"] <= 0.25:
+                explanations.append("Low playcount demoted relative to major releases")
+            pop_mult = 1.0 + 0.50 * (feat["popularity_score"] - 0.50)
+        else:
+            explanations.append("Neutral baseline (unpenalized missing popularity data)")
+            pop_mult = 1.0
+        final_score = max(0.0, raw_relevance * pop_mult)
+
+    candidate.popularity = feat["popularity_score"]
 
     if final_score >= 0.65:
         confidence = "high"
@@ -696,6 +785,7 @@ def rank_candidates(
         key=lambda c: (
             c.score,
             c.features.get("exact_title", 0.0),
+            c.features.get("popularity_score", 0.0),
             c.views or 0,
         ),
         reverse=True,
