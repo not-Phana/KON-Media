@@ -118,6 +118,12 @@ pub struct LearnPayload {
     pub media_type: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PairEvalRequest {
+    pub video: kon_search_core::pairing::StreamCandidate,
+    pub audio: kon_search_core::pairing::StreamCandidate,
+}
+
 // -----------------------------------------------------------------------------
 // Route Handlers
 // -----------------------------------------------------------------------------
@@ -188,6 +194,8 @@ async fn suggestions_handler(
                 "title": s.title,
                 "artist": s.artist,
                 "type": item_type,
+                "content_type": item_type,
+                "is_music": item_type != "video",
                 "category": s.suggestion_type,
                 "confidence": s.confidence,
                 "platform": "youtube",
@@ -322,6 +330,8 @@ async fn search_handler(
         .into_iter()
         .take(limit)
         .map(|r| {
+            let cat = r.content_type.clone().unwrap_or_else(|| "song".to_string());
+            let is_m = r.is_music.unwrap_or(cat != "video");
             json!({
                 "id": r.id,
                 "title": r.title,
@@ -330,7 +340,13 @@ async fn search_handler(
                 "duration": r.duration,
                 "url": r.url,
                 "platform": r.platform,
-                "category": "song"
+                "category": cat,
+                "content_type": cat,
+                "is_music": is_m,
+                "confidence": r.confidence,
+                "explanation": r.explanations,
+                "uploader": r.uploader,
+                "views": r.views
             })
         })
         .collect();
@@ -340,6 +356,21 @@ async fn search_handler(
         "query": clean_q,
         "count": count,
         "results": results
+    }))
+}
+
+/// Smart stream pairing evaluation endpoint using native Rust logic (< 0.05ms).
+async fn pair_eval_handler(
+    Json(payload): Json<PairEvalRequest>,
+) -> Json<Value> {
+    let eval = kon_search_core::pairing::evaluate_stream_pair(&payload.video, &payload.audio);
+    Json(json!({
+        "pair_score": (eval.pair_score * 1000.0).round() / 1000.0,
+        "is_compatible": eval.is_compatible,
+        "duration_delta": (eval.duration_delta * 100.0).round() / 100.0,
+        "title_similarity": (eval.title_similarity * 1000.0).round() / 1000.0,
+        "format_tier_score": (eval.format_tier_score * 1000.0).round() / 1000.0,
+        "rejection_reason": eval.rejection_reason
     }))
 }
 
@@ -458,6 +489,8 @@ async fn main() {
         .route("/api/search/suggestions", get(suggestions_handler))
         .route("/api/search/suggestions/learn", post(suggestions_learn_handler))
         .route("/api/search/suggestions/history", get(suggestions_history_handler).delete(suggestions_history_clear_handler))
+        // Smart Stream Pairing
+        .route("/api/pair/evaluate", post(pair_eval_handler))
         // Settings & History & Tasks
         .route("/api/settings", get(settings_get_handler).post(settings_post_handler))
         .route("/api/history", get(history_get_handler))

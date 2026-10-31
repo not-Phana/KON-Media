@@ -114,6 +114,10 @@ def rank_candidates(
                         original.is_cluttered = item.get("is_cluttered", False)
                     if item.get("is_cutscene") is not None:
                         original.is_cutscene = item.get("is_cutscene", False)
+                    if item.get("is_music") is not None:
+                        original.is_music = bool(item.get("is_music"))
+                    if item.get("content_type"):
+                        original.content_type = item.get("content_type")
                     ranked.append(original)
 
             if limit is not None:
@@ -178,3 +182,58 @@ def rust_cache_insert(key: str, value: str, ttl_secs: Optional[int] = None) -> N
             _RUST_MODULE.cache_insert(key, value, ttl_secs)
         except Exception:
             pass
+
+
+def evaluate_rust_stream_pair(video: Dict[str, Any], audio: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Evaluate video and audio stream compatibility and pairing score in native Rust."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            res_json = _RUST_MODULE.evaluate_stream_pair_json(json.dumps(video), json.dumps(audio))
+            return json.loads(res_json)
+        except Exception as err:
+            log.warning("Rust stream pair evaluation failed (%s).", err)
+    return None
+
+
+def verify_rust_audio_samples(samples: List[float], sample_rate: int = 44100) -> Optional[Dict[str, Any]]:
+    """Verify audio samples for silence, RMS energy, and distortion in native Rust."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            res_json = _RUST_MODULE.verify_audio_samples_json(samples, sample_rate)
+            return json.loads(res_json)
+        except Exception as err:
+            log.warning("Rust audio verification failed (%s).", err)
+    return None
+
+
+def classify_rust_media(title: str, uploader: str = "", duration_secs: float = 0.0) -> Optional[Dict[str, Any]]:
+    """Classify media title into song, soundtrack, or non-music video in native Rust."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            res_json = _RUST_MODULE.classify_media_candidate_json(title, uploader, duration_secs)
+            return json.loads(res_json)
+        except Exception as err:
+            log.warning("Rust media classification failed (%s).", err)
+    return None
+
+
+def search_rust_soundtrack(query: str, limit: int = 10) -> Optional[List[Dict[str, Any]]]:
+    """Search verified soundtrack database in native Rust."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            res_json = _RUST_MODULE.search_soundtrack_db_json(query, limit)
+            return json.loads(res_json)
+        except Exception as err:
+            log.warning("Rust soundtrack DB lookup failed (%s).", err)
+    return None
+
+
+def search_rust_catalog(query: str, limit: int = 10) -> Optional[List[Dict[str, Any]]]:
+    """Search canonical discography tracks in native Rust."""
+    if _RUST_AVAILABLE and _RUST_MODULE is not None:
+        try:
+            res_json = _RUST_MODULE.search_catalog_tracks_json(query, limit)
+            return json.loads(res_json)
+        except Exception as err:
+            log.warning("Rust catalog tracks lookup failed (%s).", err)
+    return None

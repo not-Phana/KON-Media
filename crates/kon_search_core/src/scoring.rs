@@ -17,6 +17,10 @@ pub struct ScoredCandidate {
     pub is_cluttered: Option<bool>,
     #[serde(default)]
     pub is_cutscene: Option<bool>,
+    #[serde(default)]
+    pub is_music: Option<bool>,
+    #[serde(default)]
+    pub content_type: Option<String>,
     pub uploader: Option<String>,
     pub duration: Option<f64>,
     pub views: Option<u64>,
@@ -96,13 +100,32 @@ pub fn score_candidate(
         + feat.audio_platform_boost
         + feat.popularity_boost; // strictly bounded tie-breaker (max 0.05)
 
-    // Modifiers (version compatibility, non-music suppression, and severe duration mismatch)
+    // Classify candidate media identity
+    let classification = crate::media_classifier::classify_candidate(
+        &cand.title,
+        cand.uploader.as_deref().unwrap_or(""),
+        cand.duration.unwrap_or(0.0),
+    );
+    let is_music = classification.is_music;
+    let content_type = match classification.category {
+        crate::media_classifier::MediaCategory::SoundtrackOrOST => "soundtrack",
+        _ if !is_music => "video",
+        _ => "song",
+    };
+
+    // Modifiers (version compatibility, non-music suppression, audio mode demotion, and duration mismatch)
     let duration_multiplier = if feat.duration_compat < 0.50 {
         feat.duration_compat
     } else {
         1.0
     };
-    let final_score = (base_score * feat.version_compat * feat.non_music_penalty * duration_multiplier).max(0.0);
+    let mut audio_mode_multiplier = 1.0;
+    if query.media_type.as_deref() == Some("audio") && !is_music {
+        audio_mode_multiplier = 0.15;
+        explanations.push("Demoted non-music video in audio mode".to_string());
+    }
+
+    let final_score = (base_score * feat.version_compat * feat.non_music_penalty * duration_multiplier * audio_mode_multiplier).max(0.0);
 
     let confidence = if final_score >= 0.65 {
         "high".to_string()
@@ -121,6 +144,8 @@ pub fn score_candidate(
         context_source: cand.context_source.clone(),
         is_cluttered: cand.is_cluttered,
         is_cutscene: cand.is_cutscene,
+        is_music: Some(is_music),
+        content_type: Some(content_type.to_string()),
         uploader: cand.uploader.clone(),
         duration: cand.duration,
         views: cand.views,

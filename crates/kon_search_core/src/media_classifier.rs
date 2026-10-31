@@ -41,17 +41,37 @@ const NON_MUSIC_CUES: &[&str] = &[
     "full boss fight",
     "boss fight",
     "full cutscene",
+    "cutscene",
     "reaction to",
     "reacts to",
     "first time hearing",
     "first reaction",
     "breakdown & analysis",
     "review & recap",
+    "review",
     "podcast episode",
     "full episode",
     "unboxing",
     "tutorial",
     "how to fix",
+    "trailer",
+    "official trailer",
+    "teaser",
+    "gameplay trailer",
+    "launch trailer",
+    "cinematic trailer",
+    "fragmovie",
+    "highlights",
+    "montage",
+    "clutch",
+    "ace",
+    "funny moments",
+    "fails",
+    "patch notes",
+    "dev diary",
+    "tier list",
+    "movie clip",
+    "anime clip",
 ];
 
 const OFFICIAL_MUSIC_CUES: &[&str] = &[
@@ -62,6 +82,15 @@ const OFFICIAL_MUSIC_CUES: &[&str] = &[
     "official visualizer",
     "provided to youtube",
     "topic",
+    "soundtrack",
+    "ost",
+    "theme song",
+    "main menu theme",
+    "original soundtrack",
+    "opening theme",
+    "ending theme",
+    "records",
+    "vevo",
 ];
 
 const LYRIC_CUES: &[&str] = &["lyrics", "lyric video", "lyrics video", "color coded lyrics"];
@@ -229,5 +258,19 @@ mod tests {
         assert!(c.is_music);
         assert_eq!(c.category, MediaCategory::OfficialAudio);
         assert_eq!(c.audio_suitability_score, 1.0);
+    }
+
+    #[test]
+    fn test_trailer_rejection() {
+        let c = classify_candidate("Counter-Strike 2 - Official Release Trailer", "Valve", 180.0);
+        assert!(!c.is_music);
+        assert_eq!(c.category, MediaCategory::GameplayOrWalkthrough);
+    }
+
+    #[test]
+    fn test_game_soundtrack_acceptance() {
+        let c = classify_candidate("Counter-Strike 2 - Main Menu Theme Song (Official Audio)", "Valve", 195.0);
+        assert!(c.is_music);
+        assert_eq!(c.category, MediaCategory::OfficialAudio);
     }
 }
