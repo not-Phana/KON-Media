@@ -216,6 +216,28 @@ export async function fetchModelStats() {
   return res.json();
 }
 
+export async function fetchContinuousTrainStatus() {
+  const res = await fetch(`${API_BASE}/search/train/continuous/status`);
+  if (!res.ok) throw new Error("Failed to fetch continuous training status");
+  return res.json();
+}
+
+export async function startContinuousTrain() {
+  const res = await fetch(`${API_BASE}/search/train/continuous/start`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to start continuous training");
+  return res.json();
+}
+
+export async function stopContinuousTrain() {
+  const res = await fetch(`${API_BASE}/search/train/continuous/stop`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to stop continuous training");
+  return res.json();
+}
+
 export async function triggerModelTraining(epochs = 5) {
   const res = await fetch(`${API_BASE}/search/train`, {
     method: "POST",

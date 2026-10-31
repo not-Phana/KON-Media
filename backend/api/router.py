@@ -497,7 +497,38 @@ async def search_model_stats_endpoint():
     """Retrieve diagnostic health, learned vocabulary size, and loss stats for the learning ranker."""
     from backend.search.engine import SearchEngine
     engine = SearchEngine()
-    return engine.learning_model.get_stats()
+    stats = engine.learning_model.get_stats()
+    try:
+        from backend.search.continuous_trainer import get_continuous_trainer
+        trainer = get_continuous_trainer()
+        stats["continuous_training"] = trainer.get_telemetry()
+    except Exception:
+        pass
+    return stats
+
+
+@router.post("/search/train/continuous/start")
+async def start_continuous_training_endpoint():
+    """Start or resume perpetual, non-stop autonomous model training in the background."""
+    from backend.search.continuous_trainer import get_continuous_trainer
+    trainer = get_continuous_trainer()
+    return trainer.start()
+
+
+@router.post("/search/train/continuous/stop")
+async def stop_continuous_training_endpoint():
+    """Pause or stop perpetual, non-stop autonomous model training."""
+    from backend.search.continuous_trainer import get_continuous_trainer
+    trainer = get_continuous_trainer()
+    return trainer.stop()
+
+
+@router.get("/search/train/continuous/status")
+async def continuous_training_status_endpoint():
+    """Retrieve real-time non-stop training telemetry, epochs, loss curve, and throughput."""
+    from backend.search.continuous_trainer import get_continuous_trainer
+    trainer = get_continuous_trainer()
+    return trainer.get_telemetry()
 
 
 @router.post("/search/learn-doc")
