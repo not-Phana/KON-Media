@@ -536,3 +536,4 @@ export default function BottomMusicPlayer({
     </div>
   );
 }
+

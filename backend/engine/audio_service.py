@@ -60,30 +60,34 @@ def find_local_downloaded_audio(
     # 1. Search in history store
     if history_store:
         try:
-            records = history_store.get_history()
-            for rec in records:
-                if rec.get("status") == "completed" and rec.get("file_path"):
-                    rec_path = Path(rec["file_path"])
-                    if rec_path.exists() and rec_path.is_file():
-                        # Match by URL or ID
-                        matches_url = rec.get("url") and rec["url"] == url
-                        matches_id = candidate_id and (
-                            candidate_id in str(rec.get("url", "")) or candidate_id == rec.get("id")
-                        )
-                        if matches_url or matches_id:
-                            mime_ext = rec_path.suffix.lstrip(".").lower()
-                            return {
-                                "playable": True,
-                                "source_type": "local",
-                                "stream_url": f"/api/stream/{quote(rec_path.name)}",
-                                "title": rec.get("title") or title or rec_path.stem,
-                                "artist": rec.get("artist") or rec.get("uploader") or "",
-                                "duration": rec.get("duration"),
-                                "thumbnail": rec.get("thumbnail"),
-                                "format": mime_ext or "mp3",
-                                "is_local": True,
-                                "file_path": str(rec_path),
-                            }
+            getter = getattr(history_store, "get_all", None) or getattr(history_store, "get_history", None)
+            records = getter() if getter else []
+            if not isinstance(records, list) and hasattr(history_store, "get_history"):
+                records = history_store.get_history()
+            if isinstance(records, list):
+                for rec in records:
+                    if rec.get("status") == "completed" and rec.get("file_path"):
+                        rec_path = Path(rec["file_path"])
+                        if rec_path.exists() and rec_path.is_file():
+                            # Match by URL or ID
+                            matches_url = rec.get("url") and rec["url"] == url
+                            matches_id = candidate_id and (
+                                candidate_id in str(rec.get("url", "")) or candidate_id == rec.get("id")
+                            )
+                            if matches_url or matches_id:
+                                mime_ext = rec_path.suffix.lstrip(".").lower()
+                                return {
+                                    "playable": True,
+                                    "source_type": "local",
+                                    "stream_url": f"/api/stream/{quote(rec_path.name)}",
+                                    "title": rec.get("title") or title or rec_path.stem,
+                                    "artist": rec.get("artist") or rec.get("uploader") or "",
+                                    "duration": rec.get("duration"),
+                                    "thumbnail": rec.get("thumbnail"),
+                                    "format": mime_ext or "mp3",
+                                    "is_local": True,
+                                    "file_path": str(rec_path),
+                                }
         except Exception as e:
             log.warning(f"Error checking history for local audio: {e}")
 
@@ -124,7 +128,7 @@ async def resolve_audio_stream(
     1. Local downloaded files (zero-latency playback).
     2. Cached stream URLs.
     3. Spotify DRM check with automatic YouTube counterpart discovery.
-    4. Fast yt-dlp audio stream extraction.
+    4. Fast yt-dlp audio stream extraction with multi-client fallbacks (android, ios, web).
     """
     clean_url = (url or "").strip()
     if not clean_url:
@@ -183,7 +187,7 @@ async def resolve_audio_stream(
     except Exception as e:
         return {"playable": False, "error": f"Invalid URL: {e}"}
 
-    # Step 5: Fast yt-dlp audio stream resolution
+    # Step 5: Fast yt-dlp audio stream resolution with multi-client fallbacks
     def _extract_stream() -> Dict[str, Any]:
         ydl_opts = {
             "quiet": True,
@@ -191,7 +195,12 @@ async def resolve_audio_stream(
             "skip_download": True,
             "format": "bestaudio[ext=m4a]/bestaudio/best",
             "extract_flat": False,
-            "socket_timeout": 12,
+            "socket_timeout": 15,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "ios", "web"]
+                }
+            },
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(validated_url, download=False)
@@ -239,5 +248,14 @@ async def resolve_audio_stream(
             _set_cached_audio(cache_key, result)
         return result
     except Exception as e:
-        log.error(f"Failed to resolve audio stream for {clean_url}: {e}", exc_info=True)
-        return {"playable": False, "error": f"Audio resolution failed: {str(e)}"}
+        raw_err = str(e)
+        if "This video is not available" in raw_err or "Video unavailable" in raw_err:
+            user_msg = "Video is restricted or unavailable in your region."
+        elif "Private video" in raw_err:
+            user_msg = "Video is set to private."
+        elif "Sign in to confirm" in raw_err:
+            user_msg = "Sign-in verification required by provider."
+        else:
+            user_msg = f"Preview unavailable: {raw_err[:60]}"
+        log.warning(f"Audio resolution notice for {clean_url}: {user_msg}")
+        return {"playable": False, "error": user_msg}

@@ -418,6 +418,11 @@ def extract_media_info(
         "quiet": True,
         "no_warnings": True,
         "no_color": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "web"]
+            }
+        },
     }
 
     if shutil.which("node"):
@@ -906,6 +911,11 @@ def execute_download(
         "quiet": True,
         "no_warnings": True,
         "no_color": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "web"]
+            }
+        },
     }
 
     if shutil.which("node"):

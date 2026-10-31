@@ -34,13 +34,11 @@ def test_resolve_audio_spotify_drm_handling():
 
 def test_resolve_audio_local_file_detection(tmp_path):
     """Verify that previously downloaded local audio files are served with zero network delay."""
-    # Create a dummy local mp3
     test_file = tmp_path / "test_song_12345.mp3"
     test_file.write_bytes(b"ID3" + b"\x00" * 100)
 
-    # Mock history store
-    mock_history = MagicMock()
-    mock_history.get_history.return_value = [
+    # Mock history store with get_all and get_history
+    records = [
         {
             "id": "cand_12345",
             "url": "https://www.youtube.com/watch?v=cand_12345",
@@ -51,6 +49,9 @@ def test_resolve_audio_local_file_detection(tmp_path):
             "file_path": str(test_file),
         }
     ]
+    mock_history = MagicMock()
+    mock_history.get_all.return_value = records
+    mock_history.get_history.return_value = records
 
     res = find_local_downloaded_audio(
         url="https://www.youtube.com/watch?v=cand_12345",
