@@ -412,7 +412,9 @@ export default function UrlInputBar({
       {/* Main Search Input Form */}
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-stretch gap-3.5 relative">
         {/* Recessed Sculpted Input Well */}
-        <div className="neu-recessed flex-1 flex items-center px-4 py-3 gap-2.5 relative">
+        <div className={`neu-recessed flex-1 flex items-center px-4 py-3 gap-2.5 relative transition-all ${
+          isLoading ? "search-active-glow" : ""
+        }`}>
           {isLoadingSuggestions ? (
             <Loader2 className="w-5 h-5 text-[#0084FF] animate-spin shrink-0" />
           ) : (
@@ -457,7 +459,7 @@ export default function UrlInputBar({
           <button
             type="button"
             onClick={handlePaste}
-            className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#475569] hover:text-[#0084FF] cursor-pointer"
+            className="neu-raised neu-btn-tactile flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#475569] hover:text-[#0084FF] cursor-pointer"
             title="Paste from clipboard"
           >
             <Clipboard className="w-3.5 h-3.5" />
@@ -469,13 +471,18 @@ export default function UrlInputBar({
         <button
           type="submit"
           disabled={isLoading || !url.trim()}
-          className="neu-accent px-7 py-3 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold whitespace-nowrap"
+          className="neu-accent neu-btn-tactile px-7 py-3 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold whitespace-nowrap"
         >
           {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin text-white" />
+            <div className="flex items-center gap-2">
+              <div className="flex items-end gap-0.5 h-3.5">
+                <span className="w-0.5 bg-white rounded-full search-wave-bar [animation-delay:0ms] h-2"></span>
+                <span className="w-0.5 bg-white rounded-full search-wave-bar [animation-delay:150ms] h-3.5"></span>
+                <span className="w-0.5 bg-white rounded-full search-wave-bar [animation-delay:300ms] h-2"></span>
+                <span className="w-0.5 bg-white rounded-full search-wave-bar [animation-delay:100ms] h-3"></span>
+              </div>
               <span>Searching...</span>
-            </>
+            </div>
           ) : isUrl ? (
             <>
               <Search className="w-4 h-4" />
@@ -509,7 +516,7 @@ export default function UrlInputBar({
                   }
                   onAnalyze(item.query, searchMode, item.engine_mode || activeEngineMode);
                 }}
-                className="neu-raised px-2.5 py-1 rounded-lg text-xs text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] transition-colors cursor-pointer flex items-center gap-1"
+                className="neu-raised neu-btn-tactile px-2.5 py-1 rounded-lg text-xs text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] cursor-pointer flex items-center gap-1"
                 title={`Search "${item.query}"`}
               >
                 <span>{item.query}</span>

@@ -389,7 +389,7 @@ export default function BottomMusicPlayer({
 
       {/* Scrubber Progress Bar on top edge of the player with Hover Time Tooltip */}
       <div
-        className="relative w-full h-2 bg-slate-200/80 dark:bg-slate-800 cursor-pointer group select-none"
+        className="relative w-full h-1.5 hover:h-2.5 transition-all duration-200 bg-slate-200/80 dark:bg-slate-800 cursor-pointer group select-none"
         onMouseMove={handleSeekMouseMove}
         onMouseLeave={handleSeekMouseLeave}
       >
@@ -410,7 +410,7 @@ export default function BottomMusicPlayer({
         />
         {/* Playback Progress Fill */}
         <div
-          className="absolute inset-y-0 left-0 bg-[#0084FF] transition-all duration-75"
+          className="absolute inset-y-0 left-0 bg-[#0084FF] transition-all duration-75 group-hover:shadow-[0_0_10px_rgba(0,132,255,0.7)]"
           style={{ width: `${progressPercent}%` }}
         />
         {/* Interactive Range Input overlay */}
@@ -456,12 +456,13 @@ export default function BottomMusicPlayer({
               <Music className="w-5 h-5 text-[#0084FF]" />
             </div>
 
-            {/* Live Playing Soundwave Equalizer Indicator */}
+            {/* Live Playing Soundwave Equalizer Indicator with Staggered Dancing Bars */}
             {isPlaying && !showSpinner && (
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-0.5 pointer-events-none rounded-lg">
-                <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:0ms] h-3.5"></span>
-                <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:150ms] h-5"></span>
-                <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:300ms] h-3"></span>
+              <div className="absolute inset-0 bg-black/45 flex items-center justify-center gap-0.75 pointer-events-none rounded-lg">
+                <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-1"></span>
+                <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-2"></span>
+                <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-3"></span>
+                <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-4"></span>
               </div>
             )}
           </div>
@@ -510,7 +511,7 @@ export default function BottomMusicPlayer({
             <button
               type="button"
               onClick={() => onToggleFavorite(currentTrack)}
-              className={`p-1.5 rounded-lg cursor-pointer transition-colors shrink-0 ${
+              className={`p-1.5 rounded-lg cursor-pointer neu-heart-pop shrink-0 ${
                 isFavorite
                   ? "text-[#EF4444] neu-recessed"
                   : "text-[#94A3B8] hover:text-[#EF4444]"
@@ -559,7 +560,7 @@ export default function BottomMusicPlayer({
             <button
               type="button"
               onClick={handleTransportToggle}
-              className="neu-accent w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all shadow-[0_4px_14px_rgba(0,132,255,0.35)]"
+              className="neu-accent neu-btn-tactile w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer shadow-[0_4px_14px_rgba(0,132,255,0.35)]"
               title={isPlaying ? "Pause" : "Play"}
             >
               {showSpinner ? (

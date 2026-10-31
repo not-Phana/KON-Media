@@ -24,7 +24,7 @@ export default function NavigationTabBar({
         <button
           type="button"
           onClick={() => onViewChange("search")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center gap-2 ${
             activeView === "search"
               ? "neu-recessed text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10 shadow-xs"
               : "neu-raised text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
@@ -38,7 +38,7 @@ export default function NavigationTabBar({
         <button
           type="button"
           onClick={() => onViewChange("favorites")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center gap-2 ${
             activeView === "favorites"
               ? "neu-recessed text-[#EF4444] border border-[#EF4444]/30 bg-[#EF4444]/10 shadow-xs"
               : "neu-raised text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
@@ -63,7 +63,7 @@ export default function NavigationTabBar({
         <button
           type="button"
           onClick={() => onViewChange("recent")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center gap-2 ${
             activeView === "recent"
               ? "neu-recessed text-[#8B5CF6] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 shadow-xs"
               : "neu-raised text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
@@ -88,7 +88,7 @@ export default function NavigationTabBar({
         <button
           type="button"
           onClick={() => onViewChange("downloads")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-2 ${
+          className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center gap-2 ${
             activeView === "downloads"
               ? "neu-recessed text-[#10B981] border border-[#10B981]/30 bg-[#10B981]/10 shadow-xs"
               : "neu-raised text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"

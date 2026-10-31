@@ -175,7 +175,7 @@ export default function PlaybackQueueDrawer({
                   return (
                     <div
                       key={track.id || `${track.url}_${idx}`}
-                      className={`p-2.5 rounded-xl transition-all flex items-center justify-between gap-3 group ${
+                      className={`p-2.5 rounded-xl neu-card-hover transition-all flex items-center justify-between gap-3 group ${
                         isCurrent
                           ? "neu-recessed border border-[#0084FF]/40 bg-[#0084FF]/5"
                           : "neu-raised hover:border-slate-300 dark:hover:border-slate-700"
@@ -195,7 +195,7 @@ export default function PlaybackQueueDrawer({
                             <img
                               src={track.thumbnail}
                               alt={track.title}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-106"
                               referrerPolicy="no-referrer"
                             />
                           ) : (

@@ -91,7 +91,7 @@ export default function LibraryWorkspace({
             <button
               type="button"
               onClick={() => handlePlayAll(false)}
-              className="neu-accent px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 text-white shadow-sm"
+              className="neu-accent neu-btn-tactile px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 text-white shadow-sm"
               title="Play all tracks in list"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
@@ -101,7 +101,7 @@ export default function LibraryWorkspace({
             <button
               type="button"
               onClick={() => handlePlayAll(true)}
-              className="neu-raised p-2 rounded-xl text-xs font-bold text-[#64748B] hover:text-[#0084FF] cursor-pointer"
+              className="neu-raised neu-btn-tactile p-2 rounded-xl text-xs font-bold text-[#64748B] hover:text-[#0084FF] cursor-pointer"
               title="Shuffle all tracks in list"
             >
               <Shuffle className="w-3.5 h-3.5" />
@@ -173,7 +173,7 @@ export default function LibraryWorkspace({
             return (
               <div
                 key={track.id || `${track.url}_${idx}`}
-                className={`p-3.5 rounded-2xl transition-all flex items-center justify-between gap-3 group ${
+                className={`p-3.5 rounded-2xl neu-card-hover transition-all flex items-center justify-between gap-3 group ${
                   isThisPlaying
                     ? "neu-recessed border border-[#0084FF]/40 bg-[#0084FF]/5 shadow-[0_0_12px_rgba(0,132,255,0.15)]"
                     : "neu-raised hover:border-slate-300 dark:hover:border-slate-700"
@@ -189,7 +189,7 @@ export default function LibraryWorkspace({
                       <img
                         src={track.thumbnail}
                         alt={track.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-106"
                         referrerPolicy="no-referrer"
                       />
                     ) : (
@@ -270,7 +270,7 @@ export default function LibraryWorkspace({
                     <button
                       type="button"
                       onClick={() => onToggleFavorite(track)}
-                      className={`p-2 rounded-xl cursor-pointer transition-all ${
+                      className={`p-2 rounded-xl cursor-pointer neu-heart-pop transition-all ${
                         isFavorites
                           ? "neu-recessed text-[#EF4444]"
                           : "neu-raised text-[#94A3B8] hover:text-[#EF4444]"

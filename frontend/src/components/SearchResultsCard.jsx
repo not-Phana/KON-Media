@@ -312,38 +312,54 @@ export default function SearchResultsCard({
   if ((searchState === "searching" || searchState === "updating") && (!results || results.length === 0)) {
     const details = searchStage?.details || {};
     return (
-      <div className="neu-card p-6 space-y-4 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Loader2 className="w-5 h-5 text-[#0084FF] animate-spin shrink-0" />
+      <div className="neu-card p-6 space-y-5 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3.5">
+            {/* Animated Sonar Radar Scanner & Pulse */}
+            <div className="relative w-11 h-11 rounded-2xl neu-recessed flex items-center justify-center shrink-0 overflow-hidden">
+              <span className="absolute inset-0 rounded-2xl border-2 border-[#0084FF] search-radar-ring"></span>
+              <span className="absolute inset-0 rounded-2xl border-2 border-[#0084FF] search-radar-ring-delayed"></span>
+              <Search className="w-5 h-5 text-[#0084FF] relative z-10" />
+            </div>
+
             <div>
-              <h3 className="text-sm font-bold text-[#1E293B] dark:text-[#E2E8F0] m-0">
-                {searchStage?.stage === "understanding" && "Understanding your search..."}
-                {searchStage?.stage === "searching" && "Searching providers..."}
-                {searchStage?.stage === "collecting" && "Collecting candidates..."}
-                {(searchStage?.stage === "matching" || searchStage?.stage === "ranking") && "Matching & ranking results..."}
-                {!searchStage?.stage && `Searching for "${query}"`}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[#1E293B] dark:text-[#E2E8F0] m-0">
+                  {searchStage?.stage === "understanding" && "Understanding query..."}
+                  {searchStage?.stage === "searching" && "Querying media providers..."}
+                  {searchStage?.stage === "collecting" && "Collecting candidate songs..."}
+                  {(searchStage?.stage === "matching" || searchStage?.stage === "ranking") && "Ranking with Rei precision..."}
+                  {!searchStage?.stage && `Searching for "${query}"`}
+                </h3>
+                {/* Dancing Frequency Soundwave Bars */}
+                <div className="flex items-end gap-0.5 h-3.5 px-1 py-0.5">
+                  <span className="w-0.5 bg-[#0084FF] rounded-full search-wave-bar [animation-delay:0ms] h-2"></span>
+                  <span className="w-0.5 bg-[#0084FF] rounded-full search-wave-bar [animation-delay:150ms] h-3.5"></span>
+                  <span className="w-0.5 bg-[#0084FF] rounded-full search-wave-bar [animation-delay:300ms] h-2"></span>
+                  <span className="w-0.5 bg-[#0084FF] rounded-full search-wave-bar [animation-delay:100ms] h-3"></span>
+                </div>
+              </div>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-medium m-0 mt-0.5">
-                {searchStage?.message || "Querying YouTube, SoundCloud & media providers concurrently..."}
+                {searchStage?.message || "Scanning YouTube, SoundCloud & audio sources concurrently..."}
               </p>
             </div>
           </div>
+
           <button
             type="button"
             onClick={onOpenModelModal}
-            className={`neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${
+            className={`neu-recessed px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors self-start sm:self-auto neu-btn-tactile ${
               isFlash ? "text-[#F59E0B] hover:text-[#D97706]" : "text-[#0084FF] hover:text-[#0074E0]"
             }`}
           >
-            {isFlash ? <Zap className="w-3 h-3 text-[#F59E0B]" /> : <Cpu className="w-3 h-3 text-[#0084FF]" />}
+            {isFlash ? <Zap className="w-3.5 h-3.5 text-[#F59E0B]" /> : <Cpu className="w-3.5 h-3.5 text-[#0084FF]" />}
             <span>{isFlash ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"}</span>
           </button>
         </div>
 
         {/* Structured Query Intent Badges if detected */}
         {(details.detected_title || details.detected_artist || details.version_hint || details.qualifier) && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 animate-fade-in">
             {details.detected_title && (
               <span className="neu-recessed px-2.5 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF]">
                 Title: {details.detected_title}
@@ -367,27 +383,39 @@ export default function SearchResultsCard({
           </div>
         )}
 
-        {/* Indeterminate progress bar */}
-        <div className="w-full h-1 bg-slate-200/50 dark:bg-slate-700/50 rounded-full overflow-hidden">
-          <div className="h-full bg-[#0084FF] rounded-full animate-pulse w-3/4" />
+        {/* Indeterminate scanning line sweep */}
+        <div className="w-full h-1 bg-slate-200/50 dark:bg-slate-700/50 rounded-full overflow-hidden relative">
+          <div className="h-full bg-linear-to-r from-transparent via-[#0084FF] to-transparent rounded-full skeleton-shimmer w-full" />
         </div>
 
-        {/* Tactile animated progress skeleton */}
+        {/* Tactile Shimmer Skeleton Candidates */}
         <div className="space-y-3 pt-1">
-          <div className="p-4 rounded-2xl neu-raised flex items-center gap-3 animate-pulse">
-            <div className="w-14 h-14 rounded-xl neu-recessed shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-3.5 bg-slate-200/60 dark:bg-slate-700/60 rounded-md w-3/4" />
-              <div className="h-2.5 bg-slate-200/40 dark:bg-slate-700/40 rounded-md w-1/2" />
+          {[1, 2, 3].map((skeletonIdx) => (
+            <div
+              key={skeletonIdx}
+              className="p-4 rounded-2xl neu-raised flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-200/40 dark:border-slate-800/60"
+            >
+              <div className="flex items-center gap-4 flex-1 w-full">
+                {/* Thumbnail Skeleton */}
+                <div className="w-16 h-16 rounded-xl neu-recessed skeleton-shimmer shrink-0" />
+                <div className="flex-1 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 rounded-full skeleton-shimmer w-16" />
+                    <div className="h-3 rounded-full skeleton-shimmer w-12" />
+                  </div>
+                  <div className="h-4 rounded-md skeleton-shimmer w-3/4" />
+                  <div className="h-3 rounded-md skeleton-shimmer w-1/2" />
+                </div>
+              </div>
+              {/* Buttons Skeleton */}
+              <div className="flex items-center gap-2 self-end sm:self-center">
+                <div className="w-8 h-8 rounded-xl neu-recessed skeleton-shimmer" />
+                <div className="w-8 h-8 rounded-xl neu-recessed skeleton-shimmer" />
+                <div className="w-20 h-8 rounded-xl neu-recessed skeleton-shimmer" />
+                <div className="w-20 h-8 rounded-xl neu-recessed skeleton-shimmer" />
+              </div>
             </div>
-          </div>
-          <div className="p-4 rounded-2xl neu-raised flex items-center gap-3 animate-pulse opacity-75">
-            <div className="w-14 h-14 rounded-xl neu-recessed shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-3.5 bg-slate-200/60 dark:bg-slate-700/60 rounded-md w-2/3" />
-              <div className="h-2.5 bg-slate-200/40 dark:bg-slate-700/40 rounded-md w-1/3" />
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     );
@@ -582,17 +610,17 @@ export default function SearchResultsCard({
           return (
             <div
               key={cand.id}
-              className={`p-4 rounded-2xl transition-all ${cardBorderClass} flex flex-col md:flex-row items-start md:items-center justify-between gap-4`}
+              className={`p-4 rounded-2xl neu-card-hover group ${cardBorderClass} flex flex-col md:flex-row items-start md:items-center justify-between gap-4`}
             >
               {/* Media Info */}
               <div className="flex items-start gap-4 min-w-0 flex-1">
                 {/* Thumbnail */}
-                <div className="w-16 h-16 rounded-xl neu-recessed p-1 shrink-0 overflow-hidden flex items-center justify-center relative">
+                <div className="w-16 h-16 rounded-xl neu-recessed p-1 shrink-0 overflow-hidden flex items-center justify-center relative neu-thumb-container">
                   {cand.thumbnail ? (
                     <img
                       src={cand.thumbnail}
                       alt={cand.title}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-cover rounded-lg transition-transform duration-300 group-hover:scale-106"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
@@ -612,12 +640,30 @@ export default function SearchResultsCard({
                       <Music className="w-6 h-6 text-[#0084FF]" />
                     )}
                   </div>
-                  {/* Live Playing Soundwave Equalizer on thumbnail */}
+
+                  {/* Hover Quick-Play Icon Overlay */}
+                  {!isThisPlaying && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPlayCandidate && onPlayCandidate(cand);
+                      }}
+                      className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center rounded-lg cursor-pointer"
+                      title="Play preview"
+                    >
+                      <div className="w-7 h-7 rounded-full bg-[#0084FF] text-white flex items-center justify-center shadow-md neu-btn-tactile">
+                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Live Playing Soundwave Equalizer on thumbnail with staggered dancing bars */}
                   {isThisPlaying && isPlaying && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-0.5 rounded-lg pointer-events-none">
-                      <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:0ms] h-4"></span>
-                      <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:150ms] h-6"></span>
-                      <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:300ms] h-3"></span>
+                    <div className="absolute inset-0 bg-black/45 flex items-center justify-center gap-0.75 rounded-lg pointer-events-none">
+                      <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-1"></span>
+                      <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-2"></span>
+                      <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-3"></span>
+                      <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-4"></span>
                     </div>
                   )}
 
@@ -747,7 +793,7 @@ export default function SearchResultsCard({
                   <button
                     type="button"
                     onClick={() => onToggleFavorite(cand)}
-                    className={`p-2.5 rounded-xl cursor-pointer transition-all ${
+                    className={`p-2.5 rounded-xl cursor-pointer neu-heart-pop ${
                       isFavorited
                         ? "neu-recessed text-[#EF4444]"
                         : "neu-raised text-[#94A3B8] hover:text-[#EF4444]"
@@ -763,7 +809,7 @@ export default function SearchResultsCard({
                   <button
                     type="button"
                     onClick={() => onAddToQueue(cand)}
-                    className="neu-raised p-2.5 text-xs text-[#64748B] hover:text-[#0084FF] cursor-pointer rounded-xl transition-colors"
+                    className="neu-raised p-2.5 text-xs text-[#64748B] hover:text-[#0084FF] cursor-pointer rounded-xl neu-btn-tactile"
                     title="Add song to listening queue"
                   >
                     <ListPlus className="w-3.5 h-3.5" />
@@ -778,7 +824,7 @@ export default function SearchResultsCard({
                     <button
                       type="button"
                       onClick={() => onPlayCandidate && onPlayCandidate(cand)}
-                      className={`px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold rounded-xl cursor-pointer transition-all active:scale-95 ${
+                      className={`px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold rounded-xl cursor-pointer neu-btn-tactile ${
                         isThisPlaying && isPlaying
                           ? "neu-recessed text-[#0084FF] border border-[#0084FF]/40 bg-[#0084FF]/10 shadow-[0_0_12px_rgba(0,132,255,0.2)]"
                           : "neu-raised text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] hover:border-[#0084FF]/30"
