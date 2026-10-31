@@ -492,3 +492,30 @@ export function subscribeToEvents(onEvent, onError) {
 
   return () => es.close();
 }
+
+export async function resolveAudioStream(url, { title, id, signal } = {}) {
+  const params = new URLSearchParams({ url });
+  if (title) params.append("title", title);
+  if (id) params.append("id", id);
+
+  const res = await fetch(`${API_BASE}/audio/resolve?${params.toString()}`, { signal });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || data.error || "Failed to resolve audio preview");
+  }
+  return data;
+}
+
+export function getAudioStreamUrl(rawUrl) {
+  if (!rawUrl) return "";
+  if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+    return rawUrl;
+  }
+  const base = getApiBase();
+  if (rawUrl.startsWith("/api/")) {
+    const root = base.replace(/\/api$/, "");
+    return `${root}${rawUrl}`;
+  }
+  return `${base}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+}
+

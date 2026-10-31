@@ -1,6 +1,8 @@
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 import React, { useState } from "react";
 import {
+  Play,
+  Pause,
   Search,
   Sparkles,
   Clock,
@@ -190,6 +192,10 @@ export default function SearchResultsCard({
   onDismiss,
   onFeedback,
   onOpenModelModal,
+  onPlayCandidate,
+  currentPlayingTrack,
+  isPlaying = false,
+  isLoadingAudio = false,
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());
   const [localPending, setLocalPending] = useState({});
@@ -650,6 +656,49 @@ export default function SearchResultsCard({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-stretch sm:self-end md:self-center justify-end">
+                {/* Built-in Audio Play / Preview Button */}
+                {(() => {
+                  const isThisPlaying =
+                    currentPlayingTrack &&
+                    (currentPlayingTrack.id === cand.id || currentPlayingTrack.url === cand.url);
+                  const isThisLoading = isThisPlaying && isLoadingAudio;
+                  const isSong = cand.is_music !== false && cand.content_type !== "video";
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => onPlayCandidate && onPlayCandidate(cand)}
+                      className={`px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold rounded-xl cursor-pointer transition-all active:scale-95 ${
+                        isThisPlaying && isPlaying
+                          ? "neu-recessed text-[#0084FF] border border-[#0084FF]/40 bg-[#0084FF]/10 shadow-[0_0_12px_rgba(0,132,255,0.2)]"
+                          : "neu-raised text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] hover:border-[#0084FF]/30"
+                      }`}
+                      title={
+                        isThisPlaying && isPlaying
+                          ? "Pause preview playback"
+                          : isSong
+                          ? "Listen to song preview before downloading"
+                          : "Preview audio playback"
+                      }
+                    >
+                      {isThisLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0084FF]" />
+                      ) : isThisPlaying && isPlaying ? (
+                        <Pause className="w-3.5 h-3.5 fill-current text-[#0084FF]" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 fill-current text-[#0084FF]" />
+                      )}
+                      <span>
+                        {isThisLoading
+                          ? "Loading..."
+                          : isThisPlaying && isPlaying
+                          ? "Playing"
+                          : "Preview"}
+                      </span>
+                    </button>
+                  );
+                })()}
+
                 {/* Download Audio / Song Button with Live Feedback */}
                 <DownloadActionButton
                   candidate={cand}

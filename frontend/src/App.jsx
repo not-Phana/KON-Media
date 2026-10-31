@@ -8,6 +8,7 @@ import ActiveTasksMonitor from "./components/ActiveTasksMonitor";
 import HistoryWorkspace from "./components/HistoryWorkspace";
 import SettingsModal from "./components/SettingsModal";
 import ModelInfoModal from "./components/ModelInfoModal";
+import BottomMusicPlayer from "./components/BottomMusicPlayer";
 import {
   fetchHealth,
   analyzeMediaUrl,
@@ -27,6 +28,7 @@ import {
   saveSettings,
   openFileInExplorer,
   subscribeToEvents,
+  resolveAudioStream,
 } from "./api";
 
 export default function App() {
@@ -74,6 +76,126 @@ export default function App() {
   const [activeTasks, setActiveTasks] = useState([]);
   const [history, setHistory] = useState([]);
   const [toast, setToast] = useState(null);
+
+  // Persistent Built-in Audio Player State
+  const [currentTrack, setCurrentTrack] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [audioError, setAudioError] = useState(null);
+  const [playbackQueue, setPlaybackQueue] = useState([]);
+  const [queueIndex, setQueueIndex] = useState(-1);
+
+  // Play candidate handler (preview before download)
+  const handlePlayCandidate = async (cand) => {
+    if (!cand) return;
+
+    // If clicking currently active track, simply toggle play/pause
+    if (
+      currentTrack &&
+      (currentTrack.id === cand.id || currentTrack.url === cand.url)
+    ) {
+      setIsPlaying((prev) => !prev);
+      return;
+    }
+
+    // Set up queue from search results if available
+    const queue = searchResults && searchResults.length > 0 ? searchResults : [cand];
+    const idx = queue.findIndex((c) => c.id === cand.id || c.url === cand.url);
+    setPlaybackQueue(queue);
+    setQueueIndex(idx >= 0 ? idx : 0);
+
+    const optimisticTrack = {
+      id: cand.id,
+      title: cand.clean_title || cand.title,
+      artist: cand.uploader || cand.artist || "",
+      thumbnail: cand.thumbnail,
+      duration: cand.duration,
+      url: cand.url,
+      engine_mode: cand.engine_mode || engineMode,
+      model: cand.model,
+      content_type: cand.content_type,
+      is_music: cand.is_music,
+      is_local: false,
+    };
+    setCurrentTrack(optimisticTrack);
+    setIsLoadingAudio(true);
+    setAudioError(null);
+    setIsPlaying(false);
+
+    try {
+      const resolved = await resolveAudioStream(cand.url, {
+        title: cand.clean_title || cand.title,
+        id: cand.id,
+      });
+
+      if (resolved.playable) {
+        setCurrentTrack((prev) => ({
+          ...prev,
+          ...resolved,
+          title: resolved.title || prev.title,
+          artist: resolved.artist || prev.artist,
+          thumbnail: resolved.thumbnail || prev.thumbnail,
+          duration: resolved.duration || prev.duration,
+          stream_url: resolved.stream_url,
+          direct_url: resolved.direct_url,
+          is_local: resolved.is_local,
+          file_path: resolved.file_path,
+        }));
+        setIsPlaying(true);
+      } else {
+        const errMsg = resolved.reason || resolved.error || "Cannot play preview";
+        setAudioError(errMsg);
+        setToast({ message: errMsg });
+      }
+    } catch (err) {
+      const errMsg = err.message || "Failed to load audio stream";
+      setAudioError(errMsg);
+      setToast({ message: errMsg });
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  };
+
+  const handleTogglePlay = () => {
+    setIsPlaying((prev) => !prev);
+  };
+
+  const handleNextTrack = ({ shuffle = false, repeat = "none" } = {}) => {
+    if (!playbackQueue.length) return;
+
+    if (shuffle) {
+      const randomIdx = Math.floor(Math.random() * playbackQueue.length);
+      handlePlayCandidate(playbackQueue[randomIdx]);
+      return;
+    }
+
+    const nextIdx = queueIndex + 1;
+    if (nextIdx < playbackQueue.length) {
+      handlePlayCandidate(playbackQueue[nextIdx]);
+    } else if (repeat === "all") {
+      handlePlayCandidate(playbackQueue[0]);
+    }
+  };
+
+  const handlePreviousTrack = ({ shuffle = false } = {}) => {
+    if (!playbackQueue.length) return;
+
+    if (shuffle) {
+      const randomIdx = Math.floor(Math.random() * playbackQueue.length);
+      handlePlayCandidate(playbackQueue[randomIdx]);
+      return;
+    }
+
+    const prevIdx = queueIndex - 1;
+    if (prevIdx >= 0) {
+      handlePlayCandidate(playbackQueue[prevIdx]);
+    }
+  };
+
+  const handleClosePlayer = () => {
+    setIsPlaying(false);
+    setCurrentTrack(null);
+  };
 
   // Load initial health, settings, tasks, and history
   const loadInitialData = useCallback(async () => {
@@ -493,7 +615,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between">
-      <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div className={`max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 ${currentTrack ? "pb-28" : ""}`}>
         {/* Global Application Header */}
         <Header
           health={health}
@@ -537,6 +659,10 @@ export default function App() {
             }}
             onFeedback={(fb) => submitSearchFeedback(fb).catch(() => {})}
             onOpenModelModal={() => setIsModelModalOpen(true)}
+            onPlayCandidate={handlePlayCandidate}
+            currentPlayingTrack={currentTrack}
+            isPlaying={isPlaying}
+            isLoadingAudio={isLoadingAudio}
           />
         )}
 
@@ -591,6 +717,26 @@ export default function App() {
       <ModelInfoModal
         isOpen={isModelModalOpen}
         onClose={() => setIsModelModalOpen(false)}
+      />
+
+      {/* Persistent Bottom Music Player (VLC-style controls) */}
+      <BottomMusicPlayer
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+        isLoading={isLoadingAudio}
+        error={audioError}
+        playbackQueue={playbackQueue}
+        queueIndex={queueIndex}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onTogglePlay={handleTogglePlay}
+        onNext={handleNextTrack}
+        onPrevious={handlePreviousTrack}
+        onClose={handleClosePlayer}
+        onDirectDownload={handleDirectDownload}
+        onOpenFile={handleOpenFile}
+        activeTasks={activeTasks}
+        history={history}
       />
 
       {/* Interactive Toast Notification */}

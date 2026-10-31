@@ -755,3 +755,83 @@ async def stream_media_file(filename: str):
         path=str(target),
         media_type=mime or "video/mp4",
     )
+
+
+@router.get("/audio/resolve")
+async def resolve_audio_endpoint(
+    url: str = Query(..., description="Media or song URL to resolve for playback"),
+    title: Optional[str] = Query(None, description="Song title"),
+    id: Optional[str] = Query(None, description="Candidate ID"),
+):
+    """Resolve an audio stream for preview playback before downloading."""
+    from backend.engine.audio_service import resolve_audio_stream
+
+    configured_dir = Path(settings_store.get_settings().get("downloads_dir", str(DOWNLOADS_DIR)))
+    result = await resolve_audio_stream(
+        url=url,
+        title=title,
+        candidate_id=id,
+        downloads_dir=configured_dir,
+        history_store=history_store,
+    )
+    return result
+
+
+@router.get("/audio/stream")
+async def stream_audio_proxy_endpoint(
+    url: str = Query(..., description="Direct upstream audio stream URL"),
+    request: Request = None,
+):
+    """Proxy remote audio stream with byte-range HTTP 206 support for in-browser playback."""
+    from urllib.parse import unquote
+    import httpx
+
+    target_url = unquote(url).strip()
+    if not target_url.startswith("http://") and not target_url.startswith("https://"):
+        raise HTTPException(status_code=400, detail="Invalid audio stream URL scheme")
+
+    range_header = request.headers.get("range") if request else None
+    upstream_headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "*/*",
+    }
+    if range_header:
+        upstream_headers["Range"] = range_header
+
+    try:
+        client = httpx.AsyncClient(follow_redirects=True, timeout=25.0)
+        req = client.build_request("GET", target_url, headers=upstream_headers)
+        upstream_res = await client.send(req, stream=True)
+    except Exception as e:
+        log.error(f"Failed to connect to upstream audio stream: {e}")
+        raise HTTPException(status_code=502, detail=f"Failed to connect to audio source: {str(e)}")
+
+    status_code = upstream_res.status_code
+    response_headers = {
+        "Content-Type": upstream_res.headers.get("content-type", "audio/mp4"),
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "public, max-age=3600",
+    }
+    if "content-range" in upstream_res.headers:
+        response_headers["Content-Range"] = upstream_res.headers["content-range"]
+    if "content-length" in upstream_res.headers:
+        response_headers["Content-Length"] = upstream_res.headers["content-length"]
+
+    async def content_iterator():
+        try:
+            async for chunk in upstream_res.aiter_bytes(chunk_size=65536):
+                yield chunk
+        finally:
+            await upstream_res.aclose()
+            await client.aclose()
+
+    return StreamingResponse(
+        content_iterator(),
+        status_code=status_code,
+        headers=response_headers,
+        media_type=response_headers["Content-Type"],
+    )
+
