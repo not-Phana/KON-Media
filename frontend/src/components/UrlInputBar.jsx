@@ -1,3 +1,4 @@
+import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Search,
@@ -333,7 +334,7 @@ export default function UrlInputBar({
                 }`}
                 title="Rei — Precision: Maximum precision. Better discovery and deeper matching."
               >
-                <Cpu className="w-3.5 h-3.5 shrink-0" />
+                <KonPrecisionIcon className="w-3.5 h-3.5 shrink-0" />
                 <span>Rei — Precision</span>
               </button>
 
@@ -356,7 +357,7 @@ export default function UrlInputBar({
                 }`}
                 title="Rei Flash — Speed: Faster results. Lightweight matching and lower latency."
               >
-                <Zap className="w-3.5 h-3.5 shrink-0" />
+                <KonFlashIcon className="w-3.5 h-3.5 shrink-0" />
                 <span>Rei Flash — Speed</span>
               </button>
             </div>
@@ -701,13 +702,23 @@ export default function UrlInputBar({
             title={`Active Search Engine: ${activeEngineMode === "flash" ? "KON Search 1.2 Rei Flash (Speed Mode)" : "KON Search 1.2 Rei (Precision Mode)"}`}
           >
             {activeEngineMode === "flash" ? (
-              <Zap className="w-3 h-3 text-[#F59E0B]" />
+              <KonFlashIcon className="w-3.5 h-3.5" />
             ) : (
-              <Cpu className="w-3 h-3 text-[#0084FF]" />
+              <KonPrecisionIcon className="w-3.5 h-3.5" />
             )}
             <span>{activeEngineMode === "flash" ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"}</span>
-            <span className="text-[10px] opacity-80 font-mono">
-              {activeEngineMode === "flash" ? "⚡ Speed" : "🎯 Precision"}
+            <span className="text-[10px] opacity-80 font-mono inline-flex items-center gap-1">
+              {activeEngineMode === "flash" ? (
+                <>
+                  <KonFlashIcon className="w-2.5 h-2.5" />
+                  <span>Speed</span>
+                </>
+              ) : (
+                <>
+                  <KonPrecisionIcon className="w-2.5 h-2.5" />
+                  <span>Precision</span>
+                </>
+              )}
             </span>
           </button>
           <span className="text-[11px] text-[#94A3B8] hidden sm:inline">

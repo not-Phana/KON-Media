@@ -1,3 +1,4 @@
+import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 import React, { useState } from "react";
 import {
   Search,
@@ -442,10 +443,20 @@ export default function SearchResultsCard({
                 : "Active Search Engine: Ranked by KON Search 1.2 Rei (Precision mode)"
             }
           >
-            {isFlash ? <Zap className="w-3 h-3 text-[#F59E0B]" /> : <Cpu className="w-3 h-3 text-[#0084FF]" />}
+            {isFlash ? <KonFlashIcon className="w-3.5 h-3.5" /> : <KonPrecisionIcon className="w-3.5 h-3.5" />}
             <span>Ranked by {isFlash ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"}</span>
-            <span className="text-[10px] opacity-80 font-mono">
-              {isFlash ? "⚡ Speed" : "🎯 Precision"}
+            <span className="text-[10px] opacity-80 font-mono inline-flex items-center gap-1">
+              {isFlash ? (
+                <>
+                  <KonFlashIcon className="w-2.5 h-2.5" />
+                  <span>Speed</span>
+                </>
+              ) : (
+                <>
+                  <KonPrecisionIcon className="w-2.5 h-2.5" />
+                  <span>Precision</span>
+                </>
+              )}
             </span>
           </button>
         </div>

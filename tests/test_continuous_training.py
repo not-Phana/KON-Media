@@ -86,3 +86,4 @@ def test_continuous_training_api_endpoints():
     res_resume = client.post("/api/search/train/continuous/start")
     assert res_resume.status_code == 200
     assert res_resume.json()["status"] in ("started", "already_running")
+

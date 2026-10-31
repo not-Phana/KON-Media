@@ -1,3 +1,4 @@
+import { KonFlashIcon, KonPrecisionIcon, KonTrainingIcon } from "./KonIcons";
 import React, { useState, useEffect } from "react";
 import {
   Cpu,
@@ -174,7 +175,7 @@ export default function ModelInfoModal({ isOpen, onClose }) {
             <div className="neu-recessed p-2.5 rounded-xl text-center">
               <div className="text-[10px] text-[#64748B] font-semibold">Speed</div>
               <div className="text-sm font-bold text-[#1E293B] font-mono mt-0.5 flex items-center justify-center gap-1">
-                <Zap className="w-3 h-3 text-amber-500" />
+                <KonFlashIcon className="w-3.5 h-3.5" />
                 <span>{ct?.steps_per_second ? `${ct.steps_per_second} /s` : "Active"}</span>
               </div>
             </div>
