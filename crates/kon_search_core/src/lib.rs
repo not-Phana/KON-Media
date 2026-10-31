@@ -44,6 +44,31 @@ fn normalize_media_url(url: &str) -> String {
     dedup::normalize_media_url(url)
 }
 
+
+/// Fast lightweight ranking for Flash mode.
+#[pyfunction]
+#[pyo3(signature = (query_json, candidates_json, limit=None))]
+fn rank_candidates_flash_json(query_json: &str, candidates_json: &str, limit: Option<usize>) -> PyResult<String> {
+    let query: features::QueryInput = serde_json::from_str(query_json)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid query JSON: {}", e)))?;
+
+    let candidates: Vec<features::CandidateInput> = serde_json::from_str(candidates_json)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid candidates JSON: {}", e)))?;
+
+    let ranked = ranking::rank_candidates_flash(&query, candidates, limit);
+
+    serde_json::to_string(&ranked)
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("JSON serialization error: {}", e)))
+}
+
+/// Fast lightweight suggestions for Flash mode.
+#[pyfunction]
+fn get_search_suggestions_flash_json(query: &str, media_type: &str, limit: usize) -> PyResult<String> {
+    let items = suggestions::get_search_suggestions_flash(query, media_type, limit);
+    serde_json::to_string(&items)
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("JSON serialization error: {}", e)))
+}
+
 /// Rank candidates passing and returning JSON strings for clean interop.
 #[pyfunction]
 fn rank_candidates_json(query_json: &str, candidates_json: &str) -> PyResult<String> {
@@ -224,6 +249,9 @@ fn kon_search_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(normalize_query, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_media_url, m)?)?;
     m.add_function(wrap_pyfunction!(rank_candidates_json, m)?)?;
+    m.add_function(wrap_pyfunction!(rank_candidates_flash_json, m)?)?;
+    m.add_function(wrap_pyfunction!(get_search_suggestions_flash_json, m)?)?;
+
     m.add_function(wrap_pyfunction!(parse_media_entity_json, m)?)?;
     m.add_function(wrap_pyfunction!(get_search_suggestions_json, m)?)?;
     m.add_function(wrap_pyfunction!(parse_query_intent_json, m)?)?;

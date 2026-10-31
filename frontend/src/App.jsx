@@ -56,6 +56,21 @@ export default function App() {
   const searchAbortRef = useRef(null);
   const searchIdRef = useRef(0);
 
+  const [engineMode, setEngineMode] = useState(() => {
+    try {
+      return localStorage.getItem("kon_search_engine_mode") || "rei";
+    } catch {
+      return "rei";
+    }
+  });
+
+  const handleEngineModeChange = (mode) => {
+    setEngineMode(mode);
+    try {
+      localStorage.setItem("kon_search_engine_mode", mode);
+    } catch (_) {}
+  };
+
   const [activeTasks, setActiveTasks] = useState([]);
   const [history, setHistory] = useState([]);
   const [toast, setToast] = useState(null);
@@ -179,9 +194,10 @@ export default function App() {
   };
 
   // Handle URL analysis or keyword discovery
-  const handleAnalyze = async (input, searchMode = "audio") => {
+  const handleAnalyze = async (input, searchMode = "audio", modeOverride = null) => {
     setIsAnalyzing(true);
     setAnalyzeError(null);
+    const activeEngine = modeOverride || engineMode;
 
     const isUrl = input.startsWith("http://") || input.startsWith("https://");
 
@@ -220,8 +236,9 @@ export default function App() {
 
       try {
         await streamSearchMedia(input, {
-          limit: 20,
+          limit: activeEngine === "flash" ? 12 : 20,
           mediaType: searchMode,
+          engineMode: activeEngine,
           signal: controller.signal,
           onStage: (stageData) => {
             if (searchIdRef.current !== currentSearchId) return;
@@ -243,7 +260,9 @@ export default function App() {
               completed: finalData.providers_completed || [],
               timedOut: finalData.providers_timed_out || [],
               failed: finalData.providers_failed || [],
-              engine: finalData.engine || "KON Search 1.2 Rei",
+              engine: finalData.engine || (activeEngine === "flash" ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"),
+              engine_mode: finalData.engine_mode || activeEngine,
+              model: finalData.model || (activeEngine === "flash" ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"),
             });
 
             if (results.length === 0) {
@@ -492,6 +511,8 @@ export default function App() {
           error={analyzeError}
           onClearError={() => setAnalyzeError(null)}
           onOpenModelModal={() => setIsModelModalOpen(true)}
+          engineMode={engineMode}
+          onEngineModeChange={handleEngineModeChange}
         />
 
         {/* Ranked Search Discoveries */}
@@ -500,6 +521,7 @@ export default function App() {
             query={searchQuery}
             results={searchResults}
             searchMode={currentSearchMode}
+            engineMode={engineMode}
             searchState={searchState}
             searchStage={searchStage}
             searchMeta={searchMeta}

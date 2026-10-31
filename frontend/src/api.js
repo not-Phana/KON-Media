@@ -52,10 +52,11 @@ export async function analyzeMediaUrl(url) {
   return data;
 }
 
-export async function searchMedia(query, { limit = 5, provider = null, mediaType = "all", signal = null } = {}) {
+export async function searchMedia(query, { limit = 5, provider = null, mediaType = "all", engineMode = "rei", signal = null } = {}) {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
   if (provider) params.append("provider", provider);
   if (mediaType && mediaType !== "all") params.append("media_type", mediaType);
+  if (engineMode) params.append("engine_mode", engineMode);
 
   const res = await fetch(`${API_BASE}/search?${params.toString()}`, { signal });
   const data = await res.json();
@@ -65,11 +66,12 @@ export async function searchMedia(query, { limit = 5, provider = null, mediaType
   return data;
 }
 
-export async function fetchSearchSuggestions(query, { limit = 6, mediaType = "all", signal = null } = {}) {
+export async function fetchSearchSuggestions(query, { limit = 6, mediaType = "all", engineMode = "rei", signal = null } = {}) {
   const cleanQ = query?.trim();
   if (!cleanQ) return { suggestions: [], count: 0 };
   const params = new URLSearchParams({ q: cleanQ, limit: String(limit) });
   if (mediaType && mediaType !== "all") params.append("media_type", mediaType);
+  if (engineMode) params.append("engine_mode", engineMode);
 
   try {
     const res = await fetch(`${API_BASE}/search/suggestions?${params.toString()}`, { signal });
@@ -105,6 +107,7 @@ export async function streamSearchMedia(
     limit = 20,
     provider = null,
     mediaType = "all",
+    engineMode = "rei",
     signal = null,
     onStage = () => {},
     onResults = () => {},
@@ -115,6 +118,7 @@ export async function streamSearchMedia(
   const params = new URLSearchParams({ q: query, limit: String(limit) });
   if (provider) params.append("provider", provider);
   if (mediaType && mediaType !== "all") params.append("media_type", mediaType);
+  if (engineMode) params.append("engine_mode", engineMode);
 
   let res;
   try {
@@ -123,7 +127,7 @@ export async function streamSearchMedia(
     if (err.name === "AbortError") throw err;
     // Fallback to static endpoint on network/connection failure
     try {
-      const staticData = await searchMedia(query, { limit, provider, mediaType, signal });
+      const staticData = await searchMedia(query, { limit, provider, mediaType, engineMode, signal });
       onResults(staticData.results || [], false);
       onComplete(staticData);
       return staticData;
@@ -135,7 +139,7 @@ export async function streamSearchMedia(
 
   if (!res.ok || !res.body) {
     try {
-      const staticData = await searchMedia(query, { limit, provider, mediaType, signal });
+      const staticData = await searchMedia(query, { limit, provider, mediaType, engineMode, signal });
       onResults(staticData.results || [], false);
       onComplete(staticData);
       return staticData;

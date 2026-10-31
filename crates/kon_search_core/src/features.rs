@@ -89,11 +89,14 @@ pub fn detect_version_hint(text: &str) -> Option<String> {
         return None;
     }
     let keywords = [
-        ("remix", &["remix", "mix", "club mix", "extended mix"][..]),
-        ("live", &["live", "live aid", "in concert", "wembley"][..]),
-        ("instrumental", &["instrumental", "karaoke", "backing track"][..]),
-        ("acoustic", &["acoustic", "unplugged"][..]),
+        ("remix", &["remix", "mix", "club mix", "extended mix", "dub", "flip", "jersey club", "jersey remix", "jersey", "edit"][..]),
+        ("live", &["live", "live aid", "in concert", "wembley", "coachella", "acoustic live", "live performance"][..]),
+        ("instrumental", &["instrumental", "karaoke", "backing track", "piano cover", "instrumental version"][..]),
+        ("acoustic", &["acoustic", "unplugged", "acoustic version"][..]),
         ("cover", &["cover", "parody", "tribute"][..]),
+        ("slowed", &["slowed", "slowed down", "slowed reverb", "reverb"][..]),
+        ("sped_up", &["sped up", "speed up", "nightcore", "fast version"][..]),
+        ("version", &["version", "ver", "edition"][..]),
     ];
 
     for (cat, terms) in keywords {
@@ -297,7 +300,7 @@ pub fn extract_candidate_features(query: &QueryInput, candidate: &CandidateInput
     // 10. Popularity / view count boost (strictly bounded log bonus, max 0.05)
     let popularity_boost = if let Some(v) = candidate.views {
         if v > 100 {
-            ((v as f64).log10() / 9.0).min(1.0)
+            (((v as f64).log10() / 10.0) * 0.05).min(0.05)
         } else {
             0.0
         }
@@ -307,7 +310,7 @@ pub fn extract_candidate_features(query: &QueryInput, candidate: &CandidateInput
 
     // 11. Audio platform boost
     let audio_platform_boost = if candidate.platform.as_deref() == Some("soundcloud") {
-        1.0
+        0.10
     } else {
         0.0
     };

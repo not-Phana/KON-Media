@@ -9,6 +9,7 @@ import {
   Film,
   Globe,
   Cpu,
+  Zap,
   Sparkles,
   ChevronRight,
   User,
@@ -24,9 +25,31 @@ export default function UrlInputBar({
   error,
   onClearError,
   onOpenModelModal,
+  engineMode: propEngineMode,
+  onEngineModeChange,
 }) {
   const [url, setUrl] = useState("");
   const [searchMode, setSearchMode] = useState("audio"); // "audio", "video", "all"
+  const [internalEngineMode, setInternalEngineMode] = useState(() => {
+    try {
+      return localStorage.getItem("kon_search_engine_mode") || "rei";
+    } catch {
+      return "rei";
+    }
+  });
+  const activeEngineMode = propEngineMode || internalEngineMode;
+
+  const handleEngineModeSelect = (mode) => {
+    try {
+      localStorage.setItem("kon_search_engine_mode", mode);
+    } catch (_) {}
+    if (onEngineModeChange) {
+      onEngineModeChange(mode);
+    } else {
+      setInternalEngineMode(mode);
+    }
+  };
+
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -125,6 +148,7 @@ export default function UrlInputBar({
       try {
         const data = await fetchSearchSuggestions(cleanQ, {
           mediaType: searchMode,
+          engineMode: activeEngineMode,
           signal: controller.signal,
           limit: 6,
         });
@@ -152,7 +176,7 @@ export default function UrlInputBar({
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [url, searchMode, isUrl]);
+  }, [url, searchMode, activeEngineMode, isUrl]);
 
   const handlePaste = async () => {
     try {
@@ -178,14 +202,14 @@ export default function UrlInputBar({
     dismissSuggestions();
     setUrl(queryToSearch);
     if (onClearError) onClearError();
-    onAnalyze(queryToSearch, searchMode);
+    onAnalyze(queryToSearch, searchMode, activeEngineMode);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!url.trim()) return;
     dismissSuggestions();
-    onAnalyze(url.trim(), searchMode);
+    onAnalyze(url.trim(), searchMode, activeEngineMode);
   };
 
   const handleKeyDown = (e) => {
@@ -235,16 +259,17 @@ export default function UrlInputBar({
 
   return (
     <section ref={wrapperRef} className="space-y-3 relative">
-      {/* Segmented Mode Selector Track */}
+      {/* Segmented Mode & Dual Search Engine Track */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        {/* Media Filter Tabs */}
         <div className="neu-recessed p-1.5 flex items-center gap-1 rounded-2xl">
           <button
             type="button"
             onClick={() => setSearchMode("audio")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               searchMode === "audio"
                 ? "neu-raised text-[#0084FF]"
-                : "text-[#64748B] hover:text-[#1E293B]"
+                : "text-[#64748B] hover:text-[#1E293B] dark:text-[#94A3B8] dark:hover:text-[#F1F5F9]"
             }`}
           >
             <Music className="w-3.5 h-3.5" />
@@ -254,10 +279,10 @@ export default function UrlInputBar({
           <button
             type="button"
             onClick={() => setSearchMode("video")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               searchMode === "video"
                 ? "neu-raised text-[#0084FF]"
-                : "text-[#64748B] hover:text-[#1E293B]"
+                : "text-[#64748B] hover:text-[#1E293B] dark:text-[#94A3B8] dark:hover:text-[#F1F5F9]"
             }`}
           >
             <Film className="w-3.5 h-3.5" />
@@ -267,15 +292,81 @@ export default function UrlInputBar({
           <button
             type="button"
             onClick={() => setSearchMode("all")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               searchMode === "all"
                 ? "neu-raised text-[#0084FF]"
-                : "text-[#64748B] hover:text-[#1E293B]"
+                : "text-[#64748B] hover:text-[#1E293B] dark:text-[#94A3B8] dark:hover:text-[#F1F5F9]"
             }`}
           >
             <Globe className="w-3.5 h-3.5" />
             <span>All Sources</span>
           </button>
+        </div>
+
+        {/* Dual Search Engine Selector: Rei vs Rei Flash */}
+        <div className="flex flex-col sm:items-end gap-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-[#64748B] dark:text-[#94A3B8] hidden xs:inline uppercase tracking-wider">
+              Search Engine
+            </span>
+            <div
+              role="tablist"
+              aria-label="Search Engine Selector"
+              className="neu-recessed p-1 flex items-center gap-1 rounded-2xl"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeEngineMode === "rei"}
+                tabIndex={0}
+                onClick={() => handleEngineModeSelect("rei")}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    handleEngineModeSelect("flash");
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                  activeEngineMode === "rei"
+                    ? "neu-raised text-[#0084FF] border border-[#0084FF]/35 bg-[#0084FF]/10 shadow-xs"
+                    : "text-[#64748B] hover:text-[#1E293B] dark:text-[#94A3B8] dark:hover:text-[#F1F5F9]"
+                }`}
+                title="Rei — Precision: Maximum precision. Better discovery and deeper matching."
+              >
+                <Cpu className="w-3.5 h-3.5 shrink-0" />
+                <span>Rei — Precision</span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeEngineMode === "flash"}
+                tabIndex={0}
+                onClick={() => handleEngineModeSelect("flash")}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    handleEngineModeSelect("rei");
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                  activeEngineMode === "flash"
+                    ? "neu-raised text-[#F59E0B] border border-[#F59E0B]/35 bg-[#F59E0B]/10 shadow-xs"
+                    : "text-[#64748B] hover:text-[#1E293B] dark:text-[#94A3B8] dark:hover:text-[#F1F5F9]"
+                }`}
+                title="Rei Flash — Speed: Faster results. Lightweight matching and lower latency."
+              >
+                <Zap className="w-3.5 h-3.5 shrink-0" />
+                <span>Rei Flash — Speed</span>
+              </button>
+            </div>
+          </div>
+          {/* Active Mode Dynamic Description */}
+          <p className="text-[10px] text-[#64748B] dark:text-[#94A3B8] m-0 px-1 font-medium select-none">
+            {activeEngineMode === "flash"
+              ? "Faster results. Lightweight matching and lower latency."
+              : "Maximum precision. Better discovery and deeper matching."}
+          </p>
         </div>
       </div>
 
@@ -572,11 +663,11 @@ export default function UrlInputBar({
               onMouseDown={(e) => {
                 e.preventDefault();
                 dismissSuggestions();
-                onAnalyze(url.trim(), searchMode);
+                onAnalyze(url.trim(), searchMode, activeEngineMode);
               }}
               onClick={() => {
                 dismissSuggestions();
-                onAnalyze(url.trim(), searchMode);
+                onAnalyze(url.trim(), searchMode, activeEngineMode);
               }}
               className="p-2.5 mt-1 rounded-xl cursor-pointer neu-recessed hover:neu-raised flex items-center justify-between text-xs text-[#64748B] hover:text-[#0084FF] border-t border-slate-200/50 dark:border-slate-700/50 transition-all"
             >
@@ -595,27 +686,39 @@ export default function UrlInputBar({
         </div>
       )}
 
-      {/* KON Search 1.2 Rei Model Spotlight Banner */}
+      {/* Dual Search Engine Model Spotlight Banner */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-[11px] text-[#94A3B8]">Search Model:</span>
+          <span className="font-semibold text-[11px] text-[#94A3B8]">Active Engine:</span>
           <button
             type="button"
             onClick={onOpenModelModal}
-            className="neu-recessed px-2.5 py-1 rounded-lg text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
-            title="Our Search Model: KON Search 1.2 Rei (Supervised GBDT & Neural SGD)"
+            className={`neu-recessed px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${
+              activeEngineMode === "flash"
+                ? "text-[#F59E0B] hover:text-[#D97706] border border-[#F59E0B]/25"
+                : "text-[#0084FF] hover:text-[#0074E0] border border-[#0084FF]/25"
+            }`}
+            title={`Active Search Engine: ${activeEngineMode === "flash" ? "KON Search 1.2 Rei Flash (Speed Mode)" : "KON Search 1.2 Rei (Precision Mode)"}`}
           >
-            <Cpu className="w-3 h-3 text-[#0084FF]" />
-            <span>KON Search 1.2 Rei</span>
-            <span className="text-[10px] opacity-75 font-mono">v1.2</span>
+            {activeEngineMode === "flash" ? (
+              <Zap className="w-3 h-3 text-[#F59E0B]" />
+            ) : (
+              <Cpu className="w-3 h-3 text-[#0084FF]" />
+            )}
+            <span>{activeEngineMode === "flash" ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"}</span>
+            <span className="text-[10px] opacity-80 font-mono">
+              {activeEngineMode === "flash" ? "⚡ Speed" : "🎯 Precision"}
+            </span>
           </button>
           <span className="text-[11px] text-[#94A3B8] hidden sm:inline">
-            · Supervised ML Ranker · 4,972 Associations · $0 API Cost
+            {activeEngineMode === "flash"
+              ? "· Lightweight Token Scoring · Bounded Network Retrieval · Zero Lag"
+              : "· Supervised ML Ranker · Deep Contextual Discovery · 4,972 Associations"}
           </span>
         </div>
 
         <span className="text-[10px] font-mono text-[#94A3B8] hidden md:inline">
-          &lt;1.5ms Local CPU Inference
+          {activeEngineMode === "flash" ? "<0.05ms Native Rust Ranking" : "<0.20ms Native Rust Core"}
         </span>
       </div>
 

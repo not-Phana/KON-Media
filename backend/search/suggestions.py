@@ -1477,6 +1477,7 @@ class SuggestionEngine:
         query: str,
         limit: int = 6,
         media_type: str = "all",
+        engine_mode: str = "rei",
     ) -> List[Dict[str, Any]]:
         """Retrieve, rank, and format search suggestions with high-speed LRU caching."""
         clean_q = query.strip()
@@ -1484,12 +1485,44 @@ class SuggestionEngine:
             return []
 
         # Check LRU suggestion cache (~0.001s)
-        cache_key = f"{clean_q.lower()}::{limit}::{media_type}"
+        cache_key = f"{clean_q.lower()}::{limit}::{media_type}::{engine_mode.lower()}"
         now = time.time()
         if cache_key in _SUGGESTION_CACHE:
             ts, cached_list = _SUGGESTION_CACHE[cache_key]
             if now - ts < _CACHE_TTL_SECONDS:
                 return cached_list
+
+        # Fast path for Flash mode: Sub-millisecond direct lookup (< 0.05ms)
+        if engine_mode.lower() == "flash":
+            try:
+                import backend.search.rust_bridge as rust_bridge
+                if rust_bridge.is_rust_available():
+                    flash_sugs = rust_bridge.get_rust_suggestions_flash(clean_q, media_type=media_type, limit=limit)
+                    if flash_sugs:
+                        formatted = []
+                        for s in flash_sugs:
+                            formatted.append({
+                                "id": f"flash_{normalize_text(s.get('title', '')).replace(' ', '_')}",
+                                "query": f"{s.get('title', '')} {s.get('artist', '')}".strip(),
+                                "title": s.get("title", ""),
+                                "artist": s.get("artist"),
+                                "type": "song" if s.get("suggestion_type") != "artist" else "artist",
+                                "category": s.get("suggestion_type", "song"),
+                                "confidence": s.get("confidence", "strong"),
+                                "context_clue": s.get("context"),
+                                "platform": "youtube",
+                                "thumbnail": s.get("thumbnail") or "https://i.ytimg.com/vi/default/hqdefault.jpg",
+                                "duration": s.get("duration"),
+                                "url": s.get("url"),
+                                "match_reason": s.get("reason") or "Flash match",
+                                "score": s.get("score", 0.90),
+                                "engine_mode": "flash",
+                            })
+                        if len(formatted) > 0:
+                            _SUGGESTION_CACHE[cache_key] = (now, formatted[:limit])
+                            return formatted[:limit]
+            except Exception as e:
+                log.debug("Flash suggestions fast path error: %s", e)
 
         intent = parse_suggestion_intent(clean_q)
 

@@ -100,6 +100,8 @@ pub struct SuggestionQuery {
     pub q: Option<String>,
     pub limit: Option<usize>,
     pub media_type: Option<String>,
+    pub engine_mode: Option<String>,
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -107,6 +109,8 @@ pub struct SearchQueryParams {
     pub q: Option<String>,
     pub limit: Option<usize>,
     pub media_type: Option<String>,
+    pub engine_mode: Option<String>,
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -178,11 +182,16 @@ async fn suggestions_handler(
         }));
     }
 
-    let raw_suggestions = kon_search_core::suggestions::get_search_suggestions(
-        clean_q,
-        &media_type,
-        limit,
-    );
+    let req_mode = params.model.or(params.engine_mode).unwrap_or_else(|| "rei".to_string()).to_lowercase();
+    let is_flash = req_mode.contains("flash");
+    let model_label = if is_flash { "KON Search 1.2 Rei Flash" } else { "KON Search 1.2 Rei" };
+    let mode_name = if is_flash { "flash" } else { "rei" };
+
+    let raw_suggestions = if is_flash {
+        kon_search_core::suggestions::get_search_suggestions_flash(clean_q, &media_type, limit)
+    } else {
+        kon_search_core::suggestions::get_search_suggestions(clean_q, &media_type, limit)
+    };
 
     let formatted: Vec<Value> = raw_suggestions
         .into_iter()
@@ -212,6 +221,10 @@ async fn suggestions_handler(
     Json(json!({
         "query": clean_q,
         "count": count,
+        "model": model_label,
+        "product": model_label,
+        "engine": model_label,
+        "engine_mode": mode_name,
         "suggestions": formatted
     }))
 }
@@ -324,7 +337,16 @@ async fn search_handler(
         media_type: Some(media_type.clone()),
     };
 
-    let ranked = kon_search_core::ranking::rank_candidates(&query_input, candidates, None);
+    let req_mode = params.model.or(params.engine_mode).unwrap_or_else(|| "rei".to_string()).to_lowercase();
+    let is_flash = req_mode.contains("flash");
+    let model_label = if is_flash { "KON Search 1.2 Rei Flash" } else { "KON Search 1.2 Rei" };
+    let mode_name = if is_flash { "flash" } else { "rei" };
+
+    let ranked = if is_flash {
+        kon_search_core::ranking::rank_candidates_flash(&query_input, candidates, Some(limit))
+    } else {
+        kon_search_core::ranking::rank_candidates(&query_input, candidates, None)
+    };
 
     let results: Vec<Value> = ranked
         .into_iter()
@@ -355,6 +377,10 @@ async fn search_handler(
     Json(json!({
         "query": clean_q,
         "count": count,
+        "model": model_label,
+        "product": model_label,
+        "engine": model_label,
+        "engine_mode": mode_name,
         "results": results
     }))
 }

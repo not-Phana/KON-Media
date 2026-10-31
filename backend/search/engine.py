@@ -52,14 +52,18 @@ class SearchEngine:
         expected_title: Optional[str] = None,
         expected_duration: Optional[float] = None,
         ffmpeg_path: Optional[str] = None,
+        engine_mode: str = "rei",
     ) -> List[Dict[str, Any]]:
         """Search across providers, normalize, rank, and return formatted candidates."""
         clean_q = query.strip()
         if not clean_q:
             return []
 
+        is_flash = (engine_mode or "").lower() == "flash"
+        model_name = "KON Search 1.2 Rei Flash" if is_flash else "KON Search 1.2 Rei"
+
         # 0. Check ultra-fast in-memory/TTL search cache (~0.001s)
-        cache_key = self.cache.make_key(clean_q, media_type=media_type, provider=preferred_provider, limit=limit)
+        cache_key = self.cache.make_key(clean_q, media_type=media_type, provider=preferred_provider, limit=limit, engine_mode=engine_mode)
         cached = self.cache.get(cache_key)
         if cached is not None:
             return cached
@@ -77,8 +81,8 @@ class SearchEngine:
         # Preserve user query intact - never poison search term with blind unigram associations or guesses
         search_term = clean_q
 
-        # 3. Retrieve candidates from providers concurrently with broad candidate pool
-        pool_limit = min(max(limit + 8, 15), 30)
+        # 3. Retrieve candidates from providers concurrently (bounded in Flash mode)
+        pool_limit = min(max(limit + 2, 8), 12) if is_flash else min(max(limit + 8, 15), 30)
         candidates = self.aggregator.aggregate_candidates(
             query=search_term,
             limit_per_provider=pool_limit,
@@ -123,8 +127,8 @@ class SearchEngine:
         elif has_franchise_role and not (search_query.detected_artist and search_query.detected_title):
             soundtrack_query_target = clean_q
 
-        # Only run extra provider search if we don't already have enough candidates (minimum 8)
-        if soundtrack_query_target and soundtrack_query_target.lower() != clean_q.lower() and len(candidates) < 8:
+        # In Flash mode, skip extra soundtrack secondary crawling if candidates already exist
+        if soundtrack_query_target and soundtrack_query_target.lower() != clean_q.lower() and (not is_flash and len(candidates) < 8):
             extra_candidates = self.aggregator.aggregate_candidates(
                 query=soundtrack_query_target,
                 limit_per_provider=min(pool_limit // 2, 8),
@@ -140,11 +144,18 @@ class SearchEngine:
         # 4. Load historical verified feedback lookup
         feedback_lookup = self.feedback_store.get_verified_lookup()
 
-        # 5. Rank candidates using native Rust search core (or verified Python relevance fallback)
-        ranked = rust_bridge.rank_candidates(
-            query=search_query,
-            candidates=candidates,
-        )
+        # 5. Rank candidates using selected engine pipeline (Flash or Precision)
+        if is_flash:
+            ranked = rust_bridge.rank_candidates_flash(
+                query=search_query,
+                candidates=candidates,
+                limit=limit,
+            )
+        else:
+            ranked = rust_bridge.rank_candidates(
+                query=search_query,
+                candidates=candidates,
+            )
 
         # 6. Apply verified historical user feedback boost if available
         norm_key = search_query.normalized_query
@@ -161,7 +172,12 @@ class SearchEngine:
                     break
 
         # 7. Format results for API / UI consumers and store in fast cache
-        results = [c.to_dict() for c in ranked[:limit]]
+        results = []
+        for c in ranked[:limit]:
+            d = c.to_dict()
+            d["engine_mode"] = "flash" if is_flash else "rei"
+            d["model"] = model_name
+            results.append(d)
         self.cache.set(cache_key, results)
         return results
 
@@ -176,6 +192,7 @@ class SearchEngine:
         media_type: str = "all",
         preferred_provider: Optional[str] = None,
         ffmpeg_path: Optional[str] = None,
+        engine_mode: str = "rei",
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream real-time search progress, multi-provider candidates, and live re-ranking."""
         clean_q = query.strip()
@@ -189,8 +206,11 @@ class SearchEngine:
             }
             return
 
+        is_flash = (engine_mode or "").lower() == "flash"
+        model_name = "KON Search 1.2 Rei Flash" if is_flash else "KON Search 1.2 Rei"
+
         # 0. Check cache
-        cache_key = self.cache.make_key(clean_q, media_type=media_type, provider=preferred_provider, limit=limit)
+        cache_key = self.cache.make_key(clean_q, media_type=media_type, provider=preferred_provider, limit=limit, engine_mode=engine_mode)
         cached = self.cache.get(cache_key)
         if cached is not None:
             yield {
@@ -203,7 +223,9 @@ class SearchEngine:
                 "providers_timed_out": [],
                 "providers_failed": [],
                 "engine": self.get_active_engine(),
-                "product": "KON Search 1.2 Rei",
+                "product": model_name,
+                "model": model_name,
+                "engine_mode": "flash" if is_flash else "rei",
             }
             return
 
@@ -239,7 +261,7 @@ class SearchEngine:
             "providers": provider_names,
         }
 
-        pool_limit = min(max(limit + 8, 15), 30)
+        pool_limit = min(max(limit + 2, 8), 12) if is_flash else min(max(limit + 8, 15), 30)
         accumulated_candidates: List[CandidateResult] = []
         completed_providers: List[str] = []
         timed_out_providers: List[str] = []
@@ -310,8 +332,16 @@ class SearchEngine:
                         "provider": p_name,
                     }
 
-                    ranked = rust_bridge.rank_candidates(query=search_query, candidates=accumulated_candidates)
-                    partial_results = [c.to_dict() for c in ranked[:limit]]
+                    if is_flash:
+                        ranked = rust_bridge.rank_candidates_flash(query=search_query, candidates=accumulated_candidates, limit=limit)
+                    else:
+                        ranked = rust_bridge.rank_candidates(query=search_query, candidates=accumulated_candidates)
+                    partial_results = []
+                    for c in ranked[:limit]:
+                        d = c.to_dict()
+                        d["engine_mode"] = "flash" if is_flash else "rei"
+                        d["model"] = model_name
+                        partial_results.append(d)
                     pending = [p for p in provider_names if p not in completed_providers and p not in timed_out_providers and p not in failed_providers]
 
                     yield {
@@ -326,8 +356,16 @@ class SearchEngine:
 
         # Final ranking and completion
         if accumulated_candidates:
-            ranked = rust_bridge.rank_candidates(query=search_query, candidates=accumulated_candidates)
-            final_results = [c.to_dict() for c in ranked[:limit]]
+            if is_flash:
+                ranked = rust_bridge.rank_candidates_flash(query=search_query, candidates=accumulated_candidates, limit=limit)
+            else:
+                ranked = rust_bridge.rank_candidates(query=search_query, candidates=accumulated_candidates)
+            final_results = []
+            for c in ranked[:limit]:
+                d = c.to_dict()
+                d["engine_mode"] = "flash" if is_flash else "rei"
+                d["model"] = model_name
+                final_results.append(d)
             self.cache.set(cache_key, final_results)
 
             if timed_out_providers or failed_providers:
@@ -341,7 +379,9 @@ class SearchEngine:
                     "providers_timed_out": timed_out_providers,
                     "providers_failed": failed_providers,
                     "engine": self.get_active_engine(),
-                    "product": "KON Search 1.2 Rei",
+                    "product": model_name,
+                    "model": model_name,
+                    "engine_mode": "flash" if is_flash else "rei",
                 }
             else:
                 yield {
@@ -354,7 +394,9 @@ class SearchEngine:
                     "providers_timed_out": timed_out_providers,
                     "providers_failed": failed_providers,
                     "engine": self.get_active_engine(),
-                    "product": "KON Search 1.2 Rei",
+                    "product": model_name,
+                    "model": model_name,
+                    "engine_mode": "flash" if is_flash else "rei",
                 }
         else:
             yield {

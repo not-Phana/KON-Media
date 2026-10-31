@@ -6,7 +6,7 @@ import logging
 import shutil
 from pathlib import Path
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel, Field
 
@@ -293,37 +293,49 @@ async def search_suggestions_endpoint(
     response: Response,
     limit: int = 6,
     media_type: Optional[str] = "all",
+    engine_mode: Optional[str] = Query("rei", alias="engine_mode"),
+    model: Optional[str] = None,
 ):
     """Smart autocomplete and intelligent song discovery from genuine evidence."""
     clean_q = q.strip()
+    selected_mode = (model or engine_mode or "rei").lower()
+    is_flash = "flash" in selected_mode
+    mode_name = "flash" if is_flash else "rei"
+    model_label = "KON Search 1.2 Rei Flash" if is_flash else "KON Search 1.2 Rei"
+
     if not clean_q:
         return {
             "query": "",
             "suggestions": [],
             "count": 0,
-            "product": "KON Search 1.2 Rei",
-            "engine": "KON Search 1.2 Rei",
+            "product": model_label,
+            "model": model_label,
+            "engine": model_label,
+            "engine_mode": mode_name,
         }
 
     clamped_limit = min(max(limit, 1), 12)
     from backend.search.suggestions import get_shared_suggestion_engine
 
     engine = get_shared_suggestion_engine()
-    response.headers["X-KON-Search-Engine"] = "KON Search 1.2 Rei"
+    response.headers["X-KON-Search-Engine"] = model_label
 
     suggestions = await asyncio.to_thread(
         engine.get_suggestions,
         query=clean_q,
         limit=clamped_limit,
         media_type=media_type or "all",
+        engine_mode=mode_name,
     )
 
     return {
         "query": clean_q,
         "suggestions": suggestions,
         "count": len(suggestions),
-        "product": "KON Search 1.2 Rei",
-        "engine": "KON Search 1.2 Rei",
+        "product": model_label,
+        "model": model_label,
+        "engine": model_label,
+        "engine_mode": mode_name,
     }
 
 
@@ -350,6 +362,8 @@ async def search_media_endpoint(
     limit: int = 20,
     media_type: Optional[str] = "all",
     provider: Optional[str] = None,
+    engine_mode: Optional[str] = Query("rei", alias="engine_mode"),
+    model: Optional[str] = None,
 ):
     """Search for media across supported public providers and return ranked results."""
     from backend.search.engine import SearchEngine
@@ -357,12 +371,18 @@ async def search_media_endpoint(
     if not clean_q:
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
 
+    selected_mode = (model or engine_mode or "rei").lower()
+    is_flash = "flash" in selected_mode
+    mode_name = "flash" if is_flash else "rei"
+    model_label = "KON Search 1.2 Rei Flash" if is_flash else "KON Search 1.2 Rei"
+
     clamped_limit = min(max(limit, 1), 50)
     configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
     from backend.search.engine import SearchEngine
     engine = SearchEngine()
     active_engine = engine.get_active_engine()
     response.headers["X-KON-Search-Engine"] = active_engine
+    response.headers["X-KON-Search-Model"] = model_label
 
     results = await asyncio.to_thread(
         engine.search,
@@ -371,6 +391,7 @@ async def search_media_endpoint(
         media_type=media_type or "all",
         preferred_provider=provider,
         ffmpeg_path=configured_ffmpeg,
+        engine_mode=mode_name,
     )
     agg_status = getattr(engine.aggregator, "last_status", {})
     return {
@@ -378,8 +399,9 @@ async def search_media_endpoint(
         "media_type": media_type or "all",
         "count": len(results),
         "engine": active_engine,
-        "product": "KON Search 1.2 Rei",
-        "model": "KON Search 1.2 Rei",
+        "product": model_label,
+        "model": model_label,
+        "engine_mode": mode_name,
         "status": "complete" if agg_status.get("is_complete", True) else "partial",
         "providers_completed": agg_status.get("completed", []),
         "providers_timed_out": agg_status.get("timed_out", []),
@@ -396,17 +418,23 @@ async def search_live_endpoint(
     limit: int = 20,
     media_type: Optional[str] = "all",
     provider: Optional[str] = None,
+    engine_mode: Optional[str] = Query("rei", alias="engine_mode"),
+    model: Optional[str] = None,
 ):
     """Server-Sent Events (SSE) live search streaming real-time status and incremental candidates."""
     clean_q = q.strip()
     if not clean_q:
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
 
+    selected_mode = (model or engine_mode or "rei").lower()
+    is_flash = "flash" in selected_mode
+    mode_name = "flash" if is_flash else "rei"
+    model_label = "KON Search 1.2 Rei Flash" if is_flash else "KON Search 1.2 Rei"
+
     clamped_limit = min(max(limit, 1), 50)
     configured_ffmpeg = settings_store.get_settings().get("ffmpeg_path")
     from backend.search.engine import SearchEngine
     engine = SearchEngine()
-    active_engine = engine.get_active_engine()
 
     async def event_generator():
         try:
@@ -416,6 +444,7 @@ async def search_live_endpoint(
                 media_type=media_type or "all",
                 preferred_provider=provider,
                 ffmpeg_path=configured_ffmpeg,
+                engine_mode=mode_name,
             ):
                 if await request.is_disconnected():
                     break
@@ -430,7 +459,7 @@ async def search_live_endpoint(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-KON-Search-Engine": active_engine,
+            "X-KON-Search-Engine": model_label,
         },
     )
 

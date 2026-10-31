@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   ChevronRight,
   Cpu,
+  Zap,
   Loader2,
   AlertCircle,
   FolderOpen,
@@ -176,6 +177,7 @@ export default function SearchResultsCard({
   query,
   results,
   searchMode = "audio",
+  engineMode = "rei",
   searchState = "complete",
   searchStage = null,
   searchMeta = null,
@@ -190,6 +192,13 @@ export default function SearchResultsCard({
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());
   const [localPending, setLocalPending] = useState({});
+
+  const isFlash =
+    engineMode === "flash" ||
+    searchMeta?.engine_mode === "flash" ||
+    searchMeta?.model?.includes("Flash") ||
+    results?.[0]?.engine_mode === "flash" ||
+    results?.[0]?.model?.includes("Flash");
 
   // Helper to resolve live status for candidate & mediaType
   const getCandidateStatus = (cand, mediaType) => {
@@ -299,10 +308,12 @@ export default function SearchResultsCard({
           <button
             type="button"
             onClick={onOpenModelModal}
-            className="neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
+            className={`neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${
+              isFlash ? "text-[#F59E0B] hover:text-[#D97706]" : "text-[#0084FF] hover:text-[#0074E0]"
+            }`}
           >
-            <Cpu className="w-3 h-3 text-[#0084FF]" />
-            <span>KON Search 1.2 Rei</span>
+            {isFlash ? <Zap className="w-3 h-3 text-[#F59E0B]" /> : <Cpu className="w-3 h-3 text-[#0084FF]" />}
+            <span>{isFlash ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"}</span>
           </button>
         </div>
 
@@ -422,11 +433,20 @@ export default function SearchResultsCard({
           <button
             type="button"
             onClick={onOpenModelModal}
-            className="neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer inline-flex items-center gap-1.5 transition-colors"
-            title="Our Search Model: Scored and ranked by KON Search 1.2 Rei (Click for model architecture & live weights)"
+            className={`neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${
+              isFlash ? "text-[#F59E0B] hover:text-[#D97706]" : "text-[#0084FF] hover:text-[#0074E0]"
+            }`}
+            title={
+              isFlash
+                ? "Active Search Engine: Ranked by KON Search 1.2 Rei Flash (Speed mode)"
+                : "Active Search Engine: Ranked by KON Search 1.2 Rei (Precision mode)"
+            }
           >
-            <Cpu className="w-3 h-3 text-[#0084FF]" />
-            <span>Ranked by KON Search 1.2 Rei</span>
+            {isFlash ? <Zap className="w-3 h-3 text-[#F59E0B]" /> : <Cpu className="w-3 h-3 text-[#0084FF]" />}
+            <span>Ranked by {isFlash ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"}</span>
+            <span className="text-[10px] opacity-80 font-mono">
+              {isFlash ? "⚡ Speed" : "🎯 Precision"}
+            </span>
           </button>
         </div>
 

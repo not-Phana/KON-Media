@@ -18,10 +18,10 @@ class SearchCache:
         self.misses = 0
 
     @staticmethod
-    def make_key(query: str, media_type: str = "all", provider: Optional[str] = None, limit: int = 5) -> str:
+    def make_key(query: str, media_type: str = "all", provider: Optional[str] = None, limit: int = 5, engine_mode: str = "rei") -> str:
         """Create deterministic canonical cache key."""
         clean_q = query.strip().lower()
-        return f"{clean_q}::{media_type.lower()}::{provider or 'all'}::{limit}"
+        return f"{clean_q}::{media_type.lower()}::{provider or 'all'}::{limit}::{engine_mode.lower()}"
 
     def get(self, key: str) -> Optional[List[Dict[str, Any]]]:
         """Retrieve cached candidate results if not expired."""
