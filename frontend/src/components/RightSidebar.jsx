@@ -58,12 +58,41 @@ export default function RightSidebar({
     currentTrack?.engine_mode === "flash" ||
     currentTrack?.model?.toLowerCase().includes("flash");
 
-  // Real-time audio time update listener for sidebar synced lyrics
-  const [currentTime, setCurrentTime] = useState(0);
-  const activeSidebarLineRef = useRef(null);
+  // Active synced lyric line tracking - strictly isolated to avoid unnecessary re-renders
+  const [activeLineIndex, setActiveLineIndex] = useState(-1);
+  const lyricsContainerRef = useRef(null);
+  const linesRef = useRef([]);
+  linesRef.current = lyricsData?.lines || [];
 
+  // Reset active line when track or lyrics payload changes
   useEffect(() => {
-    const handleTime = (e) => setCurrentTime(e.detail?.currentTime || 0);
+    setActiveLineIndex(-1);
+  }, [lyricsData]);
+
+  // Audio timeupdate listener: ONLY updates state when active lyric line actually changes
+  useEffect(() => {
+    let lastIndex = -1;
+
+    const handleTime = (e) => {
+      const cur = e.detail?.currentTime || 0;
+      const lines = linesRef.current;
+      if (!lines || lines.length === 0) return;
+
+      let found = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (cur >= lines[i].time) {
+          found = i;
+        } else {
+          break;
+        }
+      }
+
+      if (found !== lastIndex) {
+        lastIndex = found;
+        setActiveLineIndex(found);
+      }
+    };
+
     window.addEventListener("kon_audio_timeupdate", handleTime);
     return () => window.removeEventListener("kon_audio_timeupdate", handleTime);
   }, []);
@@ -71,23 +100,22 @@ export default function RightSidebar({
   const lines = lyricsData?.lines || [];
   const isSynced = lyricsData?.synced && lines.length > 0;
 
-  let activeLineIndex = -1;
-  if (isSynced) {
-    for (let i = 0; i < lines.length; i++) {
-      if (currentTime >= lines[i].time) {
-        activeLineIndex = i;
-      } else {
-        break;
-      }
-    }
-  }
-
-  // Smooth auto-scroll sidebar lyrics when active line changes
+  // Smooth auto-scroll sidebar lyrics - ISOLATED to container, never shakes parent aside
   useEffect(() => {
-    if (activeSidebarLineRef.current) {
-      activeSidebarLineRef.current.scrollIntoView({
+    const container = lyricsContainerRef.current;
+    if (!container || activeLineIndex < 0) return;
+
+    const lineElements = container.querySelectorAll("[data-sidebar-lyric]");
+    const activeEl = lineElements[activeLineIndex];
+    if (activeEl) {
+      const containerHeight = container.clientHeight;
+      const elOffsetTop = activeEl.offsetTop;
+      const elHeight = activeEl.clientHeight;
+      const targetScroll = elOffsetTop - (containerHeight / 2) + (elHeight / 2);
+
+      container.scrollTo({
+        top: Math.max(0, targetScroll),
         behavior: "smooth",
-        block: "nearest",
       });
     }
   }, [activeLineIndex]);
@@ -149,9 +177,9 @@ export default function RightSidebar({
                 </div>
               )}
 
-              {/* Dancing Equalizer Overlay when playing */}
+              {/* Sleek playing indicator badge in corner, keeping artwork clear */}
               {isPlaying && !isLoadingAudio && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-1 pointer-events-none rounded-lg">
+                <div className="absolute bottom-2 right-2 bg-slate-900/85 backdrop-blur-md px-2 py-1 rounded-md flex items-center gap-1 pointer-events-none border border-slate-700/60 shadow-md">
                   <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-1"></span>
                   <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-2"></span>
                   <span className="w-1 bg-[#0084FF] rounded-full equalizer-bar-3"></span>
@@ -284,22 +312,25 @@ export default function RightSidebar({
             </p>
           </div>
         ) : isSynced ? (
-          <div className="neu-recessed p-3 rounded-xl max-h-48 overflow-y-auto space-y-1.5 neu-custom-scrollbar">
+          <div
+            ref={lyricsContainerRef}
+            className="relative neu-recessed p-2.5 rounded-xl max-h-48 overflow-y-auto space-y-1 neu-custom-scrollbar"
+          >
             {lines.map((line, idx) => {
               const isActive = idx === activeLineIndex;
               return (
                 <div
                   key={`${line.time}_${idx}`}
-                  ref={isActive ? activeSidebarLineRef : null}
+                  data-sidebar-lyric={idx}
                   onClick={() => handleLineClick(line.time)}
-                  className={`text-xs rounded-lg px-2.5 py-1.5 transition-all duration-200 cursor-pointer ${
+                  className={`text-xs rounded-lg px-2.5 py-1.5 transition-colors duration-150 cursor-pointer border ${
                     isActive
-                      ? "neu-raised text-[#0084FF] font-black border border-[#0084FF]/40 bg-[#0084FF]/10 shadow-xs"
-                      : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] font-medium"
+                      ? "neu-raised text-[#0084FF] font-bold border-[#0084FF]/30 bg-[#0084FF]/10 shadow-xs"
+                      : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] font-medium border-transparent"
                   }`}
                   title={`Jump to ${formatDuration(line.time)}`}
                 >
-                  <p className="m-0 leading-tight truncate">
+                  <p className="m-0 leading-snug truncate">
                     {line.text || "..."}
                   </p>
                 </div>

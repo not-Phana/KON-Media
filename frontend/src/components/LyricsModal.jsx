@@ -55,6 +55,9 @@ export default function LyricsModal({
   // Sync with prop updates
   useEffect(() => {
     setLyricsData(initialLyricsData);
+    if (initialLyricsData?.found) {
+      setErrorMsg(null);
+    }
   }, [initialLyricsData]);
 
   useEffect(() => {
@@ -64,6 +67,15 @@ export default function LyricsModal({
   useEffect(() => {
     setErrorMsg(initialError);
   }, [initialError]);
+
+  // Sync state whenever modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setLyricsData(initialLyricsData);
+      setIsLoading(initialLoading);
+      setErrorMsg(initialLyricsData?.found ? null : initialError);
+    }
+  }, [isOpen, initialLyricsData, initialLoading, initialError]);
 
   useEffect(() => {
     if (currentTrack) {
@@ -122,12 +134,22 @@ export default function LyricsModal({
     setActiveLineIndex(foundIdx);
   }, [currentTime, lines, isSynced]);
 
-  // Smooth auto-scroll to active line
+  // Smooth auto-scroll strictly within theater container - never shakes parent window
   useEffect(() => {
-    if (activeLineRef.current && containerRef.current && !userScrolledRef.current) {
-      activeLineRef.current.scrollIntoView({
+    const container = containerRef.current;
+    if (!container || activeLineIndex < 0 || userScrolledRef.current) return;
+
+    const lineElements = container.querySelectorAll("[data-theater-line]");
+    const activeEl = lineElements[activeLineIndex];
+    if (activeEl) {
+      const containerHeight = container.clientHeight;
+      const elOffsetTop = activeEl.offsetTop;
+      const elHeight = activeEl.clientHeight;
+      const targetScroll = elOffsetTop - (containerHeight / 2) + (elHeight / 2);
+
+      container.scrollTo({
+        top: Math.max(0, targetScroll),
         behavior: "smooth",
-        block: "center",
       });
     }
   }, [activeLineIndex]);
@@ -357,14 +379,14 @@ export default function LyricsModal({
               return (
                 <div
                   key={`${line.time}_${idx}`}
-                  ref={isActive ? activeLineRef : null}
+                  data-theater-line={idx}
                   onClick={() => handleLineClick(line.time)}
-                  className={`transition-all duration-300 cursor-pointer rounded-2xl px-4 py-2.5 font-bold leading-relaxed tracking-tight ${
+                  className={`transition-colors duration-150 cursor-pointer rounded-2xl px-4 py-2.5 leading-relaxed tracking-tight border ${
                     isActive
-                      ? "text-2xl sm:text-3xl md:text-4xl text-[#38BDF8] scale-102 neu-recessed border border-[#0084FF]/40 bg-[#0084FF]/10 shadow-[0_0_24px_rgba(0,132,255,0.25)] font-black"
+                      ? "text-2xl sm:text-3xl md:text-4xl text-[#38BDF8] neu-recessed border-[#0084FF]/40 bg-[#0084FF]/10 shadow-[0_0_24px_rgba(0,132,255,0.25)] font-bold"
                       : isPast
-                      ? "text-lg sm:text-xl md:text-2xl text-[#64748B] hover:text-[#CBD5E1]"
-                      : "text-lg sm:text-xl md:text-2xl text-[#94A3B8] hover:text-[#F8FAFC]"
+                      ? "text-lg sm:text-xl md:text-2xl text-[#64748B] hover:text-[#CBD5E1] font-medium border-transparent"
+                      : "text-lg sm:text-xl md:text-2xl text-[#94A3B8] hover:text-[#F8FAFC] font-medium border-transparent"
                   }`}
                   title={`Jump to ${formatTime(line.time)}`}
                 >
