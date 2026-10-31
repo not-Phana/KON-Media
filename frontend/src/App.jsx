@@ -12,6 +12,8 @@ import LearningDashboardModal from "./components/LearningDashboardModal";
 import BottomMusicPlayer from "./components/BottomMusicPlayer";
 import NavigationTabBar from "./components/NavigationTabBar";
 import PlaybackQueueDrawer from "./components/PlaybackQueueDrawer";
+import LeftSidebar from "./components/LeftSidebar";
+import RightSidebar from "./components/RightSidebar";
 import LibraryWorkspace from "./components/LibraryWorkspace";
 import {
   getFavorites,
@@ -764,136 +766,196 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between">
-      <div className={`max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 ${currentTrack ? "pb-28" : ""}`}>
-        {/* Global Application Header */}
-        <Header
-          health={health}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          onOpenFile={handleOpenFile}
-          onOpenModelModal={() => setIsModelModalOpen(true)}
-          onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
-        />
+      <div className={`max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-6 ${currentTrack ? "pb-28" : ""}`}>
+        {/* 3-Column Workstation Layout */}
+        <div className="flex items-start gap-6">
+          {/* Left Sidebar: Navigation, Engine Switcher & Autonomous Learning */}
+          <LeftSidebar
+            activeView={activeView}
+            onViewChange={setActiveView}
+            favoritesCount={favorites.length}
+            recentCount={recentlyPlayed.length}
+            activeDownloadsCount={
+              activeTasks.filter((t) =>
+                ["queued", "downloading", "processing", "verifying"].includes(t.status)
+              ).length
+            }
+            engineMode={engineMode}
+            onEngineModeChange={handleEngineModeChange}
+            onOpenModelModal={() => setIsModelModalOpen(true)}
+            onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenFile={handleOpenFile}
+            health={health}
+            theme={theme}
+            onToggleTheme={handleToggleTheme}
+          />
 
-        {/* Workspace Navigation Bar */}
-        <NavigationTabBar
-          activeView={activeView}
-          onViewChange={setActiveView}
-          favoritesCount={favorites.length}
-          recentCount={recentlyPlayed.length}
-          activeDownloadsCount={
-            activeTasks.filter((t) =>
-              ["queued", "downloading", "processing", "verifying"].includes(t.status)
-            ).length
-          }
-          engineMode={engineMode}
-          onOpenModelModal={() => setIsModelModalOpen(true)}
-          onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
-        />
+          {/* Center Stage Workspace (Uncluttered & Focused) */}
+          <main className="flex-1 min-w-0 space-y-6">
+            {/* Mobile / Tablet Header & Navigation (< lg screens) */}
+            <div className="block lg:hidden space-y-4">
+              <Header
+                health={health}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                onOpenFile={handleOpenFile}
+                onOpenModelModal={() => setIsModelModalOpen(true)}
+                onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
+                theme={theme}
+                onToggleTheme={handleToggleTheme}
+              />
+              <NavigationTabBar
+                activeView={activeView}
+                onViewChange={setActiveView}
+                favoritesCount={favorites.length}
+                recentCount={recentlyPlayed.length}
+                activeDownloadsCount={
+                  activeTasks.filter((t) =>
+                    ["queued", "downloading", "processing", "verifying"].includes(t.status)
+                  ).length
+                }
+                engineMode={engineMode}
+                onOpenModelModal={() => setIsModelModalOpen(true)}
+                onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
+              />
+            </div>
 
-        {/* Favorites and Recently Played Library Workspace */}
-        {(activeView === "favorites" || activeView === "recent") && (
-          <LibraryWorkspace
-            activeTab={activeView}
-            onTabChange={setActiveView}
-            favorites={favorites}
-            recentlyPlayed={recentlyPlayed}
+            {/* Favorites and Recently Played Library Workspace */}
+            {(activeView === "favorites" || activeView === "recent") && (
+              <LibraryWorkspace
+                activeTab={activeView}
+                onTabChange={setActiveView}
+                favorites={favorites}
+                recentlyPlayed={recentlyPlayed}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onPlayTrack={(track, queue) => {
+                  handlePlayCandidate(track, queue);
+                }}
+                onToggleFavorite={handleToggleTrackFavorite}
+                onClearRecentlyPlayed={() => {
+                  clearRecentlyPlayed();
+                  setRecentlyPlayed([]);
+                }}
+                onDirectDownload={handleDirectDownload}
+                onOpenFile={handleOpenFile}
+                history={history}
+                onNavigateToSearch={() => setActiveView("search")}
+              />
+            )}
+
+            {/* URL Input & Ingress Bar */}
+            {activeView === "search" && (
+              <UrlInputBar
+                onAnalyze={handleAnalyze}
+                isLoading={isAnalyzing}
+                error={analyzeError}
+                onClearError={() => setAnalyzeError(null)}
+                onOpenModelModal={() => setIsModelModalOpen(true)}
+                onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
+                engineMode={engineMode}
+                onEngineModeChange={handleEngineModeChange}
+              />
+            )}
+
+            {/* Ranked Search Discoveries */}
+            {(searchResults || searchState === "searching" || searchState === "updating" || searchState === "no_results") && (
+              <SearchResultsCard
+                query={searchQuery}
+                results={searchResults}
+                searchMode={currentSearchMode}
+                engineMode={engineMode}
+                searchState={searchState}
+                searchStage={searchStage}
+                searchMeta={searchMeta}
+                activeTasks={activeTasks}
+                history={history}
+                onOpenFile={handleOpenFile}
+                onSelectCandidate={handleSelectSearchResult}
+                onDirectDownload={handleDirectDownload}
+                onDismiss={() => {
+                  setSearchResults(null);
+                  setSearchState("idle");
+                  setSearchMeta(null);
+                }}
+                onFeedback={(fb) => submitSearchFeedback(fb).catch(() => {})}
+                onOpenModelModal={() => setIsModelModalOpen(true)}
+                onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
+                onPlayCandidate={handlePlayCandidate}
+                currentPlayingTrack={currentTrack}
+                isPlaying={isPlaying}
+                isLoadingAudio={isLoadingAudio}
+                onAddToQueue={handleAddToQueue}
+                onToggleFavorite={handleToggleTrackFavorite}
+                favorites={favorites}
+              />
+            )}
+
+            {/* Media Preview & Format Selector */}
+            {analyzedMedia && (
+              <MediaPreviewCard
+                mediaInfo={analyzedMedia}
+                onStartDownload={handleStartDownload}
+                onDismiss={() => setAnalyzedMedia(null)}
+                onUpdateMediaInfo={setAnalyzedMedia}
+              />
+            )}
+
+            {/* Active Task Queue Monitor (Full view on downloads tab) */}
+            {activeView === "downloads" && (
+              <ActiveTasksMonitor
+                tasks={activeTasks}
+                onCancelTask={handleCancelTask}
+                onOpenFile={handleOpenFile}
+                onDismissTask={handleDismissTask}
+                onRetryTask={handleRetryTask}
+                onClearFinished={handleClearFinished}
+              />
+            )}
+
+            {/* Compact screen task monitor fallback (< xl) */}
+            {activeView === "search" && activeTasks.length > 0 && (
+              <div className="block xl:hidden">
+                <ActiveTasksMonitor
+                  tasks={activeTasks}
+                  onCancelTask={handleCancelTask}
+                  onOpenFile={handleOpenFile}
+                  onDismissTask={handleDismissTask}
+                  onRetryTask={handleRetryTask}
+                  onClearFinished={handleClearFinished}
+                />
+              </div>
+            )}
+
+            {/* Local Download History */}
+            {activeView === "downloads" && (
+              <HistoryWorkspace
+                history={history}
+                onOpenFile={handleOpenFile}
+                onDeleteItem={handleDeleteHistoryItem}
+                onClearAll={handleClearHistory}
+              />
+            )}
+          </main>
+
+          {/* Right Sidebar: Now Playing Spotlight, Queue Peek & Downloads Stream */}
+          <RightSidebar
             currentTrack={currentTrack}
             isPlaying={isPlaying}
-            onPlayTrack={(track, queue) => {
-              handlePlayCandidate(track, queue);
-            }}
-            onToggleFavorite={handleToggleTrackFavorite}
-            onClearRecentlyPlayed={() => {
-              clearRecentlyPlayed();
-              setRecentlyPlayed([]);
-            }}
-            onDirectDownload={handleDirectDownload}
-            onOpenFile={handleOpenFile}
-            history={history}
-            onNavigateToSearch={() => setActiveView("search")}
-          />
-        )}
-
-        {/* URL Input & Ingress Bar */}
-        {activeView === "search" && (
-          <UrlInputBar
-          onAnalyze={handleAnalyze}
-          isLoading={isAnalyzing}
-          error={analyzeError}
-          onClearError={() => setAnalyzeError(null)}
-          onOpenModelModal={() => setIsModelModalOpen(true)}
-          onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
-          engineMode={engineMode}
-          onEngineModeChange={handleEngineModeChange}
-        />
-        )}
-
-        {/* Ranked Search Discoveries */}
-        {(searchResults || searchState === "searching" || searchState === "updating" || searchState === "no_results") && (
-          <SearchResultsCard
-            query={searchQuery}
-            results={searchResults}
-            searchMode={currentSearchMode}
-            engineMode={engineMode}
-            searchState={searchState}
-            searchStage={searchStage}
-            searchMeta={searchMeta}
-            activeTasks={activeTasks}
-            history={history}
-            onOpenFile={handleOpenFile}
-            onSelectCandidate={handleSelectSearchResult}
-            onDirectDownload={handleDirectDownload}
-            onDismiss={() => {
-              setSearchResults(null);
-              setSearchState("idle");
-              setSearchMeta(null);
-            }}
-            onFeedback={(fb) => submitSearchFeedback(fb).catch(() => {})}
-            onOpenModelModal={() => setIsModelModalOpen(true)}
-          onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
-            onPlayCandidate={handlePlayCandidate}
-            currentPlayingTrack={currentTrack}
-            isPlaying={isPlaying}
             isLoadingAudio={isLoadingAudio}
-            onAddToQueue={handleAddToQueue}
-            onToggleFavorite={handleToggleTrackFavorite}
-            favorites={favorites}
+            onTogglePlay={handleTogglePlay}
+            onPlayCandidate={handlePlayCandidate}
+            onToggleFavorite={() => handleToggleTrackFavorite(currentTrack)}
+            isFavorite={isTrackFavorite(currentTrack, favorites)}
+            onDirectDownload={handleDirectDownload}
+            playbackQueue={playbackQueue}
+            queueIndex={queueIndex}
+            onToggleQueue={() => setIsQueueOpen((prev) => !prev)}
+            activeTasks={activeTasks}
+            onCancelTask={handleCancelTask}
+            onOpenFile={handleOpenFile}
           />
-        )}
-
-        {/* Media Preview & Format Selector */}
-        {analyzedMedia && (
-          <MediaPreviewCard
-            mediaInfo={analyzedMedia}
-            onStartDownload={handleStartDownload}
-            onDismiss={() => setAnalyzedMedia(null)}
-            onUpdateMediaInfo={setAnalyzedMedia}
-          />
-        )}
-
-        {/* Active Task Queue Monitor */}
-        {(activeView === "downloads" || (activeView === "search" && activeTasks.length > 0)) && (
-          <ActiveTasksMonitor
-          tasks={activeTasks}
-          onCancelTask={handleCancelTask}
-          onOpenFile={handleOpenFile}
-          onDismissTask={handleDismissTask}
-          onRetryTask={handleRetryTask}
-          onClearFinished={handleClearFinished}
-        />
-        )}
-
-        {/* Local Download History */}
-        {activeView === "downloads" && (
-          <HistoryWorkspace
-          history={history}
-          onOpenFile={handleOpenFile}
-          onDeleteItem={handleDeleteHistoryItem}
-          onClearAll={handleClearHistory}
-        />
-        )}
+        </div>
       </div>
 
       {/* Footer */}
