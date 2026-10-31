@@ -61,6 +61,7 @@ export default function RightSidebar({
   // Active synced lyric line tracking - strictly isolated to avoid unnecessary re-renders
   const [activeLineIndex, setActiveLineIndex] = useState(-1);
   const lyricsContainerRef = useRef(null);
+  const animFrameIdRef = useRef(null);
   const linesRef = useRef([]);
   linesRef.current = lyricsData?.lines || [];
 
@@ -100,24 +101,51 @@ export default function RightSidebar({
   const lines = lyricsData?.lines || [];
   const isSynced = lyricsData?.synced && lines.length > 0;
 
-  // Smooth auto-scroll sidebar lyrics - ISOLATED to container, never shakes parent aside
+  // Silky-smooth continuous glide for sidebar lyrics - gentle ease-out, isolated to container
   useEffect(() => {
     const container = lyricsContainerRef.current;
     if (!container || activeLineIndex < 0) return;
 
     const lineElements = container.querySelectorAll("[data-sidebar-lyric]");
     const activeEl = lineElements[activeLineIndex];
-    if (activeEl) {
-      const containerHeight = container.clientHeight;
-      const elOffsetTop = activeEl.offsetTop;
-      const elHeight = activeEl.clientHeight;
-      const targetScroll = elOffsetTop - (containerHeight / 2) + (elHeight / 2);
+    if (!activeEl) return;
 
-      container.scrollTo({
-        top: Math.max(0, targetScroll),
-        behavior: "smooth",
-      });
+    const containerHeight = container.clientHeight;
+    const elOffsetTop = activeEl.offsetTop;
+    const elHeight = activeEl.clientHeight;
+    const targetScroll = Math.max(0, elOffsetTop - (containerHeight / 2) + (elHeight / 2));
+
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
     }
+
+    const startY = container.scrollTop;
+    const distance = targetScroll - startY;
+    if (Math.abs(distance) < 2) return;
+
+    const duration = 550; // 550ms gentle glide
+    const startTime = performance.now();
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      container.scrollTop = startY + distance * easeOutCubic(progress);
+
+      if (progress < 1) {
+        animFrameIdRef.current = requestAnimationFrame(step);
+      } else {
+        animFrameIdRef.current = null;
+      }
+    };
+
+    animFrameIdRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+      }
+    };
   }, [activeLineIndex]);
 
   const handleLineClick = (lineTime) => {
@@ -314,7 +342,7 @@ export default function RightSidebar({
         ) : isSynced ? (
           <div
             ref={lyricsContainerRef}
-            className="relative neu-recessed p-2.5 rounded-xl max-h-48 overflow-y-auto space-y-1 neu-custom-scrollbar"
+            className="relative neu-recessed px-2 py-16 max-h-48 overflow-y-auto space-y-1 neu-custom-scrollbar"
           >
             {lines.map((line, idx) => {
               const isActive = idx === activeLineIndex;
@@ -323,10 +351,10 @@ export default function RightSidebar({
                   key={`${line.time}_${idx}`}
                   data-sidebar-lyric={idx}
                   onClick={() => handleLineClick(line.time)}
-                  className={`text-xs rounded-lg px-2.5 py-1.5 transition-colors duration-150 cursor-pointer border ${
+                  className={`text-xs rounded-lg px-2.5 py-1.5 transition-all duration-300 cursor-pointer ${
                     isActive
-                      ? "neu-raised text-[#0084FF] font-bold border-[#0084FF]/30 bg-[#0084FF]/10 shadow-xs"
-                      : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] font-medium border-transparent"
+                      ? "text-[#0084FF] font-bold opacity-100 bg-[#0084FF]/10 shadow-xs"
+                      : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] font-medium opacity-50 hover:opacity-90"
                   }`}
                   title={`Jump to ${formatDuration(line.time)}`}
                 >

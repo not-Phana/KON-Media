@@ -40,10 +40,10 @@ export default function LyricsModal({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [activeLineIndex, setActiveLineIndex] = useState(-1);
-  const activeLineRef = useRef(null);
   const containerRef = useRef(null);
   const userScrolledRef = useRef(false);
   const userScrollTimeoutRef = useRef(null);
+  const animFrameIdRef = useRef(null);
 
   // Local override state for instant in-modal search & retries
   const [lyricsData, setLyricsData] = useState(initialLyricsData);
@@ -134,38 +134,91 @@ export default function LyricsModal({
     setActiveLineIndex(foundIdx);
   }, [currentTime, lines, isSynced]);
 
-  // Smooth auto-scroll strictly within theater container - never shakes parent window
+  // Detect physical user manual scrolling (wheel/touch) so we do not fight user input
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onUserInteraction = () => {
+      userScrolledRef.current = true;
+      if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
+      userScrollTimeoutRef.current = setTimeout(() => {
+        userScrolledRef.current = false;
+      }, 3500);
+
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
+      }
+    };
+
+    container.addEventListener("wheel", onUserInteraction, { passive: true });
+    container.addEventListener("touchstart", onUserInteraction, { passive: true });
+    container.addEventListener("pointerdown", onUserInteraction, { passive: true });
+
+    return () => {
+      container.removeEventListener("wheel", onUserInteraction);
+      container.removeEventListener("touchstart", onUserInteraction);
+      container.removeEventListener("pointerdown", onUserInteraction);
+    };
+  }, []);
+
+  // Silky-smooth continuous glide with ease-out-cubic (Apple Music / Spotify feel)
   useEffect(() => {
     const container = containerRef.current;
     if (!container || activeLineIndex < 0 || userScrolledRef.current) return;
 
     const lineElements = container.querySelectorAll("[data-theater-line]");
     const activeEl = lineElements[activeLineIndex];
-    if (activeEl) {
-      const containerHeight = container.clientHeight;
-      const elOffsetTop = activeEl.offsetTop;
-      const elHeight = activeEl.clientHeight;
-      const targetScroll = elOffsetTop - (containerHeight / 2) + (elHeight / 2);
+    if (!activeEl) return;
 
-      container.scrollTo({
-        top: Math.max(0, targetScroll),
-        behavior: "smooth",
-      });
+    const containerHeight = container.clientHeight;
+    const elOffsetTop = activeEl.offsetTop;
+    const elHeight = activeEl.clientHeight;
+    const targetScroll = Math.max(0, elOffsetTop - (containerHeight / 2) + (elHeight / 2));
+
+    if (animFrameIdRef.current) {
+      cancelAnimationFrame(animFrameIdRef.current);
     }
+
+    const startY = container.scrollTop;
+    const distance = targetScroll - startY;
+
+    // Skip tiny sub-pixel jitters
+    if (Math.abs(distance) < 2) return;
+
+    const duration = 750; // 750ms gentle, slow cinematic glide
+    const startTime = performance.now();
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    const step = (now) => {
+      if (userScrolledRef.current) return;
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = easeOutCubic(progress);
+
+      container.scrollTop = startY + distance * eased;
+
+      if (progress < 1) {
+        animFrameIdRef.current = requestAnimationFrame(step);
+      } else {
+        animFrameIdRef.current = null;
+      }
+    };
+
+    animFrameIdRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+      }
+    };
   }, [activeLineIndex]);
 
-  // Temporarily suspend auto-scroll if user manually scrolls, resume after 3.5s
-  const handleScroll = () => {
-    userScrolledRef.current = true;
-    if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
-    userScrollTimeoutRef.current = setTimeout(() => {
-      userScrolledRef.current = false;
-    }, 3500);
-  };
-
   const handleLineClick = (lineTime) => {
-    window.dispatchEvent(new CustomEvent("kon_audio_seek", { detail: { time: lineTime } }));
     userScrolledRef.current = false;
+    if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
+    window.dispatchEvent(new CustomEvent("kon_audio_seek", { detail: { time: lineTime } }));
   };
 
   // Perform in-modal manual search / retry
@@ -326,8 +379,7 @@ export default function LyricsModal({
       {/* CENTER STAGE: LYRICS SCROLLER */}
       <main
         ref={containerRef}
-        onScroll={handleScroll}
-        className="relative z-10 flex-1 overflow-y-auto py-10 px-2 sm:px-8 space-y-6 neu-custom-scrollbar max-w-4xl mx-auto w-full text-center"
+        className="relative z-10 flex-1 overflow-y-auto px-4 sm:px-8 neu-custom-scrollbar max-w-4xl mx-auto w-full text-center"
       >
         {isLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-3 py-20">
@@ -371,7 +423,7 @@ export default function LyricsModal({
             </form>
           </div>
         ) : isSynced ? (
-          <div className="space-y-4 py-8">
+          <div className="pt-[32vh] pb-[40vh] space-y-4">
             {lines.map((line, idx) => {
               const isActive = idx === activeLineIndex;
               const isPast = idx < activeLineIndex;
@@ -381,12 +433,12 @@ export default function LyricsModal({
                   key={`${line.time}_${idx}`}
                   data-theater-line={idx}
                   onClick={() => handleLineClick(line.time)}
-                  className={`transition-colors duration-150 cursor-pointer rounded-2xl px-4 py-2.5 leading-relaxed tracking-tight border ${
+                  className={`transition-all duration-500 ease-out cursor-pointer rounded-2xl px-4 py-3 leading-relaxed tracking-tight select-none text-2xl sm:text-3xl md:text-4xl ${
                     isActive
-                      ? "text-2xl sm:text-3xl md:text-4xl text-[#38BDF8] neu-recessed border-[#0084FF]/40 bg-[#0084FF]/10 shadow-[0_0_24px_rgba(0,132,255,0.25)] font-bold"
+                      ? "text-white font-black opacity-100 drop-shadow-[0_2px_24px_rgba(255,255,255,0.45)]"
                       : isPast
-                      ? "text-lg sm:text-xl md:text-2xl text-[#64748B] hover:text-[#CBD5E1] font-medium border-transparent"
-                      : "text-lg sm:text-xl md:text-2xl text-[#94A3B8] hover:text-[#F8FAFC] font-medium border-transparent"
+                      ? "text-slate-400 font-bold opacity-30 hover:opacity-75"
+                      : "text-slate-300 font-bold opacity-45 hover:opacity-85"
                   }`}
                   title={`Jump to ${formatTime(line.time)}`}
                 >
