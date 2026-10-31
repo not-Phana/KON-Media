@@ -66,8 +66,10 @@ export default function BottomMusicPlayer({
   isQueueOpen = false,
   onToggleFavorite,
   isFavorite = false,
+  onTrackListen,
 }) {
   const audioRef = useRef(null);
+  const listenedTriggeredRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [bufferedPercent, setBufferedPercent] = useState(0);
@@ -108,6 +110,7 @@ export default function BottomMusicPlayer({
     setPlayerError(null);
     setCurrentTime(0);
     setBufferedPercent(0);
+    listenedTriggeredRef.current = false;
 
     if (audioSrc) {
       el.src = audioSrc;
@@ -165,13 +168,19 @@ export default function BottomMusicPlayer({
     if (isSeeking || !audioRef.current) return;
     const cur = audioRef.current.currentTime || 0;
     setCurrentTime(cur);
+    if (!listenedTriggeredRef.current && (cur >= 30 || (duration > 0 && cur >= duration * 0.5))) {
+      listenedTriggeredRef.current = true;
+      if (onTrackListen && currentTrack) {
+        onTrackListen(currentTrack, cur, false);
+      }
+    }
 
     const el = audioRef.current;
     if (el.buffered.length > 0 && el.duration > 0) {
       const end = el.buffered.end(el.buffered.length - 1);
       setBufferedPercent(Math.min(100, (end / el.duration) * 100));
     }
-  }, [isSeeking]);
+  }, [isSeeking, duration, onTrackListen, currentTrack]);
 
   const handleLoadedMetadata = useCallback(() => {
     if (!audioRef.current) return;
@@ -225,6 +234,9 @@ export default function BottomMusicPlayer({
   }, []);
 
   const handleEnded = useCallback(() => {
+    if (onTrackListen && currentTrack) {
+      onTrackListen(currentTrack, audioRef.current?.currentTime || duration, true);
+    }
     if (repeatMode === "one") {
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
@@ -235,7 +247,7 @@ export default function BottomMusicPlayer({
     } else if (onPause) {
       onPause();
     }
-  }, [repeatMode, onNext, isShuffle, onPause]);
+  }, [repeatMode, onNext, isShuffle, onPause, onTrackListen, currentTrack, duration]);
 
   // Transport toggle with direct element play for instant gesture recognition
   const handleTransportToggle = () => {

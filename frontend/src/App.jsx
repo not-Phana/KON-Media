@@ -8,6 +8,7 @@ import ActiveTasksMonitor from "./components/ActiveTasksMonitor";
 import HistoryWorkspace from "./components/HistoryWorkspace";
 import SettingsModal from "./components/SettingsModal";
 import ModelInfoModal from "./components/ModelInfoModal";
+import LearningDashboardModal from "./components/LearningDashboardModal";
 import BottomMusicPlayer from "./components/BottomMusicPlayer";
 import NavigationTabBar from "./components/NavigationTabBar";
 import PlaybackQueueDrawer from "./components/PlaybackQueueDrawer";
@@ -40,6 +41,7 @@ import {
   openFileInExplorer,
   subscribeToEvents,
   resolveAudioStream,
+  recordLearningInteraction,
 } from "./api";
 
 export default function App() {
@@ -55,6 +57,7 @@ export default function App() {
   const [settings, setSettings] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
+  const [isLearningDashboardOpen, setIsLearningDashboardOpen] = useState(false);
 
   const [analyzedMedia, setAnalyzedMedia] = useState(null);
   const [searchResults, setSearchResults] = useState(null);
@@ -129,11 +132,12 @@ export default function App() {
         setIsQueueOpen(false);
         setIsSettingsOpen(false);
         setIsModelModalOpen(false);
+        setIsLearningDashboardOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentTrack, isQueueOpen, isSettingsOpen, isModelModalOpen]);
+  }, [currentTrack, isQueueOpen, isSettingsOpen, isModelModalOpen, isLearningDashboardOpen]);
 
   // Queue and Favorite Actions
   const handleAddToQueue = (cand) => {
@@ -171,6 +175,16 @@ export default function App() {
   const handleToggleTrackFavorite = (track) => {
     if (!track) return;
     const isNowFav = toggleFavorite(track);
+    if (isNowFav) {
+      recordLearningInteraction({
+        query: searchQuery,
+        candidate_id: track.id || track.url,
+        candidate_title: track.clean_title || track.title,
+        event_type: "favorite",
+        candidate_url: track.url,
+        engine_mode: track.engine_mode || engineMode,
+      });
+    }
     setToast({
       message: isNowFav ? `Saved to Favorites: ${track.clean_title || track.title}` : `Removed from Favorites`,
       type: "info",
@@ -180,6 +194,14 @@ export default function App() {
 
   // Play candidate handler (preview before download)
   const handlePlayCandidate = async (cand, customQueue = null) => {
+    recordLearningInteraction({
+      query: searchQuery,
+      candidate_id: cand?.id || cand?.url,
+      candidate_title: cand?.clean_title || cand?.title || "",
+      event_type: "preview",
+      candidate_url: cand?.url,
+      engine_mode: cand?.engine_mode || engineMode,
+    }).catch(() => {});
     if (!cand) return;
 
     // If clicking currently active track, simply toggle play/pause
@@ -292,6 +314,20 @@ export default function App() {
   const handleClosePlayer = () => {
     setIsPlaying(false);
     setCurrentTrack(null);
+  };
+
+  const handleTrackListen = (track, durationListened, isCompleted) => {
+    if (!track) return;
+    recordLearningInteraction({
+      query: searchQuery,
+      candidate_id: track.id || track.url,
+      candidate_title: track.clean_title || track.title || "",
+      event_type: "listen",
+      candidate_url: track.url,
+      engine_mode: track.engine_mode || engineMode,
+      listen_duration: durationListened,
+      track_duration: track.duration,
+    }).catch(() => {});
   };
 
   // Load initial health, settings, tasks, and history
@@ -533,6 +569,14 @@ export default function App() {
           ? candidate.clean_title
           : candidate.title;
 
+      recordLearningInteraction({
+        query: searchQuery,
+        candidate_id: candidate.id || candidate.url,
+        candidate_title: effectiveTitle,
+        event_type: "download",
+        candidate_url: candidate.url,
+        engine_mode: candidate.engine_mode || engineMode,
+      }).catch(() => {});
       const res = await queueDownload({
         url: candidate.url,
         title: effectiveTitle,
@@ -562,6 +606,14 @@ export default function App() {
 
   // Handle selecting a search discovery for custom format inspection
   const handleSelectSearchResult = async (candidate) => {
+    recordLearningInteraction({
+      query: searchQuery,
+      candidate_id: candidate?.id || candidate?.url,
+      candidate_title: candidate?.clean_title || candidate?.title || "",
+      event_type: "select",
+      candidate_url: candidate?.url,
+      engine_mode: candidate?.engine_mode || engineMode,
+    }).catch(() => {});
     setSearchResults(null);
     submitSearchFeedback({
       query: searchQuery,
@@ -719,6 +771,7 @@ export default function App() {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenFile={handleOpenFile}
           onOpenModelModal={() => setIsModelModalOpen(true)}
+          onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
           theme={theme}
           onToggleTheme={handleToggleTheme}
         />
@@ -736,6 +789,7 @@ export default function App() {
           }
           engineMode={engineMode}
           onOpenModelModal={() => setIsModelModalOpen(true)}
+          onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
         />
 
         {/* Favorites and Recently Played Library Workspace */}
@@ -770,6 +824,7 @@ export default function App() {
           error={analyzeError}
           onClearError={() => setAnalyzeError(null)}
           onOpenModelModal={() => setIsModelModalOpen(true)}
+          onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
           engineMode={engineMode}
           onEngineModeChange={handleEngineModeChange}
         />
@@ -797,6 +852,7 @@ export default function App() {
             }}
             onFeedback={(fb) => submitSearchFeedback(fb).catch(() => {})}
             onOpenModelModal={() => setIsModelModalOpen(true)}
+          onOpenLearningDashboard={() => setIsLearningDashboardOpen(true)}
             onPlayCandidate={handlePlayCandidate}
             currentPlayingTrack={currentTrack}
             isPlaying={isPlaying}
@@ -864,6 +920,12 @@ export default function App() {
         onClose={() => setIsModelModalOpen(false)}
       />
 
+      {/* Autonomous Continuous Learning Dashboard Modal */}
+      <LearningDashboardModal
+        isOpen={isLearningDashboardOpen}
+        onClose={() => setIsLearningDashboardOpen(false)}
+      />
+
       {/* Persistent Bottom Music Player (VLC-style controls) */}
       <BottomMusicPlayer
         currentTrack={currentTrack}
@@ -886,6 +948,7 @@ export default function App() {
         isQueueOpen={isQueueOpen}
         onToggleFavorite={() => handleToggleTrackFavorite(currentTrack)}
         isFavorite={isTrackFavorite(currentTrack, favorites)}
+        onTrackListen={handleTrackListen}
       />
 
       {/* Listening Queue Slide-Out Drawer */}

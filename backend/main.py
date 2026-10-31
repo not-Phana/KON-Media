@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.api.router import router as api_router, task_manager
+from backend.api.learning_router import router as learning_router
 from backend.config import HOST, PORT, FRONTEND_DIST_DIR
 
 
@@ -26,9 +27,14 @@ async def lifespan(app: FastAPI):
     trainer = get_continuous_trainer()
     trainer.start()
 
+    from backend.search.learning.scheduler import get_learning_scheduler
+    scheduler = get_learning_scheduler()
+    scheduler.start()
+
     yield
 
     trainer.stop()
+    scheduler.stop()
 
 
 app = FastAPI(
@@ -58,6 +64,7 @@ app.add_middleware(
 
 # Mount API endpoints
 app.include_router(api_router)
+app.include_router(learning_router)
 
 # Mount frontend static files if production build exists
 if FRONTEND_DIST_DIR.exists():

@@ -519,3 +519,61 @@ export function getAudioStreamUrl(rawUrl) {
   return `${base}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
 }
 
+// Autonomous Continuous Learning Endpoints
+export async function fetchLearningTelemetry() {
+  const res = await fetch(`${API_BASE}/learning/telemetry`);
+  if (!res.ok) throw new Error("Failed to fetch learning telemetry");
+  return res.json();
+}
+
+export async function triggerAutonomousTraining() {
+  const res = await fetch(`${API_BASE}/learning/train-now`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to trigger autonomous training");
+  return res.json();
+}
+
+export async function pauseLearningScheduler() {
+  const res = await fetch(`${API_BASE}/learning/scheduler/pause`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to pause learning scheduler");
+  return res.json();
+}
+
+export async function resumeLearningScheduler() {
+  const res = await fetch(`${API_BASE}/learning/scheduler/resume`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to resume learning scheduler");
+  return res.json();
+}
+
+export async function rollbackLearningModel() {
+  const res = await fetch(`${API_BASE}/learning/rollback`, { method: "POST" });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to roll back model");
+  return data;
+}
+
+export async function toggleLearningCollector(enabled) {
+  const res = await fetch(`${API_BASE}/learning/collector/toggle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) throw new Error("Failed to toggle collector");
+  return res.json();
+}
+
+export async function clearLearningData() {
+  const res = await fetch(`${API_BASE}/learning/collector/clear`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to clear learning data");
+  return res.json();
+}
+
+export async function recordLearningInteraction(event) {
+  try {
+    await fetch(`${API_BASE}/learning/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(event),
+    });
+  } catch (_) {}
+}
+

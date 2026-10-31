@@ -478,6 +478,19 @@ async def search_feedback_endpoint(req: SearchFeedbackRequest):
         reason=req.reason,
         provider=req.provider or "youtube",
     )
+    try:
+        from backend.search.learning.data_collector import get_learning_data_collector
+        collector = get_learning_data_collector()
+        collector.record_event(
+            query=req.query,
+            candidate_id=req.selected_id,
+            candidate_title=req.selected_title,
+            candidate_url=req.selected_url,
+            event_type="mismatch" if req.is_mismatch else "select",
+            reason=req.reason,
+        )
+    except Exception:
+        pass
     return {"status": "recorded", "entry": entry}
 
 

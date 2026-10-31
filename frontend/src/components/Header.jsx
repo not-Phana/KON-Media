@@ -1,5 +1,5 @@
 import React from "react";
-import { HardDrive, Settings, FolderOpen, Cpu, Moon, Sun } from "lucide-react";
+import { HardDrive, Settings, FolderOpen, Cpu, Moon, Sun, Brain } from "lucide-react";
 import KonLogo from "./KonLogo";
 
 export default function Header({
@@ -7,6 +7,7 @@ export default function Header({
   onOpenSettings,
   onOpenFile,
   onOpenModelModal,
+  onOpenLearningDashboard,
   theme,
   onToggleTheme,
 }) {
@@ -58,6 +59,19 @@ export default function Header({
             v1.2
           </span>
         </button>
+
+        {/* Autonomous Continuous Learning Center */}
+        {onOpenLearningDashboard && (
+          <button
+            type="button"
+            onClick={onOpenLearningDashboard}
+            className="neu-raised flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#6366F1] hover:text-[#4F46E5] cursor-pointer transition-colors"
+            title="Open Autonomous Continuous Learning Center (Model Evolution & Telemetry)"
+          >
+            <Brain className="w-3.5 h-3.5 text-[#6366F1]" />
+            <span className="hidden md:inline">Learning Center</span>
+          </button>
+        )}
 
         {/* System Ready Badge */}
         <div className="neu-raised flex items-center gap-2 px-3.5 py-2 text-[#475569] font-medium">

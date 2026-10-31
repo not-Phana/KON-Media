@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Heart, Clock, Download, HardDrive } from "lucide-react";
+import { Search, Heart, Clock, Download, HardDrive, Brain } from "lucide-react";
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 
 export default function NavigationTabBar({
@@ -10,6 +10,7 @@ export default function NavigationTabBar({
   activeDownloadsCount = 0,
   engineMode = "rei",
   onOpenModelModal,
+  onOpenLearningDashboard,
 }) {
   const isFlash = engineMode === "flash";
 
@@ -104,8 +105,20 @@ export default function NavigationTabBar({
         </button>
       </div>
 
-      {/* Active Engine Spotlight Pill */}
+      {/* Active Engine Spotlight Pill & Learning Center */}
       <div className="hidden md:flex items-center gap-2 pr-1">
+        {onOpenLearningDashboard && (
+          <button
+            type="button"
+            onClick={onOpenLearningDashboard}
+            className="neu-raised px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center gap-1.5 text-[#6366F1] hover:text-[#4F46E5] border border-[#6366F1]/20 hover:border-[#6366F1]/40 transition-colors"
+            title="Open Autonomous Continuous Learning Center (Model Evolution & Telemetry)"
+          >
+            <Brain className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Learning Center</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={onOpenModelModal}
