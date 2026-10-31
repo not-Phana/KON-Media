@@ -42,6 +42,34 @@ class SearchEngine:
         self.learning_model = learning_model or get_shared_learning_model()
         self.cache = cache or get_shared_search_cache()
 
+    def _apply_learning_model(self, query_text: str, ranked: List[CandidateResult]) -> List[CandidateResult]:
+        """Apply learned neural semantic affinities and associations to candidate rankings."""
+        if not self.learning_model or not ranked:
+            return ranked
+
+        sem_weight = self.learning_model.weights.get("semantic_embedding", 0.30)
+        has_reorder = False
+
+        for c in ranked:
+            try:
+                sim = self.learning_model.compute_semantic_similarity(query_text, c.title)
+                if sim > 0.05:
+                    boost = sem_weight * sim
+                    c.score += boost
+                    has_reorder = True
+                    if sim >= 0.40 and hasattr(c, "explanation"):
+                        c.explanation.append(f"Learned neural affinity ({int(sim * 100)}%)")
+                elif sim < 0.0:
+                    c.score += sim * 0.5
+                    has_reorder = True
+            except Exception:
+                pass
+
+        if has_reorder:
+            ranked.sort(key=lambda x: getattr(x, "score", 0.0), reverse=True)
+
+        return ranked
+
     def search(
         self,
         query: str,
@@ -156,6 +184,9 @@ class SearchEngine:
                 query=search_query,
                 candidates=candidates,
             )
+
+        # 5.5 Apply autonomous continuous learning model neural affinity boost
+        ranked = self._apply_learning_model(clean_q, ranked)
 
         # 6. Apply verified historical user feedback boost if available
         norm_key = search_query.normalized_query
@@ -336,6 +367,7 @@ class SearchEngine:
                         ranked = rust_bridge.rank_candidates_flash(query=search_query, candidates=accumulated_candidates, limit=limit)
                     else:
                         ranked = rust_bridge.rank_candidates(query=search_query, candidates=accumulated_candidates)
+                    ranked = self._apply_learning_model(clean_q, ranked)
                     partial_results = []
                     for c in ranked[:limit]:
                         d = c.to_dict()
@@ -360,6 +392,7 @@ class SearchEngine:
                 ranked = rust_bridge.rank_candidates_flash(query=search_query, candidates=accumulated_candidates, limit=limit)
             else:
                 ranked = rust_bridge.rank_candidates(query=search_query, candidates=accumulated_candidates)
+            ranked = self._apply_learning_model(clean_q, ranked)
             final_results = []
             for c in ranked[:limit]:
                 d = c.to_dict()
