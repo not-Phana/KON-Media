@@ -911,3 +911,21 @@ async def stream_audio_proxy_endpoint(
         media_type=response_headers["Content-Type"],
     )
 
+
+
+@router.get("/lyrics")
+async def get_lyrics_endpoint(
+    title: str = Query(..., description="Track or song title"),
+    artist: Optional[str] = Query(None, description="Artist name"),
+    duration: Optional[float] = Query(None, description="Track duration in seconds"),
+    file_path: Optional[str] = Query(None, description="Local audio file path if available"),
+):
+    """Retrieve synchronized or plain lyrics for a track, with local caching and LRCLIB integration."""
+    from backend.lyrics.lyrics_service import get_lyrics_service
+    service = get_lyrics_service()
+    return await service.get_lyrics(
+        raw_title=title,
+        raw_artist=artist,
+        duration=duration,
+        file_path=file_path,
+    )

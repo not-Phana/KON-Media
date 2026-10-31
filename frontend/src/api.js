@@ -577,3 +577,24 @@ export async function recordLearningInteraction(event) {
   } catch (_) {}
 }
 
+
+
+// Lyrics Retrieval API
+export async function fetchLyrics({ title, artist = "", duration = null, filePath = null, signal = null } = {}) {
+  const params = new URLSearchParams();
+  if (title) params.append("title", title);
+  if (artist) params.append("artist", artist);
+  if (duration && duration > 0) params.append("duration", String(duration));
+  if (filePath) params.append("file_path", filePath);
+
+  try {
+    const res = await fetch(`${API_BASE}/lyrics?${params.toString()}`, { signal });
+    if (!res.ok) {
+      return { found: false, synced: false, lines: [], plain_lyrics: null, error: "Lyrics unavailable" };
+    }
+    return await res.json();
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    return { found: false, synced: false, lines: [], plain_lyrics: null, error: err.message };
+  }
+}

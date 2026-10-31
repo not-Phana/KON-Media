@@ -12,6 +12,7 @@ import LearningDashboardModal from "./components/LearningDashboardModal";
 import BottomMusicPlayer from "./components/BottomMusicPlayer";
 import NavigationTabBar from "./components/NavigationTabBar";
 import PlaybackQueueDrawer from "./components/PlaybackQueueDrawer";
+import LyricsModal from "./components/LyricsModal";
 import LeftSidebar from "./components/LeftSidebar";
 import RightSidebar from "./components/RightSidebar";
 import LibraryWorkspace from "./components/LibraryWorkspace";
@@ -44,6 +45,7 @@ import {
   subscribeToEvents,
   resolveAudioStream,
   recordLearningInteraction,
+  fetchLyrics,
 } from "./api";
 
 export default function App() {
@@ -100,6 +102,10 @@ export default function App() {
   const [audioError, setAudioError] = useState(null);
   const [playbackQueue, setPlaybackQueue] = useState([]);
   const [queueIndex, setQueueIndex] = useState(-1);
+  const [isLyricsModalOpen, setIsLyricsModalOpen] = useState(false);
+  const [lyricsData, setLyricsData] = useState(null);
+  const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
+  const [lyricsError, setLyricsError] = useState(null);
 
   // Workspace Navigation & Drawer State
   const [activeView, setActiveView] = useState("search"); // "search" | "favorites" | "recent" | "downloads"
@@ -119,6 +125,49 @@ export default function App() {
     };
   }, []);
 
+  // Reactive lyrics fetcher when current track changes
+  useEffect(() => {
+    if (!currentTrack) {
+      setLyricsData(null);
+      setLyricsError(null);
+      setIsLoadingLyrics(false);
+      return;
+    }
+
+    let isMounted = true;
+    const abortCtrl = new AbortController();
+    setIsLoadingLyrics(true);
+    setLyricsError(null);
+
+    fetchLyrics({
+      title: currentTrack.song_title || currentTrack.clean_title || currentTrack.title,
+      artist: currentTrack.artist || currentTrack.uploader || "",
+      duration: currentTrack.duration,
+      filePath: currentTrack.file_path,
+      signal: abortCtrl.signal,
+    })
+      .then((data) => {
+        if (!isMounted) return;
+        setIsLoadingLyrics(false);
+        if (data && data.found) {
+          setLyricsData(data);
+        } else {
+          setLyricsData(null);
+          setLyricsError(data?.error || "No lyrics found for this track");
+        }
+      })
+      .catch((err) => {
+        if (!isMounted || err.name === "AbortError") return;
+        setIsLoadingLyrics(false);
+        setLyricsError(err.message || "Failed to load lyrics");
+      });
+
+    return () => {
+      isMounted = false;
+      abortCtrl.abort();
+    };
+  }, [currentTrack?.id, currentTrack?.url, currentTrack?.title, currentTrack?.artist]);
+
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -135,6 +184,11 @@ export default function App() {
         setIsSettingsOpen(false);
         setIsModelModalOpen(false);
         setIsLearningDashboardOpen(false);
+        setIsLyricsModalOpen(false);
+      }
+      if ((e.key === "l" || e.key === "L") && currentTrack) {
+        e.preventDefault();
+        setIsLyricsModalOpen((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -954,6 +1008,10 @@ export default function App() {
             activeTasks={activeTasks}
             onCancelTask={handleCancelTask}
             onOpenFile={handleOpenFile}
+            lyricsData={lyricsData}
+            isLoadingLyrics={isLoadingLyrics}
+            lyricsError={lyricsError}
+            onOpenFullscreenLyrics={() => setIsLyricsModalOpen(true)}
           />
         </div>
       </div>
@@ -1011,6 +1069,8 @@ export default function App() {
         onToggleFavorite={() => handleToggleTrackFavorite(currentTrack)}
         isFavorite={isTrackFavorite(currentTrack, favorites)}
         onTrackListen={handleTrackListen}
+        onToggleLyrics={() => setIsLyricsModalOpen((prev) => !prev)}
+        isLyricsOpen={isLyricsModalOpen}
       />
 
       {/* Listening Queue Slide-Out Drawer */}
@@ -1027,6 +1087,18 @@ export default function App() {
         onDirectDownload={handleDirectDownload}
         onOpenFile={handleOpenFile}
         history={history}
+      />
+
+      {/* Full-Screen / Theater Lyrics Experience */}
+      <LyricsModal
+        isOpen={isLyricsModalOpen}
+        onClose={() => setIsLyricsModalOpen(false)}
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+        onTogglePlay={handleTogglePlay}
+        lyricsData={lyricsData}
+        isLoadingLyrics={isLoadingLyrics}
+        lyricsError={lyricsError}
       />
 
       {/* Interactive Toast Notification with Pop-Up Physics */}

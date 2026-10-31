@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Music,
   Play,
@@ -15,6 +15,8 @@ import {
   Volume2,
   Film,
   Sparkles,
+  Mic2,
+  Maximize2,
 } from "lucide-react";
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 
@@ -47,10 +49,52 @@ export default function RightSidebar({
   activeTasks = [],
   onCancelTask,
   onOpenFile,
+  lyricsData,
+  isLoadingLyrics = false,
+  lyricsError = null,
+  onOpenFullscreenLyrics,
 }) {
   const isFlash =
     currentTrack?.engine_mode === "flash" ||
     currentTrack?.model?.toLowerCase().includes("flash");
+
+  // Real-time audio time update listener for sidebar synced lyrics
+  const [currentTime, setCurrentTime] = useState(0);
+  const activeSidebarLineRef = useRef(null);
+
+  useEffect(() => {
+    const handleTime = (e) => setCurrentTime(e.detail?.currentTime || 0);
+    window.addEventListener("kon_audio_timeupdate", handleTime);
+    return () => window.removeEventListener("kon_audio_timeupdate", handleTime);
+  }, []);
+
+  const lines = lyricsData?.lines || [];
+  const isSynced = lyricsData?.synced && lines.length > 0;
+
+  let activeLineIndex = -1;
+  if (isSynced) {
+    for (let i = 0; i < lines.length; i++) {
+      if (currentTime >= lines[i].time) {
+        activeLineIndex = i;
+      } else {
+        break;
+      }
+    }
+  }
+
+  // Smooth auto-scroll sidebar lyrics when active line changes
+  useEffect(() => {
+    if (activeSidebarLineRef.current) {
+      activeSidebarLineRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [activeLineIndex]);
+
+  const handleLineClick = (lineTime) => {
+    window.dispatchEvent(new CustomEvent("kon_audio_seek", { detail: { time: lineTime } }));
+  };
 
   // Next up items in queue (excluding current)
   const upNextItems =
@@ -65,7 +109,7 @@ export default function RightSidebar({
 
   return (
     <aside
-      className="hidden xl:flex flex-col w-72 2xl:w-80 shrink-0 space-y-4 select-none sticky top-5 self-start max-h-[calc(100vh-2.5rem)] overflow-y-auto pr-1"
+      className="hidden xl:flex flex-col w-72 2xl:w-80 shrink-0 space-y-4 select-none sticky top-5 self-start max-h-[calc(100vh-2.5rem)] overflow-y-auto pr-1 neu-custom-scrollbar"
       aria-label="Playback Spotlight & Queue Sidebar"
     >
       {/* 1. Now Playing Spotlight Card */}
@@ -195,7 +239,93 @@ export default function RightSidebar({
         )}
       </div>
 
-      {/* 2. Listening Queue Quick Peek */}
+      {/* 2. LIVE SYNCHRONIZED LYRICS CARD (Easy to find, right under spotlight!) */}
+      <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-wider text-[#0084FF] flex items-center gap-1.5">
+            <Mic2 className="w-3.5 h-3.5 text-[#0084FF]" />
+            Live Lyrics
+            {isSynced && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse ml-0.5" />
+            )}
+          </span>
+
+          {currentTrack && onOpenFullscreenLyrics && (
+            <button
+              type="button"
+              onClick={onOpenFullscreenLyrics}
+              className="neu-raised px-2 py-1 rounded-lg text-[10px] font-bold text-[#0084FF] hover:text-white hover:bg-[#0084FF] transition-all cursor-pointer flex items-center gap-1 neu-btn-tactile"
+              title="Expand Lyrics to Full Screen"
+            >
+              <Maximize2 className="w-3 h-3" />
+              <span>Full Screen</span>
+            </button>
+          )}
+        </div>
+
+        {/* Lyrics Content Display */}
+        {isLoadingLyrics ? (
+          <div className="neu-recessed p-4 rounded-xl text-center space-y-2">
+            <Loader2 className="w-4 h-4 text-[#0084FF] animate-spin mx-auto" />
+            <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] m-0">
+              Loading lyrics...
+            </p>
+          </div>
+        ) : lyricsError ? (
+          <div className="neu-recessed p-3.5 rounded-xl text-center">
+            <p className="text-[11px] text-[#94A3B8] m-0">
+              {lyricsError}
+            </p>
+          </div>
+        ) : !currentTrack ? (
+          <div className="neu-recessed p-3.5 rounded-xl text-center">
+            <p className="text-[11px] text-[#94A3B8] m-0">
+              Play a song to view live lyrics here.
+            </p>
+          </div>
+        ) : isSynced ? (
+          <div className="neu-recessed p-3 rounded-xl max-h-48 overflow-y-auto space-y-1.5 neu-custom-scrollbar">
+            {lines.map((line, idx) => {
+              const isActive = idx === activeLineIndex;
+              return (
+                <div
+                  key={`${line.time}_${idx}`}
+                  ref={isActive ? activeSidebarLineRef : null}
+                  onClick={() => handleLineClick(line.time)}
+                  className={`text-xs rounded-lg px-2.5 py-1.5 transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? "neu-raised text-[#0084FF] font-black border border-[#0084FF]/40 bg-[#0084FF]/10 shadow-xs"
+                      : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] font-medium"
+                  }`}
+                  title={`Jump to ${formatDuration(line.time)}`}
+                >
+                  <p className="m-0 leading-tight truncate">
+                    {line.text || "..."}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        ) : lyricsData?.plain_lyrics ? (
+          <div className="neu-recessed p-3 rounded-xl max-h-48 overflow-y-auto neu-custom-scrollbar">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-[#F59E0B] block mb-1">
+              Unsynchronized
+            </span>
+            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] whitespace-pre-line m-0 font-medium leading-relaxed">
+              {lyricsData.plain_lyrics.slice(0, 400)}
+              {lyricsData.plain_lyrics.length > 400 ? "..." : ""}
+            </p>
+          </div>
+        ) : (
+          <div className="neu-recessed p-3.5 rounded-xl text-center space-y-1">
+            <p className="text-[11px] text-[#94A3B8] m-0">
+              No lyrics found for this song.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Listening Queue Quick Peek */}
       <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
@@ -255,7 +385,7 @@ export default function RightSidebar({
         )}
       </div>
 
-      {/* 3. Active Downloads Stream Widget */}
+      {/* 4. Active Downloads Stream Widget */}
       <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">

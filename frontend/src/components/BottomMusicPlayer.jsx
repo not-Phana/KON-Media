@@ -19,6 +19,7 @@ import {
   Music,
   Heart,
   ListMusic,
+  Mic2,
 } from "lucide-react";
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 import { getAudioStreamUrl } from "../api";
@@ -67,6 +68,8 @@ export default function BottomMusicPlayer({
   onToggleFavorite,
   isFavorite = false,
   onTrackListen,
+  onToggleLyrics,
+  isLyricsOpen = false,
 }) {
   const audioRef = useRef(null);
   const listenedTriggeredRef = useRef(false);
@@ -98,6 +101,19 @@ export default function BottomMusicPlayer({
       audioRef.current.volume = isMuted ? 0 : volume;
     }
   }, [volume, isMuted]);
+
+  // Listen for external seek events (e.g. clicking a lyric line)
+  useEffect(() => {
+    const handleAudioSeek = (e) => {
+      const targetTime = e.detail?.time;
+      if (typeof targetTime === "number" && audioRef.current) {
+        audioRef.current.currentTime = Math.max(0, targetTime);
+        setCurrentTime(targetTime);
+      }
+    };
+    window.addEventListener("kon_audio_seek", handleAudioSeek);
+    return () => window.removeEventListener("kon_audio_seek", handleAudioSeek);
+  }, []);
 
   const rawStreamUrl = currentTrack?.stream_url || currentTrack?.direct_url;
   const audioSrc = rawStreamUrl ? getAudioStreamUrl(rawStreamUrl) : "";
@@ -168,6 +184,13 @@ export default function BottomMusicPlayer({
     if (isSeeking || !audioRef.current) return;
     const cur = audioRef.current.currentTime || 0;
     setCurrentTime(cur);
+
+    // Emit live audio time update for lyrics synchronization
+    window.dispatchEvent(
+      new CustomEvent("kon_audio_timeupdate", {
+        detail: { currentTime: cur, duration: duration || audioRef.current.duration || 0 }
+      })
+    );
     if (!listenedTriggeredRef.current && (cur >= 30 || (duration > 0 && cur >= duration * 0.5))) {
       listenedTriggeredRef.current = true;
       if (onTrackListen && currentTrack) {
@@ -667,6 +690,23 @@ export default function BottomMusicPlayer({
               aria-label="Volume slider"
             />
           </div>
+
+          {/* Dedicated Lyrics Button */}
+          {onToggleLyrics && (
+            <button
+              type="button"
+              onClick={onToggleLyrics}
+              className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                isLyricsOpen
+                  ? "neu-recessed text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10 shadow-xs"
+                  : "neu-raised text-[#64748B] hover:text-[#0084FF]"
+              }`}
+              title="Lyrics Theater (L)"
+            >
+              <Mic2 className="w-4 h-4" />
+              <span className="hidden sm:inline font-bold">Lyrics</span>
+            </button>
+          )}
 
           {/* Listening Queue Button */}
           {onToggleQueue && (
