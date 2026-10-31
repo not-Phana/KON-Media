@@ -378,50 +378,80 @@ pub static SOUNDTRACK_REGISTRY: &[SoundtrackEntry] = &[
     },
 ];
 
-/// Search soundtrack knowledge base for matches to a query string.
+use std::sync::OnceLock;
+
+struct PrecomputedSoundtrack {
+    entry: &'static SoundtrackEntry,
+    title_norm: String,
+    franchise_norm: String,
+    artist_norm: String,
+    clean_franchise: String,
+    all_text: String,
+    role_tokens: Vec<String>,
+}
+
+static PRECOMPUTED_SOUNDTRACKS: OnceLock<Vec<PrecomputedSoundtrack>> = OnceLock::new();
+
+fn get_precomputed_soundtracks() -> &'static [PrecomputedSoundtrack] {
+    PRECOMPUTED_SOUNDTRACKS.get_or_init(|| {
+        SOUNDTRACK_REGISTRY
+            .iter()
+            .map(|entry| {
+                let t_norm = normalize_text(entry.title);
+                let f_norm = normalize_text(entry.franchise);
+                let a_norm = normalize_text(entry.artist);
+                let r_norm = normalize_text(entry.role);
+                let clean_f = f_norm.split("season").next().unwrap_or(&f_norm).trim().to_string();
+                let all_text = format!("{} {} {} {}", t_norm, f_norm, a_norm, r_norm);
+                let role_tokens = r_norm.split_whitespace().map(|s| s.to_string()).collect();
+                PrecomputedSoundtrack {
+                    entry,
+                    title_norm: t_norm,
+                    franchise_norm: f_norm,
+                    artist_norm: a_norm,
+                    clean_franchise: clean_f,
+                    all_text,
+                    role_tokens,
+                }
+            })
+            .collect()
+    })
+}
+
+/// Search soundtrack knowledge base for matches to a query string with zero dynamic allocations.
 pub fn search_soundtrack_db(query: &str, limit: usize) -> Vec<&'static SoundtrackEntry> {
     let norm = normalize_text(query);
     if norm.is_empty() {
         return Vec::new();
     }
 
+    let precomputed = get_precomputed_soundtracks();
+    let q_tokens: Vec<&str> = norm.split_whitespace().collect();
     let mut matches: Vec<(&'static SoundtrackEntry, f64)> = Vec::new();
 
-    for entry in SOUNDTRACK_REGISTRY {
-        let t_norm = normalize_text(entry.title);
-        let f_norm = normalize_text(entry.franchise);
-        let a_norm = normalize_text(entry.artist);
-        let r_norm = normalize_text(entry.role);
-        let clean_f = f_norm.split("season").next().unwrap_or(&f_norm).trim();
-
+    for item in precomputed {
         let mut score = 0.0;
-        if t_norm == norm {
+        if item.title_norm == norm {
             score = 1.0;
-        } else if t_norm.contains(&norm) {
+        } else if item.title_norm.contains(&norm) {
             score = 0.85;
-        } else if f_norm.contains(&norm) || norm.contains(&f_norm) || (!clean_f.is_empty() && norm.contains(clean_f)) {
+        } else if item.franchise_norm.contains(&norm) || norm.contains(&item.franchise_norm) || (!item.clean_franchise.is_empty() && norm.contains(&item.clean_franchise)) {
             score = 0.80;
-        } else if a_norm.contains(&norm) {
+        } else if item.artist_norm.contains(&norm) {
             score = 0.75;
         } else {
-            // Check token overlap
-            let q_tokens: Vec<&str> = norm.split_whitespace().collect();
-            let all_text = format!("{} {} {} {}", t_norm, f_norm, a_norm, r_norm);
-            let matched = q_tokens.iter().filter(|&&t| all_text.contains(t)).count();
+            let matched = q_tokens.iter().filter(|&&t| item.all_text.contains(t)).count();
             if !q_tokens.is_empty() {
                 score = (matched as f64 / q_tokens.len() as f64) * 0.70;
             }
         }
 
-        if !r_norm.is_empty() {
-            let r_tokens: Vec<&str> = r_norm.split_whitespace().collect();
-            if r_tokens.iter().any(|&rt| norm.contains(rt)) {
-                score += 0.15;
-            }
+        if !item.role_tokens.is_empty() && item.role_tokens.iter().any(|rt| norm.contains(rt.as_str())) {
+            score += 0.15;
         }
 
         if score >= 0.40 {
-            matches.push((entry, score));
+            matches.push((item.entry, score));
         }
     }
 

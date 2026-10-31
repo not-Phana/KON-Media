@@ -115,7 +115,7 @@ export default function UrlInputBar({
       abortControllerRef.current.abort();
     }
 
-    // 220ms debounce prevents excessive provider traffic during rapid typing
+    // 120ms debounce enables ultra-responsive typing with sub-50ms backend latency
     debounceTimerRef.current = setTimeout(async () => {
       const currentRequestId = ++requestIdRef.current;
       const controller = new AbortController();
@@ -145,7 +145,7 @@ export default function UrlInputBar({
           setIsLoadingSuggestions(false);
         }
       }
-    }, 220);
+    }, 120);
 
     return () => {
       if (debounceTimerRef.current) {

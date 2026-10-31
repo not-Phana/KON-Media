@@ -142,33 +142,56 @@ pub static ARTIST_DATABASE: &[ArtistEntry] = &[
 ];
 
 /// Find tracks matching a query string across all registered artists.
+use std::sync::OnceLock;
+
+struct PrecomputedTrack {
+    track: &'static TrackMetadata,
+    title_norm: String,
+    artist_norm: String,
+}
+
+static PRECOMPUTED_TRACKS: OnceLock<Vec<PrecomputedTrack>> = OnceLock::new();
+
+fn get_precomputed_tracks() -> &'static [PrecomputedTrack] {
+    PRECOMPUTED_TRACKS.get_or_init(|| {
+        let mut tracks = Vec::new();
+        for artist in ARTIST_DATABASE {
+            for track in artist.tracks {
+                tracks.push(PrecomputedTrack {
+                    track,
+                    title_norm: normalize_text(track.title),
+                    artist_norm: normalize_text(track.artist),
+                });
+            }
+        }
+        tracks
+    })
+}
+
+/// Search canonical catalog tracks for partial or fuzzy matches with zero dynamic allocations.
 pub fn search_catalog_tracks(query: &str, limit: usize) -> Vec<&'static TrackMetadata> {
     let norm = normalize_text(query);
     if norm.is_empty() {
         return Vec::new();
     }
 
+    let precomputed = get_precomputed_tracks();
     let mut matches: Vec<(&'static TrackMetadata, f64)> = Vec::new();
 
-    for artist in ARTIST_DATABASE {
-        for track in artist.tracks {
-            let t_norm = normalize_text(track.title);
-            let a_norm = normalize_text(track.artist);
+    for item in precomputed {
+        let mut score = 0.0;
+        if item.title_norm == norm {
+            score = 1.0;
+        } else if item.title_norm.starts_with(&norm) {
+            score = 0.90;
+        } else if item.title_norm.contains(&norm) {
+            score = 0.82;
+        } else if item.artist_norm.contains(&norm) {
+            score = 0.70;
+        }
 
-            let mut score = 0.0;
-            if t_norm == norm {
-                score = 1.0;
-            } else if t_norm.starts_with(&norm) {
-                score = 0.90;
-            } else if t_norm.contains(&norm) {
-                score = 0.82;
-            } else if a_norm.contains(&norm) {
-                score = 0.70;
-            }
-
-            if score >= 0.50 {
-                matches.push((track, score));
-            }
+        if score >= 0.50 {
+            matches.push((item.track, score));
         }
     }
 
