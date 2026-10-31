@@ -3,6 +3,10 @@ import React, { useState } from "react";
 import {
   Play,
   Pause,
+  Heart,
+  ListPlus,
+  Flame,
+  TrendingUp,
   Search,
   Sparkles,
   Clock,
@@ -25,6 +29,16 @@ import {
 /**
  * Matches a search candidate item against an active task or history item.
  */
+
+function formatViewCount(views) {
+  if (!views || isNaN(views) || Number(views) <= 0) return null;
+  const num = Number(views);
+  if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B views`;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M views`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(0)}K views`;
+  return `${num} views`;
+}
+
 function isCandidateTaskMatch(cand, task, mediaType) {
   if (!cand || !task) return false;
   const taskMediaType = task.media_type || "video";
@@ -196,6 +210,9 @@ export default function SearchResultsCard({
   currentPlayingTrack,
   isPlaying = false,
   isLoadingAudio = false,
+  onAddToQueue,
+  onToggleFavorite,
+  favorites = [],
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());
   const [localPending, setLocalPending] = useState({});
@@ -451,6 +468,11 @@ export default function SearchResultsCard({
           >
             {isFlash ? <KonFlashIcon className="w-3.5 h-3.5" /> : <KonPrecisionIcon className="w-3.5 h-3.5" />}
             <span>Ranked by {isFlash ? "KON Search 1.2 Rei Flash" : "KON Search 1.2 Rei"}</span>
+            {searchMeta?.latency_ms ? (
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10 font-bold">
+                {searchMeta.latency_ms}ms
+              </span>
+            ) : null}
             <span className="text-[10px] opacity-80 font-mono inline-flex items-center gap-1">
               {isFlash ? (
                 <>
@@ -526,8 +548,30 @@ export default function SearchResultsCard({
             (audioStatus.status === "completed" || videoStatus.status === "completed") &&
             !isCandidateDownloading;
 
+          const isThisPlaying =
+            currentPlayingTrack &&
+            (currentPlayingTrack.id === cand.id || currentPlayingTrack.url === cand.url);
+          const isThisLoading = isThisPlaying && isLoadingAudio;
+          const isFavorited = favorites.some(
+            (f) => (f.id || f.url) === (cand.id || cand.url)
+          );
+
+          const formattedViews = formatViewCount(cand.views || cand.view_count || cand.streams);
+          const isGlobalHit =
+            (cand.popularity !== undefined && cand.popularity >= 0.85) ||
+            (cand.views && Number(cand.views) >= 40_000_000);
+          const isTrending =
+            !isGlobalHit &&
+            ((cand.popularity !== undefined && cand.popularity >= 0.55) ||
+              (cand.views && Number(cand.views) >= 5_000_000));
+          const isExactMatch =
+            cand.is_exact_match ||
+            (cand.clean_title && query && cand.clean_title.toLowerCase().trim() === query.toLowerCase().trim());
+
           let cardBorderClass = "neu-raised";
-          if (isCandidateDownloading) {
+          if (isThisPlaying) {
+            cardBorderClass = "neu-recessed border-2 border-[#0084FF] shadow-[0_0_20px_rgba(0,132,255,0.22)] bg-[#0084FF]/5";
+          } else if (isCandidateDownloading) {
             cardBorderClass = "neu-raised border border-[#0084FF]/40 shadow-[0_0_15px_rgba(0,132,255,0.12)]";
           } else if (isCandidateCompleted) {
             cardBorderClass = "neu-raised border border-[#10B981]/35 shadow-[0_0_12px_rgba(16,185,129,0.08)]";
@@ -568,6 +612,15 @@ export default function SearchResultsCard({
                       <Music className="w-6 h-6 text-[#0084FF]" />
                     )}
                   </div>
+                  {/* Live Playing Soundwave Equalizer on thumbnail */}
+                  {isThisPlaying && isPlaying && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-0.5 rounded-lg pointer-events-none">
+                      <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:0ms] h-4"></span>
+                      <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:150ms] h-6"></span>
+                      <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:300ms] h-3"></span>
+                    </div>
+                  )}
+
                   {/* Small platform chip on thumbnail for videos */}
                   {(cand.content_type === "video" || cand.is_music === false) && (
                     <span className="absolute bottom-1 right-1 bg-[#EF4444] text-[8px] font-black text-white px-1 py-0.2 rounded shadow-sm">
@@ -578,10 +631,38 @@ export default function SearchResultsCard({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    {isTopRanked && (
+                    {isThisPlaying && (
+                      <span className="neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] border border-[#0084FF]/40 inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0084FF] animate-ping" />
+                        <span>Now Playing</span>
+                      </span>
+                    )}
+
+                    {isExactMatch && !isThisPlaying && (
+                      <span className="inline-flex items-center gap-1 neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#10B981] border border-[#10B981]/30 bg-[#10B981]/10">
+                        <CheckCircle2 className="w-3 h-3 text-[#10B981]" />
+                        <span>Exact Match</span>
+                      </span>
+                    )}
+
+                    {isTopRanked && !isExactMatch && !isThisPlaying && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0084FF]">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Top Match
+                      </span>
+                    )}
+
+                    {isGlobalHit && (
+                      <span className="inline-flex items-center gap-1 neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#F59E0B] border border-[#F59E0B]/30 bg-[#F59E0B]/10">
+                        <Flame className="w-3 h-3 text-[#F59E0B]" />
+                        <span>Global Hit</span>
+                      </span>
+                    )}
+
+                    {isTrending && (
+                      <span className="inline-flex items-center gap-1 neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10">
+                        <TrendingUp className="w-3 h-3 text-[#0084FF]" />
+                        <span>Trending</span>
                       </span>
                     )}
 
@@ -650,18 +731,47 @@ export default function SearchResultsCard({
                         <span>{formatDuration(cand.duration)}</span>
                       </span>
                     )}
+                    {formattedViews && (
+                      <span className="neu-recessed px-1.5 py-0.2 rounded text-[10px] font-mono text-[#64748B] dark:text-[#94A3B8]">
+                        {formattedViews}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-stretch sm:self-end md:self-center justify-end">
+                {/* Favorite (Heart) Button */}
+                {onToggleFavorite && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleFavorite(cand)}
+                    className={`p-2.5 rounded-xl cursor-pointer transition-all ${
+                      isFavorited
+                        ? "neu-recessed text-[#EF4444]"
+                        : "neu-raised text-[#94A3B8] hover:text-[#EF4444]"
+                    }`}
+                    title={isFavorited ? "Remove from favorites" : "Save to favorites"}
+                  >
+                    <Heart className={`w-3.5 h-3.5 ${isFavorited ? "fill-current" : ""}`} />
+                  </button>
+                )}
+
+                {/* Add to Queue Button */}
+                {onAddToQueue && (
+                  <button
+                    type="button"
+                    onClick={() => onAddToQueue(cand)}
+                    className="neu-raised p-2.5 text-xs text-[#64748B] hover:text-[#0084FF] cursor-pointer rounded-xl transition-colors"
+                    title="Add song to listening queue"
+                  >
+                    <ListPlus className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
                 {/* Built-in Audio Play / Preview Button */}
                 {(() => {
-                  const isThisPlaying =
-                    currentPlayingTrack &&
-                    (currentPlayingTrack.id === cand.id || currentPlayingTrack.url === cand.url);
-                  const isThisLoading = isThisPlaying && isLoadingAudio;
                   const isSong = cand.is_music !== false && cand.content_type !== "video";
 
                   return (

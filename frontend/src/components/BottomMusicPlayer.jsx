@@ -17,6 +17,8 @@ import {
   FolderOpen,
   X,
   Music,
+  Heart,
+  ListMusic,
 } from "lucide-react";
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 import { getAudioStreamUrl } from "../api";
@@ -60,6 +62,10 @@ export default function BottomMusicPlayer({
   onOpenFile,
   activeTasks = [],
   history = [],
+  onToggleQueue,
+  isQueueOpen = false,
+  onToggleFavorite,
+  isFavorite = false,
 }) {
   const audioRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -67,6 +73,8 @@ export default function BottomMusicPlayer({
   const [bufferedPercent, setBufferedPercent] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
   const [playerError, setPlayerError] = useState(null);
+  const [hoverTime, setHoverTime] = useState(null);
+  const [hoverPosition, setHoverPosition] = useState(0);
 
   const [volume, setVolume] = useState(() => {
     try {
@@ -116,7 +124,6 @@ export default function BottomMusicPlayer({
             .catch((err) => {
               setIsBuffering(false);
               if (err.name === "NotAllowedError") {
-                // User activation required; wait for manual click
                 if (onPause) onPause();
               } else if (err.name !== "AbortError") {
                 console.warn("Audio play failed:", err);
@@ -272,6 +279,19 @@ export default function BottomMusicPlayer({
     }
   };
 
+  const handleSeekMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const pct = x / rect.width;
+    const dur = duration || currentTrack?.duration || 0;
+    setHoverPosition(x);
+    setHoverTime(pct * dur);
+  };
+
+  const handleSeekMouseLeave = () => {
+    setHoverTime(null);
+  };
+
   // Volume interaction
   const handleVolumeChange = (e) => {
     const val = parseFloat(e.target.value);
@@ -367,8 +387,22 @@ export default function BottomMusicPlayer({
         onEnded={handleEnded}
       />
 
-      {/* Scrubber Progress Bar on top edge of the player */}
-      <div className="relative w-full h-1.5 bg-slate-200/80 dark:bg-slate-800 cursor-pointer group">
+      {/* Scrubber Progress Bar on top edge of the player with Hover Time Tooltip */}
+      <div
+        className="relative w-full h-2 bg-slate-200/80 dark:bg-slate-800 cursor-pointer group select-none"
+        onMouseMove={handleSeekMouseMove}
+        onMouseLeave={handleSeekMouseLeave}
+      >
+        {/* Hover Time Tooltip */}
+        {hoverTime !== null && effectiveDuration > 0 && (
+          <div
+            className="absolute -top-7 neu-recessed px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-[#1E293B] dark:text-[#E2E8F0] shadow-md pointer-events-none transform -translate-x-1/2 z-20 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            style={{ left: `${hoverPosition}px` }}
+          >
+            {formatTime(hoverTime)}
+          </div>
+        )}
+
         {/* Buffered Bar */}
         <div
           className="absolute inset-y-0 left-0 bg-slate-300 dark:bg-slate-700/60 transition-all duration-300"
@@ -397,8 +431,8 @@ export default function BottomMusicPlayer({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
-        {/* LEFT SECTION: Track Artwork & Metadata */}
-        <div className="flex items-center gap-3.5 min-w-0 max-w-[280px] sm:max-w-[340px] md:max-w-[380px] shrink-0">
+        {/* LEFT SECTION: Track Artwork, Metadata, & Favorite Toggle */}
+        <div className="flex items-center gap-3 min-w-0 max-w-[280px] sm:max-w-[340px] md:max-w-[380px] shrink-0">
           {/* Thumbnail */}
           <div className="w-12 h-12 rounded-xl neu-recessed p-0.5 shrink-0 overflow-hidden flex items-center justify-center relative shadow-sm">
             {currentTrack.thumbnail ? (
@@ -424,9 +458,9 @@ export default function BottomMusicPlayer({
 
             {/* Live Playing Soundwave Equalizer Indicator */}
             {isPlaying && !showSpinner && (
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center gap-0.5 rounded-lg pointer-events-none">
-                <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:0ms] h-4"></span>
-                <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:150ms] h-6"></span>
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-0.5 pointer-events-none rounded-lg">
+                <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:0ms] h-3.5"></span>
+                <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:150ms] h-5"></span>
                 <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:300ms] h-3"></span>
               </div>
             )}
@@ -470,6 +504,22 @@ export default function BottomMusicPlayer({
               )}
             </p>
           </div>
+
+          {/* Favorite Button */}
+          {onToggleFavorite && (
+            <button
+              type="button"
+              onClick={() => onToggleFavorite(currentTrack)}
+              className={`p-1.5 rounded-lg cursor-pointer transition-colors shrink-0 ${
+                isFavorite
+                  ? "text-[#EF4444] neu-recessed"
+                  : "text-[#94A3B8] hover:text-[#EF4444]"
+              }`}
+              title={isFavorite ? "Remove from favorites" : "Save to favorites"}
+            >
+              <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+            </button>
+          )}
         </div>
 
         {/* CENTER SECTION: VLC Transport Controls & Scrubber Timestamps */}
@@ -573,8 +623,8 @@ export default function BottomMusicPlayer({
           </div>
         </div>
 
-        {/* RIGHT SECTION: Volume Slider, Direct Download & Dismiss */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* RIGHT SECTION: Volume Slider, Queue Toggle, Direct Download & Dismiss */}
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Volume Control */}
           <div className="hidden md:flex items-center gap-2">
             <button
@@ -602,6 +652,25 @@ export default function BottomMusicPlayer({
               aria-label="Volume slider"
             />
           </div>
+
+          {/* Listening Queue Button */}
+          {onToggleQueue && (
+            <button
+              type="button"
+              onClick={onToggleQueue}
+              className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                isQueueOpen
+                  ? "neu-recessed text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10"
+                  : "neu-raised text-[#64748B] hover:text-[#0084FF]"
+              }`}
+              title="Open listening queue"
+            >
+              <ListMusic className="w-4 h-4" />
+              <span className="neu-recessed px-1.5 py-0.2 rounded text-[10px] font-mono hidden sm:inline">
+                {playbackQueue.length}
+              </span>
+            </button>
+          )}
 
           {/* Direct "Download Song" Action from Bottom Player */}
           {downloadStatus.status === "completed" ? (

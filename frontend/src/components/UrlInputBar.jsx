@@ -19,6 +19,12 @@ import {
   CornerDownLeft,
 } from "lucide-react";
 import { fetchSearchSuggestions } from "../api";
+import {
+  getSearchQueryHistory,
+  addSearchQueryHistory,
+  clearSearchQueryHistory,
+} from "../utils/playerStorage";
+import { History, Clock } from "lucide-react";
 
 export default function UrlInputBar({
   onAnalyze,
@@ -55,6 +61,16 @@ export default function UrlInputBar({
   const [isOpen, setIsOpen] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [recentSearches, setRecentSearches] = useState(() => getSearchQueryHistory());
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  useEffect(() => {
+    const handleHistoryChanged = (e) => {
+      setRecentSearches(e.detail || []);
+    };
+    window.addEventListener("kon_search_history_changed", handleHistoryChanged);
+    return () => window.removeEventListener("kon_search_history_changed", handleHistoryChanged);
+  }, []);
 
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
@@ -202,6 +218,7 @@ export default function UrlInputBar({
     const queryToSearch = sug.query || sug.title;
     dismissSuggestions();
     setUrl(queryToSearch);
+    addSearchQueryHistory(queryToSearch, activeEngineMode);
     if (onClearError) onClearError();
     onAnalyze(queryToSearch, searchMode, activeEngineMode);
   };
@@ -210,6 +227,7 @@ export default function UrlInputBar({
     e.preventDefault();
     if (!url.trim()) return;
     dismissSuggestions();
+    addSearchQueryHistory(url.trim(), activeEngineMode);
     onAnalyze(url.trim(), searchMode, activeEngineMode);
   };
 
@@ -371,6 +389,26 @@ export default function UrlInputBar({
         </div>
       </div>
 
+      {/* Error Feedback Banner */}
+      {error && (
+        <div className="neu-recessed p-3 rounded-2xl border border-red-500/30 bg-red-500/5 flex items-center justify-between gap-3 text-xs text-[#EF4444] animate-fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span className="font-semibold">{error}</span>
+          </div>
+          {onClearError && (
+            <button
+              type="button"
+              onClick={onClearError}
+              className="text-[#EF4444] hover:text-red-700 cursor-pointer p-1 rounded-lg"
+              title="Dismiss error"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Main Search Input Form */}
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-stretch gap-3.5 relative">
         {/* Recessed Sculpted Input Well */}
@@ -391,9 +429,14 @@ export default function UrlInputBar({
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => {
+              setIsInputFocused(true);
               if (!suppressSuggestionsRef.current && suggestions.length > 0 && !isUrl) {
                 setIsOpen(true);
               }
+            }}
+            onBlur={() => {
+              // Delay so chip clicks can register
+              setTimeout(() => setIsInputFocused(false), 200);
             }}
             placeholder={getPlaceholder()}
             className="flex-1 bg-transparent border-none outline-none text-sm text-[#1E293B] placeholder-[#94A3B8] font-medium"
@@ -446,6 +489,51 @@ export default function UrlInputBar({
           )}
         </button>
       </form>
+
+      {/* Recent Searches Chips Shelf */}
+      {recentSearches.length > 0 && !url.trim() && (
+        <div className="flex flex-wrap items-center gap-2 pt-1 animate-fade-in">
+          <span className="text-[11px] font-bold text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1">
+            <Clock className="w-3 h-3 text-[#0084FF]" />
+            <span>Recent:</span>
+          </span>
+          <div className="flex flex-wrap items-center gap-1.5 flex-1">
+            {recentSearches.slice(0, 6).map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setUrl(item.query);
+                  if (item.engine_mode && onEngineModeChange) {
+                    onEngineModeChange(item.engine_mode);
+                  }
+                  onAnalyze(item.query, searchMode, item.engine_mode || activeEngineMode);
+                }}
+                className="neu-raised px-2.5 py-1 rounded-lg text-xs text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] transition-colors cursor-pointer flex items-center gap-1"
+                title={`Search "${item.query}"`}
+              >
+                <span>{item.query}</span>
+                {item.engine_mode === "flash" ? (
+                  <KonFlashIcon className="w-2.5 h-2.5 text-[#F59E0B]" />
+                ) : (
+                  <KonPrecisionIcon className="w-2.5 h-2.5 text-[#0084FF]" />
+                )}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                clearSearchQueryHistory();
+                setRecentSearches([]);
+              }}
+              className="text-[10px] text-[#94A3B8] hover:text-[#EF4444] px-1 cursor-pointer transition-colors"
+              title="Clear search history"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Intelligent Search Suggestions & Song Discovery Dropdown */}
       {isOpen && suggestions.length > 0 && (

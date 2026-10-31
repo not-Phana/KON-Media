@@ -9,6 +9,17 @@ import HistoryWorkspace from "./components/HistoryWorkspace";
 import SettingsModal from "./components/SettingsModal";
 import ModelInfoModal from "./components/ModelInfoModal";
 import BottomMusicPlayer from "./components/BottomMusicPlayer";
+import NavigationTabBar from "./components/NavigationTabBar";
+import PlaybackQueueDrawer from "./components/PlaybackQueueDrawer";
+import LibraryWorkspace from "./components/LibraryWorkspace";
+import {
+  getFavorites,
+  toggleFavorite,
+  isTrackFavorite,
+  getRecentlyPlayed,
+  addRecentlyPlayed,
+  clearRecentlyPlayed,
+} from "./utils/playerStorage";
 import {
   fetchHealth,
   analyzeMediaUrl,
@@ -85,8 +96,90 @@ export default function App() {
   const [playbackQueue, setPlaybackQueue] = useState([]);
   const [queueIndex, setQueueIndex] = useState(-1);
 
+  // Workspace Navigation & Drawer State
+  const [activeView, setActiveView] = useState("search"); // "search" | "favorites" | "recent" | "downloads"
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [favorites, setFavorites] = useState(() => getFavorites());
+  const [recentlyPlayed, setRecentlyPlayed] = useState(() => getRecentlyPlayed());
+
+  // Reactive listeners for local storage state changes
+  useEffect(() => {
+    const handleFavChange = (e) => setFavorites(e.detail || getFavorites());
+    const handleRecentChange = (e) => setRecentlyPlayed(e.detail || getRecentlyPlayed());
+    window.addEventListener("kon_favorites_changed", handleFavChange);
+    window.addEventListener("kon_recently_played_changed", handleRecentChange);
+    return () => {
+      window.removeEventListener("kon_favorites_changed", handleFavChange);
+      window.removeEventListener("kon_recently_played_changed", handleRecentChange);
+    };
+  }, []);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || e.target.isContentEditable) {
+        return;
+      }
+      if (e.code === "Space" && currentTrack) {
+        e.preventDefault();
+        handleTogglePlay();
+      }
+      if (e.key === "Escape") {
+        setIsQueueOpen(false);
+        setIsSettingsOpen(false);
+        setIsModelModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentTrack, isQueueOpen, isSettingsOpen, isModelModalOpen]);
+
+  // Queue and Favorite Actions
+  const handleAddToQueue = (cand) => {
+    if (!cand) return;
+    const item = {
+      id: cand.id || cand.url,
+      title: cand.clean_title || cand.title,
+      artist: cand.uploader || cand.artist || "",
+      thumbnail: cand.thumbnail,
+      duration: cand.duration,
+      url: cand.url,
+      platform: cand.platform,
+    };
+    setPlaybackQueue((prev) => [...prev, item]);
+    setToast({ message: `Added to queue: ${item.title}` });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleRemoveFromQueue = (index) => {
+    setPlaybackQueue((prev) => prev.filter((_, i) => i !== index));
+    if (index === queueIndex) {
+      if (queueIndex < playbackQueue.length - 1) {
+        handlePlayCandidate(playbackQueue[queueIndex + 1]);
+      }
+    } else if (index < queueIndex) {
+      setQueueIndex((prev) => prev - 1);
+    }
+  };
+
+  const handleClearQueue = () => {
+    setPlaybackQueue([]);
+    setQueueIndex(-1);
+  };
+
+  const handleToggleTrackFavorite = (track) => {
+    if (!track) return;
+    const isNowFav = toggleFavorite(track);
+    setToast({
+      message: isNowFav ? `Saved to Favorites: ${track.clean_title || track.title}` : `Removed from Favorites`,
+      type: "info",
+    });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   // Play candidate handler (preview before download)
-  const handlePlayCandidate = async (cand) => {
+  const handlePlayCandidate = async (cand, customQueue = null) => {
     if (!cand) return;
 
     // If clicking currently active track, simply toggle play/pause
@@ -99,8 +192,8 @@ export default function App() {
     }
 
     // Set up queue from search results if available
-    const queue = searchResults && searchResults.length > 0 ? searchResults : [cand];
-    const idx = queue.findIndex((c) => c.id === cand.id || c.url === cand.url);
+    const queue = customQueue || (searchResults && searchResults.length > 0 ? searchResults : [cand]);
+    const idx = queue.findIndex((c) => (c.id || c.url) === (cand.id || cand.url));
     setPlaybackQueue(queue);
     setQueueIndex(idx >= 0 ? idx : 0);
 
@@ -142,6 +235,10 @@ export default function App() {
           file_path: resolved.file_path,
         }));
         setIsPlaying(true);
+        addRecentlyPlayed({
+          ...optimisticTrack,
+          ...resolved,
+        });
       } else {
         const errMsg = resolved.reason || resolved.error || "Cannot play preview";
         setAudioError(errMsg);
@@ -626,8 +723,48 @@ export default function App() {
           onToggleTheme={handleToggleTheme}
         />
 
+        {/* Workspace Navigation Bar */}
+        <NavigationTabBar
+          activeView={activeView}
+          onViewChange={setActiveView}
+          favoritesCount={favorites.length}
+          recentCount={recentlyPlayed.length}
+          activeDownloadsCount={
+            activeTasks.filter((t) =>
+              ["queued", "downloading", "processing", "verifying"].includes(t.status)
+            ).length
+          }
+          engineMode={engineMode}
+          onOpenModelModal={() => setIsModelModalOpen(true)}
+        />
+
+        {/* Favorites and Recently Played Library Workspace */}
+        {(activeView === "favorites" || activeView === "recent") && (
+          <LibraryWorkspace
+            activeTab={activeView}
+            onTabChange={setActiveView}
+            favorites={favorites}
+            recentlyPlayed={recentlyPlayed}
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            onPlayTrack={(track, queue) => {
+              handlePlayCandidate(track, queue);
+            }}
+            onToggleFavorite={handleToggleTrackFavorite}
+            onClearRecentlyPlayed={() => {
+              clearRecentlyPlayed();
+              setRecentlyPlayed([]);
+            }}
+            onDirectDownload={handleDirectDownload}
+            onOpenFile={handleOpenFile}
+            history={history}
+            onNavigateToSearch={() => setActiveView("search")}
+          />
+        )}
+
         {/* URL Input & Ingress Bar */}
-        <UrlInputBar
+        {activeView === "search" && (
+          <UrlInputBar
           onAnalyze={handleAnalyze}
           isLoading={isAnalyzing}
           error={analyzeError}
@@ -636,6 +773,7 @@ export default function App() {
           engineMode={engineMode}
           onEngineModeChange={handleEngineModeChange}
         />
+        )}
 
         {/* Ranked Search Discoveries */}
         {(searchResults || searchState === "searching" || searchState === "updating" || searchState === "no_results") && (
@@ -663,6 +801,9 @@ export default function App() {
             currentPlayingTrack={currentTrack}
             isPlaying={isPlaying}
             isLoadingAudio={isLoadingAudio}
+            onAddToQueue={handleAddToQueue}
+            onToggleFavorite={handleToggleTrackFavorite}
+            favorites={favorites}
           />
         )}
 
@@ -677,7 +818,8 @@ export default function App() {
         )}
 
         {/* Active Task Queue Monitor */}
-        <ActiveTasksMonitor
+        {(activeView === "downloads" || (activeView === "search" && activeTasks.length > 0)) && (
+          <ActiveTasksMonitor
           tasks={activeTasks}
           onCancelTask={handleCancelTask}
           onOpenFile={handleOpenFile}
@@ -685,14 +827,17 @@ export default function App() {
           onRetryTask={handleRetryTask}
           onClearFinished={handleClearFinished}
         />
+        )}
 
         {/* Local Download History */}
-        <HistoryWorkspace
+        {activeView === "downloads" && (
+          <HistoryWorkspace
           history={history}
           onOpenFile={handleOpenFile}
           onDeleteItem={handleDeleteHistoryItem}
           onClearAll={handleClearHistory}
         />
+        )}
       </div>
 
       {/* Footer */}
@@ -736,6 +881,26 @@ export default function App() {
         onDirectDownload={handleDirectDownload}
         onOpenFile={handleOpenFile}
         activeTasks={activeTasks}
+        history={history}
+        onToggleQueue={() => setIsQueueOpen((prev) => !prev)}
+        isQueueOpen={isQueueOpen}
+        onToggleFavorite={() => handleToggleTrackFavorite(currentTrack)}
+        isFavorite={isTrackFavorite(currentTrack, favorites)}
+      />
+
+      {/* Listening Queue Slide-Out Drawer */}
+      <PlaybackQueueDrawer
+        isOpen={isQueueOpen}
+        onClose={() => setIsQueueOpen(false)}
+        queue={playbackQueue}
+        currentIndex={queueIndex}
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+        onPlayTrack={(cand) => handlePlayCandidate(cand)}
+        onRemoveTrack={handleRemoveFromQueue}
+        onClearQueue={handleClearQueue}
+        onDirectDownload={handleDirectDownload}
+        onOpenFile={handleOpenFile}
         history={history}
       />
 
