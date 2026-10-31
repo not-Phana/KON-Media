@@ -782,13 +782,64 @@ async def stream_audio_proxy_endpoint(
     url: str = Query(..., description="Direct upstream audio stream URL"),
     request: Request = None,
 ):
-    """Proxy remote audio stream with byte-range HTTP 206 support for in-browser playback."""
+    """Proxy remote audio stream with byte-range HTTP 206 and HLS-to-MP3 transcoding support."""
     from urllib.parse import unquote
     import httpx
 
     target_url = unquote(url).strip()
     if not target_url.startswith("http://") and not target_url.startswith("https://"):
         raise HTTPException(status_code=400, detail="Invalid audio stream URL scheme")
+
+    # If the stream is an HLS m3u8 playlist (e.g. SoundCloud), transcode to progressive MP3 on the fly
+    is_hls = ".m3u8" in target_url or "m3u8_native" in target_url
+    if is_hls:
+        from backend.engine.ffmpeg_manager import validate_ffmpeg_path
+        ffmpeg_status = validate_ffmpeg_path()
+        if ffmpeg_status["available"]:
+            ffmpeg_bin = ffmpeg_status["path"]
+            cmd = [
+                ffmpeg_bin,
+                "-loglevel", "error",
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "5",
+                "-i", target_url,
+                "-vn",
+                "-f", "mp3",
+                "-c:a", "libmp3lame",
+                "-b:a", "128k",
+                "pipe:1",
+            ]
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+
+            async def hls_mp3_iterator():
+                try:
+                    while True:
+                        chunk = await proc.stdout.read(65536)
+                        if not chunk:
+                            break
+                        yield chunk
+                finally:
+                    try:
+                        proc.kill()
+                        await proc.wait()
+                    except Exception:
+                        pass
+
+            return StreamingResponse(
+                hls_mp3_iterator(),
+                status_code=200,
+                headers={
+                    "Content-Type": "audio/mpeg",
+                    "Accept-Ranges": "none",
+                    "Cache-Control": "no-cache",
+                },
+                media_type="audio/mpeg",
+            )
 
     range_header = request.headers.get("range") if request else None
     upstream_headers = {
@@ -810,8 +861,20 @@ async def stream_audio_proxy_endpoint(
         raise HTTPException(status_code=502, detail=f"Failed to connect to audio source: {str(e)}")
 
     status_code = upstream_res.status_code
+
+    # Normalize MIME type: map video/mp4 container to audio/mp4 for HTML5 audio element
+    raw_content_type = (upstream_res.headers.get("content-type") or "audio/mp4").lower()
+    if "video/mp4" in raw_content_type:
+        clean_content_type = "audio/mp4"
+    elif "video/webm" in raw_content_type:
+        clean_content_type = "audio/webm"
+    elif "application/x-mpegurl" in raw_content_type or "vnd.apple.mpegurl" in raw_content_type:
+        clean_content_type = "audio/mpeg"
+    else:
+        clean_content_type = raw_content_type
+
     response_headers = {
-        "Content-Type": upstream_res.headers.get("content-type", "audio/mp4"),
+        "Content-Type": clean_content_type,
         "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=3600",
     }

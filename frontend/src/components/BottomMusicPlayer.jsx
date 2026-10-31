@@ -47,7 +47,7 @@ export default function BottomMusicPlayer({
   currentTrack,
   isPlaying,
   isLoading,
-  error,
+  error: externalError,
   playbackQueue = [],
   queueIndex = -1,
   onPlay,
@@ -65,6 +65,9 @@ export default function BottomMusicPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [bufferedPercent, setBufferedPercent] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [playerError, setPlayerError] = useState(null);
+
   const [volume, setVolume] = useState(() => {
     try {
       const v = localStorage.getItem("kon_player_volume");
@@ -78,7 +81,6 @@ export default function BottomMusicPlayer({
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState("none"); // 'none' | 'all' | 'one'
   const [isSeeking, setIsSeeking] = useState(false);
-  const [seekValue, setSeekValue] = useState(0);
 
   // Sync volume with audio element
   useEffect(() => {
@@ -87,33 +89,76 @@ export default function BottomMusicPlayer({
     }
   }, [volume, isMuted]);
 
-  // Handle play/pause state synchronization
+  const rawStreamUrl = currentTrack?.stream_url || currentTrack?.direct_url;
+  const audioSrc = rawStreamUrl ? getAudioStreamUrl(rawStreamUrl) : "";
+
+  // When track or source changes, reload audio source cleanly
   useEffect(() => {
     const el = audioRef.current;
-    if (!el || !currentTrack) return;
+    if (!el) return;
 
-    if (isPlaying) {
-      const playPromise = el.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          // Ignore abort error caused by rapid track changes
-          if (err.name !== "AbortError") {
-            console.warn("Playback error:", err);
-          }
-        });
+    setPlayerError(null);
+    setCurrentTime(0);
+    setBufferedPercent(0);
+
+    if (audioSrc) {
+      el.src = audioSrc;
+      el.load();
+
+      if (isPlaying) {
+        setIsBuffering(true);
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsBuffering(false);
+            })
+            .catch((err) => {
+              setIsBuffering(false);
+              if (err.name === "NotAllowedError") {
+                // User activation required; wait for manual click
+                if (onPause) onPause();
+              } else if (err.name !== "AbortError") {
+                console.warn("Audio play failed:", err);
+              }
+            });
+        }
       }
     } else {
       el.pause();
+      el.removeAttribute("src");
     }
-  }, [isPlaying, currentTrack]);
+  }, [audioSrc]);
 
-  // Audio event listeners
+  // Synchronize play/pause state
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !audioSrc) return;
+
+    if (isPlaying) {
+      if (el.paused) {
+        const p = el.play();
+        if (p !== undefined) {
+          p.catch((err) => {
+            if (err.name !== "AbortError") {
+              console.warn("Playback error on state sync:", err);
+            }
+          });
+        }
+      }
+    } else {
+      if (!el.paused) {
+        el.pause();
+      }
+    }
+  }, [isPlaying, audioSrc]);
+
+  // Audio element event listeners
   const handleTimeUpdate = useCallback(() => {
     if (isSeeking || !audioRef.current) return;
     const cur = audioRef.current.currentTime || 0;
     setCurrentTime(cur);
 
-    // Calculate buffer
     const el = audioRef.current;
     if (el.buffered.length > 0 && el.duration > 0) {
       const end = el.buffered.end(el.buffered.length - 1);
@@ -129,7 +174,48 @@ export default function BottomMusicPlayer({
     } else if (currentTrack?.duration) {
       setDuration(currentTrack.duration);
     }
+    setIsBuffering(false);
   }, [currentTrack]);
+
+  const handleCanPlay = useCallback(() => {
+    setIsBuffering(false);
+    if (isPlaying && audioRef.current?.paused) {
+      audioRef.current.play().catch(() => {});
+    }
+  }, [isPlaying]);
+
+  const handleWaiting = useCallback(() => {
+    setIsBuffering(true);
+  }, []);
+
+  const handlePlaying = useCallback(() => {
+    setIsBuffering(false);
+    setPlayerError(null);
+    if (!isPlaying && onPlay) {
+      onPlay();
+    }
+  }, [isPlaying, onPlay]);
+
+  const handlePause = useCallback(() => {
+    if (isPlaying && onPause) {
+      onPause();
+    }
+  }, [isPlaying, onPause]);
+
+  const handleError = useCallback((e) => {
+    setIsBuffering(false);
+    const mediaErr = audioRef.current?.error;
+    let msg = "Cannot play audio preview";
+    if (mediaErr) {
+      if (mediaErr.code === 4) {
+        msg = "Audio format not supported by browser";
+      } else if (mediaErr.code === 2) {
+        msg = "Network interruption during playback";
+      }
+    }
+    setPlayerError(msg);
+    console.warn("Audio element error:", mediaErr || e);
+  }, []);
 
   const handleEnded = useCallback(() => {
     if (repeatMode === "one") {
@@ -144,10 +230,32 @@ export default function BottomMusicPlayer({
     }
   }, [repeatMode, onNext, isShuffle, onPause]);
 
+  // Transport toggle with direct element play for instant gesture recognition
+  const handleTransportToggle = () => {
+    const el = audioRef.current;
+    if (!el) {
+      if (onTogglePlay) onTogglePlay();
+      return;
+    }
+
+    if (el.paused) {
+      el.play()
+        .then(() => {
+          if (onPlay) onPlay();
+        })
+        .catch((err) => {
+          console.warn("Direct play error:", err);
+          if (onTogglePlay) onTogglePlay();
+        });
+    } else {
+      el.pause();
+      if (onPause) onPause();
+    }
+  };
+
   // Seek bar interaction
   const handleSeekChange = (e) => {
     const val = parseFloat(e.target.value);
-    setSeekValue(val);
     setCurrentTime(val);
   };
 
@@ -192,11 +300,10 @@ export default function BottomMusicPlayer({
     else setRepeatMode("none");
   };
 
-  // Check download status of the currently playing track
+  // Check download status of currently playing track
   const getTrackDownloadStatus = () => {
     if (!currentTrack) return { status: "idle" };
 
-    // Check active tasks
     const activeTask = activeTasks.find(
       (t) =>
         t.url === currentTrack.url ||
@@ -211,7 +318,6 @@ export default function BottomMusicPlayer({
       };
     }
 
-    // Check history
     const historyItem = history.find(
       (h) =>
         (h.url === currentTrack.url ||
@@ -233,13 +339,13 @@ export default function BottomMusicPlayer({
   if (!currentTrack) return null;
 
   const downloadStatus = getTrackDownloadStatus();
-  const rawStreamUrl = currentTrack.stream_url || currentTrack.direct_url;
-  const audioSrc = rawStreamUrl ? getAudioStreamUrl(rawStreamUrl) : "";
   const effectiveDuration = duration || currentTrack.duration || 0;
   const progressPercent =
     effectiveDuration > 0 ? Math.min(100, (currentTime / effectiveDuration) * 100) : 0;
   const isFlash =
     currentTrack.engine_mode === "flash" || currentTrack.model?.toLowerCase().includes("flash");
+  const displayError = externalError || playerError;
+  const showSpinner = isLoading || isBuffering;
 
   return (
     <div
@@ -247,17 +353,19 @@ export default function BottomMusicPlayer({
       role="region"
       aria-label="Persistent Audio Player"
     >
-      {/* Hidden Native Audio Element */}
-      {audioSrc && (
-        <audio
-          ref={audioRef}
-          src={audioSrc}
-          preload="auto"
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={handleEnded}
-        />
-      )}
+      {/* Native Audio Element - Always mounted for robust media session control */}
+      <audio
+        ref={audioRef}
+        preload="auto"
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onCanPlay={handleCanPlay}
+        onWaiting={handleWaiting}
+        onPlaying={handlePlaying}
+        onPause={handlePause}
+        onError={handleError}
+        onEnded={handleEnded}
+      />
 
       {/* Scrubber Progress Bar on top edge of the player */}
       <div className="relative w-full h-1.5 bg-slate-200/80 dark:bg-slate-800 cursor-pointer group">
@@ -315,7 +423,7 @@ export default function BottomMusicPlayer({
             </div>
 
             {/* Live Playing Soundwave Equalizer Indicator */}
-            {isPlaying && (
+            {isPlaying && !showSpinner && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center gap-0.5 rounded-lg pointer-events-none">
                 <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:0ms] h-4"></span>
                 <span className="w-1 bg-[#0084FF] rounded-full animate-bounce [animation-delay:150ms] h-6"></span>
@@ -331,7 +439,7 @@ export default function BottomMusicPlayer({
                 className="text-xs sm:text-sm font-bold text-[#1E293B] dark:text-[#E2E8F0] truncate m-0"
                 title={currentTrack.title}
               >
-                {currentTrack.title || "Unknown Song"}
+                {currentTrack.title || "Loading Preview..."}
               </h4>
 
               {/* Engine Badge */}
@@ -354,7 +462,7 @@ export default function BottomMusicPlayer({
               className="text-[11px] text-[#64748B] dark:text-[#94A3B8] truncate m-0 mt-0.5 font-medium"
               title={currentTrack.artist || currentTrack.uploader}
             >
-              {currentTrack.artist || currentTrack.uploader || "Unknown Artist"}
+              {currentTrack.artist || currentTrack.uploader || "Preview Audio"}
               {currentTrack.is_local && (
                 <span className="ml-1.5 text-[10px] text-[#10B981] font-semibold">
                   (Local File)
@@ -400,12 +508,11 @@ export default function BottomMusicPlayer({
             {/* Main Play / Pause / Loading Button */}
             <button
               type="button"
-              onClick={onTogglePlay}
-              disabled={isLoading}
+              onClick={handleTransportToggle}
               className="neu-accent w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all shadow-[0_4px_14px_rgba(0,132,255,0.35)]"
               title={isPlaying ? "Pause" : "Play"}
             >
-              {isLoading ? (
+              {showSpinner ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : isPlaying ? (
                 <Pause className="w-5 h-5 fill-current" />
@@ -451,10 +558,15 @@ export default function BottomMusicPlayer({
           {/* Time Displays */}
           <div className="flex items-center justify-between w-full text-[11px] font-mono font-semibold text-[#64748B] dark:text-[#94A3B8] px-1">
             <span>{formatTime(currentTime)}</span>
-            {error ? (
+            {displayError ? (
               <span className="text-[#EF4444] text-[10px] font-sans font-semibold inline-flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                <span>{error}</span>
+                <span>{displayError}</span>
+              </span>
+            ) : showSpinner ? (
+              <span className="text-[#0084FF] text-[10px] font-sans font-semibold inline-flex items-center gap-1 animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Buffering audio...</span>
               </span>
             ) : null}
             <span>{formatTime(effectiveDuration)}</span>
@@ -536,4 +648,3 @@ export default function BottomMusicPlayer({
     </div>
   );
 }
-
