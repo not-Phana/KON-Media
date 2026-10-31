@@ -152,7 +152,7 @@ const TaskCard = React.memo(function TaskCard({
   };
 
   return (
-    <div className="neu-raised p-4 rounded-2xl space-y-3 transition-colors duration-200">
+    <div className="neu-raised p-4 rounded-2xl space-y-3 transition-colors duration-200 neu-card-hover neu-stagger-item">
       <div className="flex items-start justify-between gap-3">
         {/* Left: Thumbnail & Media Info */}
         <div className="flex items-start gap-3.5 min-w-0 flex-1">

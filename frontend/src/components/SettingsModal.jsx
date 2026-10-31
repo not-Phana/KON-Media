@@ -95,8 +95,8 @@ export default function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="neu-card w-full max-w-lg p-6 space-y-5 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 neu-popup-backdrop p-4 overflow-y-auto">
+      <div className="neu-card neu-popup-spring neu-popup-aura w-full max-w-lg p-6 space-y-5 my-8 border border-[#0084FF]/25 shadow-2xl">
         <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
           <div className="flex items-center gap-2.5">
             <div className="w-2.5 h-2.5 rounded-full bg-[#0084FF]"></div>

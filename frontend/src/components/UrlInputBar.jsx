@@ -545,7 +545,7 @@ export default function UrlInputBar({
       {/* Intelligent Search Suggestions & Song Discovery Dropdown */}
       {isOpen && suggestions.length > 0 && (
         <div
-          className="absolute left-0 right-0 top-full mt-2 z-50 neu-card p-2 space-y-1 shadow-2xl border border-[#0084FF]/25 animate-fade-in max-h-[420px] overflow-y-auto"
+          className="absolute left-0 right-0 top-full mt-2 z-50 neu-card p-2 space-y-1 shadow-2xl border border-[#0084FF]/25 neu-dropdown-pop neu-popup-aura max-h-[420px] overflow-y-auto"
           role="listbox"
           aria-label="Search suggestions"
         >

@@ -37,13 +37,13 @@ export default function PlaybackQueueDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end animate-fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/60 neu-popup-backdrop flex justify-end"
       onClick={onClose}
       role="dialog"
       aria-label="Listening Queue"
     >
       <div
-        className="w-full max-w-md h-full bg-white dark:bg-[#0B1120] border-l border-slate-200/80 dark:border-slate-800 shadow-2xl flex flex-col justify-between overflow-hidden animate-slide-in-right"
+        className="w-full max-w-md h-full bg-white dark:bg-[#0B1120] border-l border-slate-200/80 dark:border-slate-800 shadow-2xl flex flex-col justify-between overflow-hidden neu-drawer-slide"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Header */}
@@ -77,10 +77,10 @@ export default function PlaybackQueueDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="neu-raised p-1.5 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] rounded-xl cursor-pointer"
+              className="neu-raised p-1.5 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] rounded-xl cursor-pointer neu-btn-elastic group"
               title="Close queue"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
             </button>
           </div>
         </div>
@@ -175,7 +175,8 @@ export default function PlaybackQueueDrawer({
                   return (
                     <div
                       key={track.id || `${track.url}_${idx}`}
-                      className={`p-2.5 rounded-xl neu-card-hover transition-all flex items-center justify-between gap-3 group ${
+                      style={{ animationDelay: `${Math.min(idx, 8) * 40}ms` }}
+                      className={`neu-stagger-item p-2.5 rounded-xl neu-card-hover transition-all flex items-center justify-between gap-3 group ${
                         isCurrent
                           ? "neu-recessed border border-[#0084FF]/40 bg-[#0084FF]/5"
                           : "neu-raised hover:border-slate-300 dark:hover:border-slate-700"

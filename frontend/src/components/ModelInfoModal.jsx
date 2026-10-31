@@ -62,8 +62,8 @@ export default function ModelInfoModal({ isOpen, onClose }) {
   const isTraining = ct?.is_training ?? false;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
-      <div className="neu-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6 animate-scale-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 neu-popup-backdrop">
+      <div className="neu-card neu-popup-spring neu-popup-aura w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6 border border-[#0084FF]/25 shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/60 pb-5">
           <div className="flex items-center gap-3.5">

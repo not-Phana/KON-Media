@@ -598,7 +598,7 @@ export default function SearchResultsCard({
 
           let cardBorderClass = "neu-raised";
           if (isThisPlaying) {
-            cardBorderClass = "neu-recessed border-2 border-[#0084FF] shadow-[0_0_20px_rgba(0,132,255,0.22)] bg-[#0084FF]/5";
+            cardBorderClass = "neu-recessed border-2 border-[#0084FF] neu-playing-halo bg-[#0084FF]/5";
           } else if (isCandidateDownloading) {
             cardBorderClass = "neu-raised border border-[#0084FF]/40 shadow-[0_0_15px_rgba(0,132,255,0.12)]";
           } else if (isCandidateCompleted) {
@@ -610,7 +610,8 @@ export default function SearchResultsCard({
           return (
             <div
               key={cand.id}
-              className={`p-4 rounded-2xl neu-card-hover group ${cardBorderClass} flex flex-col md:flex-row items-start md:items-center justify-between gap-4`}
+              style={{ animationDelay: `${Math.min(idx, 8) * 35}ms` }}
+              className={`p-4 rounded-2xl neu-card-hover group neu-stagger-item ${cardBorderClass} flex flex-col md:flex-row items-start md:items-center justify-between gap-4`}
             >
               {/* Media Info */}
               <div className="flex items-start gap-4 min-w-0 flex-1">

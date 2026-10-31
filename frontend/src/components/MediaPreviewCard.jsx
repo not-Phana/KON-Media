@@ -116,7 +116,7 @@ export default function MediaPreviewCard({
     };
 
     return (
-      <div className="neu-card p-6 space-y-5">
+      <div className="neu-card p-6 space-y-5 neu-popup-spring neu-popup-aura border border-[#0084FF]/25 shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -395,7 +395,7 @@ export default function MediaPreviewCard({
   };
 
   return (
-    <div className="neu-card p-6 space-y-5">
+    <div className="neu-card p-6 space-y-5 neu-popup-spring neu-popup-aura border border-[#0084FF]/25 shadow-2xl">
       {/* Alternative Match Header Banner if matched */}
       {activeInfo.is_alternative_match && (
         <div className="p-3.5 rounded-2xl neu-raised flex items-center justify-between gap-3 text-xs text-[#0084FF]">

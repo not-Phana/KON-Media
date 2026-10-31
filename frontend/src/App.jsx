@@ -967,17 +967,28 @@ export default function App() {
         history={history}
       />
 
-      {/* Interactive Toast Notification */}
+      {/* Interactive Toast Notification with Pop-Up Physics */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-md p-4 rounded-2xl neu-card shadow-2xl flex items-center justify-between gap-3 animate-fade-in text-[#1E293B]">
-          <span className="text-xs text-[#1E293B] font-medium leading-relaxed">
-            {toast.message}
-          </span>
+        <div className="fixed bottom-6 right-6 z-50 max-w-md p-4 rounded-2xl neu-card shadow-2xl flex items-center justify-between gap-3.5 neu-toast-pop neu-popup-aura text-[#1E293B] dark:text-[#F8FAFC] border border-[#0084FF]/25 overflow-hidden">
+          <div className="flex items-center gap-3 min-w-0">
+            <span
+              className={`w-1.5 self-stretch rounded-full shrink-0 ${
+                toast.type === "success"
+                  ? "bg-[#10B981] shadow-[0_0_8px_rgba(16,185,129,0.6)]"
+                  : toast.type === "error"
+                  ? "bg-[#EF4444] shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                  : "bg-[#0084FF] shadow-[0_0_8px_rgba(0,132,255,0.6)]"
+              }`}
+            />
+            <span className="text-xs font-semibold leading-relaxed">
+              {toast.message}
+            </span>
+          </div>
           <button
             onClick={() => setToast(null)}
-            className="neu-raised p-1 text-[#64748B] hover:text-[#1E293B] cursor-pointer shrink-0 rounded-lg"
+            className="neu-raised p-1.5 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] cursor-pointer shrink-0 rounded-xl neu-btn-elastic group"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5 transition-transform duration-200 group-hover:rotate-90" />
           </button>
         </div>
       )}

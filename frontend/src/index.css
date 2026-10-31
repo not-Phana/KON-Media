@@ -561,10 +561,238 @@ html.dark .skeleton-shimmer::after {
 .equalizer-bar-3 { animation: equalizerBounce 0.85s ease-in-out infinite 0.0s; }
 .equalizer-bar-4 { animation: equalizerBounce 0.7s ease-in-out infinite 0.2s; }
 
-/* 4. REDUCED MOTION PREFERENCE (Accessibility) */
+/* 4. POP-UP, MODAL, DRAWER, DROPDOWN & NOTIFICATION ANIMATIONS */
+
+/* Glassmorphism Backdrop Fade with ambient optical blur */
+@keyframes neuBackdropFade {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+.neu-popup-backdrop {
+  animation: neuBackdropFade 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, backdrop-filter;
+}
+
+/* Tactile Spring Pop-Up for Modals (Snappy 3D Physics Entrance) */
+@keyframes neuPopupSpringIn {
+  0% {
+    opacity: 0;
+    transform: scale3d(0.88, 0.88, 1) translateY(24px);
+    filter: blur(4px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale3d(1.02, 1.02, 1) translateY(-2px);
+    filter: blur(0px);
+  }
+  82% {
+    transform: scale3d(0.995, 0.995, 1) translateY(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+.neu-popup-spring {
+  animation: neuPopupSpringIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
+}
+
+/* Subtle Luminous Border Glow on Pop-Up Entrance */
+@keyframes neuPopupAura {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 132, 255, 0.45), 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 28px 2px rgba(0, 132, 255, 0.35), 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 132, 255, 0), 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  }
+}
+
+.neu-popup-aura {
+  animation: neuPopupAura 1.4s ease-out 1;
+}
+
+/* Smooth Slide-In from Right for Drawers */
+@keyframes neuDrawerSlideIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(100%, 0, 0);
+  }
+  70% {
+    opacity: 1;
+    transform: translate3d(-6px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.neu-drawer-slide {
+  animation: neuDrawerSlideIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Top-Down Unfolding Pop for Dropdowns & Search Suggestions */
+@keyframes neuDropdownPopIn {
+  0% {
+    opacity: 0;
+    transform: scale3d(0.96, 0.82, 1) translateY(-10px);
+    transform-origin: top center;
+  }
+  65% {
+    transform: scale3d(1.008, 1.012, 1) translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1) translateY(0);
+  }
+}
+
+.neu-dropdown-pop {
+  animation: neuDropdownPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+  will-change: transform, opacity;
+}
+
+/* Spring Bounce-In for Interactive Toast Notifications */
+@keyframes neuToastPopIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(24px, 32px, 0) scale(0.88);
+  }
+  65% {
+    opacity: 1;
+    transform: translate3d(-4px, -4px, 0) scale(1.02);
+  }
+  85% {
+    transform: translate3d(1px, 1px, 0) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.neu-toast-pop {
+  animation: neuToastPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom right;
+  will-change: transform, opacity;
+}
+
+/* Bottom Player Dock Entrance Slide-Up */
+@keyframes neuPlayerDockIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 100%, 0);
+  }
+  75% {
+    opacity: 1;
+    transform: translate3d(0, -3px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.neu-player-dock {
+  animation: neuPlayerDockIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Micro-Pop for Tooltips & Hover Tags */
+@keyframes neuTooltipPop {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 6px, 0) scale(0.88);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+}
+
+.neu-tooltip-pop {
+  animation: neuTooltipPop 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom center;
+  will-change: transform, opacity;
+}
+
+/* Staggered Item Cascades */
+@keyframes neuStaggerFadeIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.neu-stagger-item {
+  animation: neuStaggerFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+.neu-stagger-1 { animation-delay: 35ms; }
+.neu-stagger-2 { animation-delay: 70ms; }
+.neu-stagger-3 { animation-delay: 105ms; }
+.neu-stagger-4 { animation-delay: 140ms; }
+.neu-stagger-5 { animation-delay: 175ms; }
+.neu-stagger-6 { animation-delay: 210ms; }
+.neu-stagger-7 { animation-delay: 245ms; }
+.neu-stagger-8 { animation-delay: 280ms; }
+
+/* Living Aura Halo for Currently Playing Song */
+@keyframes neuLivingHalo {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #0084FF, 0 0 14px rgba(0, 132, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 3px #38BDF8, 0 0 24px rgba(56, 189, 248, 0.55);
+  }
+}
+
+.neu-playing-halo {
+  animation: neuLivingHalo 2.2s ease-in-out infinite;
+}
+
+/* Tactile Elastic Button Bounce */
+.neu-btn-elastic {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.neu-btn-elastic:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.025);
+}
+
+.neu-btn-elastic:active:not(:disabled) {
+  transform: translateY(1.5px) scale(0.95);
+}
+
+/* 5. REDUCED MOTION PREFERENCE (Accessibility) */
 @media (prefers-reduced-motion: reduce) {
   .neu-card-hover,
   .neu-btn-tactile,
+  .neu-btn-elastic,
   .neu-heart-pop,
   .neu-thumb-container img {
     transition: none !important;
@@ -578,7 +806,17 @@ html.dark .skeleton-shimmer::after {
   .equalizer-bar-1,
   .equalizer-bar-2,
   .equalizer-bar-3,
-  .equalizer-bar-4 {
+  .equalizer-bar-4,
+  .neu-popup-backdrop,
+  .neu-popup-spring,
+  .neu-popup-aura,
+  .neu-drawer-slide,
+  .neu-dropdown-pop,
+  .neu-toast-pop,
+  .neu-player-dock,
+  .neu-tooltip-pop,
+  .neu-stagger-item,
+  .neu-playing-halo {
     animation: none !important;
   }
 }

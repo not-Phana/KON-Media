@@ -144,11 +144,11 @@ export default function LearningDashboardModal({ isOpen, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 neu-popup-backdrop"
       role="dialog"
       aria-label="Autonomous Continuous Learning Dashboard"
     >
-      <div className="neu-card w-full max-w-4xl max-h-[92vh] overflow-y-auto p-6 sm:p-8 space-y-6 animate-scale-in">
+      <div className="neu-card neu-popup-spring neu-popup-aura w-full max-w-4xl max-h-[92vh] overflow-y-auto p-6 sm:p-8 space-y-6 border border-[#0084FF]/25 shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-5">
           <div className="flex items-center gap-3.5">
@@ -213,7 +213,7 @@ export default function LearningDashboardModal({ isOpen, onClose }) {
         )}
 
         {/* Top 4 Key Metric Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 neu-stagger-item neu-stagger-1">
           {/* Active Model */}
           <div className="neu-raised p-4 rounded-2xl space-y-1 neu-card-hover">
             <span className="text-[10px] font-black uppercase text-[#64748B] dark:text-[#94A3B8] tracking-wider flex items-center gap-1">
@@ -276,7 +276,7 @@ export default function LearningDashboardModal({ isOpen, onClose }) {
         </div>
 
         {/* Dual Engine Comparison (Rei vs Rei Flash) */}
-        <div className="neu-raised p-5 rounded-2xl space-y-3.5 border border-slate-200/60 dark:border-slate-800">
+        <div className="neu-raised p-5 rounded-2xl space-y-3.5 border border-slate-200/60 dark:border-slate-800 neu-stagger-item neu-stagger-2">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black uppercase tracking-wider text-[#1E293B] dark:text-[#F8FAFC] m-0 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-[#0084FF]" />
@@ -350,7 +350,7 @@ export default function LearningDashboardModal({ isOpen, onClose }) {
 
         {/* Gatekeeper Decision Card */}
         {lastResult && (
-          <div className="neu-recessed p-4 rounded-2xl space-y-2 border border-slate-200/80 dark:border-slate-800">
+          <div className="neu-recessed p-4 rounded-2xl space-y-2 border border-slate-200/80 dark:border-slate-800 neu-stagger-item neu-stagger-3">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-[#64748B] dark:text-[#94A3B8] tracking-wider flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
@@ -377,7 +377,7 @@ export default function LearningDashboardModal({ isOpen, onClose }) {
         )}
 
         {/* Autonomous Controls Row */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200/80 dark:border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200/80 dark:border-slate-800 neu-stagger-item neu-stagger-4">
           <div className="flex flex-wrap items-center gap-2">
             {/* Train Candidate Now */}
             <button

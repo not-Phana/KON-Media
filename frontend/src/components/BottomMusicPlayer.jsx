@@ -381,7 +381,7 @@ export default function BottomMusicPlayer({
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 shadow-[0_-8px_25px_rgba(0,0,0,0.12)] transition-all animate-fade-in"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 shadow-[0_-8px_25px_rgba(0,0,0,0.12)] transition-all neu-player-dock"
       role="region"
       aria-label="Persistent Audio Player"
     >
@@ -408,7 +408,7 @@ export default function BottomMusicPlayer({
         {/* Hover Time Tooltip */}
         {hoverTime !== null && effectiveDuration > 0 && (
           <div
-            className="absolute -top-7 neu-recessed px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-[#1E293B] dark:text-[#E2E8F0] shadow-md pointer-events-none transform -translate-x-1/2 z-20 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="absolute -top-7 neu-recessed px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-[#1E293B] dark:text-[#E2E8F0] shadow-md pointer-events-none transform -translate-x-1/2 z-20 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 neu-tooltip-pop"
             style={{ left: `${hoverPosition}px` }}
           >
             {formatTime(hoverTime)}
@@ -446,7 +446,9 @@ export default function BottomMusicPlayer({
         {/* LEFT SECTION: Track Artwork, Metadata, & Favorite Toggle */}
         <div className="flex items-center gap-3 min-w-0 max-w-[280px] sm:max-w-[340px] md:max-w-[380px] shrink-0">
           {/* Thumbnail */}
-          <div className="w-12 h-12 rounded-xl neu-recessed p-0.5 shrink-0 overflow-hidden flex items-center justify-center relative shadow-sm">
+          <div className={`w-12 h-12 rounded-xl neu-recessed p-0.5 shrink-0 overflow-hidden flex items-center justify-center relative shadow-sm transition-all duration-300 ${
+            isPlaying ? "neu-playing-halo ring-2 ring-[#0084FF]/60" : ""
+          }`}>
             {currentTrack.thumbnail ? (
               <img
                 src={currentTrack.thumbnail}
@@ -572,7 +574,7 @@ export default function BottomMusicPlayer({
             <button
               type="button"
               onClick={handleTransportToggle}
-              className="neu-accent neu-btn-tactile w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer shadow-[0_4px_14px_rgba(0,132,255,0.35)]"
+              className="neu-accent neu-btn-elastic w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white cursor-pointer shadow-[0_4px_14px_rgba(0,132,255,0.35)]"
               title={isPlaying ? "Pause" : "Play"}
             >
               {showSpinner ? (
