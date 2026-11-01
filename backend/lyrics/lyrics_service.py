@@ -28,6 +28,12 @@ CLUTTER_PATTERNS = [
 ]
 
 LRC_TIMESTAMP_REGEX = re.compile(r"\[(\d{1,2}):(\d{1,2}(?:\.\d{1,3})?)\]")
+LRC_OFFSET_REGEX = re.compile(r"\[offset:\s*([+-]?\d+)\]", re.IGNORECASE)
+
+METADATA_LINE_PREFIXES = (
+    "title:", "artist:", "album:", "by:", "composer:", "lyricist:",
+    "arranger:", "author:", "producer:", "作詞", "作曲", "編曲", "歌：", "演唱："
+)
 
 
 def parse_lrc(lrc_text: str) -> List[Dict[str, Any]]:
@@ -38,6 +44,15 @@ def parse_lrc(lrc_text: str) -> List[Dict[str, Any]]:
     """
     if not lrc_text:
         return []
+
+    # Check for [offset: +/-ms] tag
+    offset_sec = 0.0
+    offset_match = LRC_OFFSET_REGEX.search(lrc_text)
+    if offset_match:
+        try:
+            offset_sec = float(offset_match.group(1)) / 1000.0
+        except ValueError:
+            offset_sec = 0.0
 
     parsed_lines: List[Dict[str, Any]] = []
 
@@ -55,11 +70,17 @@ def parse_lrc(lrc_text: str) -> List[Dict[str, Any]]:
         last_match = matches[-1]
         lyric_text = line[last_match.end():].strip()
 
+        # Skip empty lines and non-singing metadata tags (e.g. composer, lyricist credits)
+        if not lyric_text:
+            continue
+        if any(lyric_text.lower().startswith(p) for p in METADATA_LINE_PREFIXES):
+            continue
+
         # Each timestamp on the line produces a timestamped line entry
         for m in matches:
             mins = int(m.group(1))
             secs = float(m.group(2))
-            total_seconds = round(mins * 60 + secs, 2)
+            total_seconds = max(0.0, round(mins * 60 + secs + offset_sec, 2))
             parsed_lines.append({
                 "time": total_seconds,
                 "text": lyric_text,

@@ -42,7 +42,34 @@ export default function LyricsModal({
 }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [syncOffset, setSyncOffset] = useState(0);
   const [activeLineIndex, setActiveLineIndex] = useState(-1);
+
+  // Load saved timing offset for current track
+  useEffect(() => {
+    if (!currentTrack?.id && !currentTrack?.url) {
+      setSyncOffset(0);
+      return;
+    }
+    const key = `kon_lyric_offset_${currentTrack.id || currentTrack.url}`;
+    try {
+      const saved = parseFloat(localStorage.getItem(key) || "0") || 0;
+      setSyncOffset(saved);
+    } catch (_) {
+      setSyncOffset(0);
+    }
+  }, [currentTrack]);
+
+  const handleAdjustOffset = (delta) => {
+    setSyncOffset((prev) => {
+      const next = Math.round((prev + delta) * 10) / 10;
+      const key = `kon_lyric_offset_${currentTrack?.id || currentTrack?.url}`;
+      try {
+        if (key) localStorage.setItem(key, String(next));
+      } catch (_) {}
+      return next;
+    });
+  };
   const containerRef = useRef(null);
   const userScrolledRef = useRef(false);
   const userScrollTimeoutRef = useRef(null);
@@ -127,9 +154,10 @@ export default function LyricsModal({
       return;
     }
 
+    const effectiveTime = Math.max(0, currentTime - syncOffset);
     let foundIdx = -1;
     for (let i = 0; i < lines.length; i++) {
-      if (currentTime >= lines[i].time) {
+      if (effectiveTime >= lines[i].time) {
         foundIdx = i;
       } else {
         break;
@@ -137,7 +165,7 @@ export default function LyricsModal({
     }
 
     setActiveLineIndex(foundIdx);
-  }, [currentTime, lines, isSynced]);
+  }, [currentTime, syncOffset, lines, isSynced]);
 
   // Smooth glide to the currently active lyric line
   const scrollToActiveLine = useCallback(() => {
@@ -493,7 +521,14 @@ export default function LyricsModal({
             </form>
           </div>
         ) : isSynced ? (
-          <div className="pt-[32vh] pb-[40vh] space-y-4">
+          <div className="pt-[28vh] pb-[40vh] space-y-4">
+            {/* Instrumental Intro Indicator */}
+            {lines.length > 0 && currentTime < (lines[0].time + syncOffset) && (
+              <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-[#0084FF]/15 border border-[#0084FF]/35 text-[#38BDF8] text-sm sm:text-base font-bold animate-pulse mx-auto mb-6 shadow-lg shadow-[#0084FF]/10 select-none">
+                <Music className="w-4 h-4 shrink-0" />
+                <span>Instrumental Intro ({Math.max(0, Math.ceil((lines[0].time + syncOffset) - currentTime))}s until vocals)</span>
+              </div>
+            )}
             {lines.map((line, idx) => {
               const isActive = idx === activeLineIndex;
               const isPast = idx < activeLineIndex;
@@ -619,6 +654,49 @@ export default function LyricsModal({
           </p>
 
           <div className="flex items-center gap-3 mx-auto sm:mx-0">
+            {/* Timing Sync Calibration Pill */}
+            {isSynced && (
+              <div className="flex items-center gap-1.5 neu-recessed px-3 py-1.5 rounded-xl border border-slate-700/60 text-xs">
+                <span className="text-[10px] uppercase font-bold text-[#94A3B8] tracking-wider mr-1">
+                  Sync:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustOffset(-0.5)}
+                  className="px-2 py-0.5 rounded text-xs font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
+                  title="Shift lyrics 0.5s earlier"
+                >
+                  -0.5s
+                </button>
+                <span
+                  className={`font-mono font-bold text-xs px-1 ${
+                    syncOffset !== 0 ? "text-[#F59E0B]" : "text-slate-300"
+                  }`}
+                  title={`Timing offset: ${syncOffset > 0 ? `+${syncOffset.toFixed(1)}s` : `${syncOffset.toFixed(1)}s`}`}
+                >
+                  {syncOffset !== 0 ? `${syncOffset > 0 ? "+" : ""}${syncOffset.toFixed(1)}s` : "0s"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustOffset(+0.5)}
+                  className="px-2 py-0.5 rounded text-xs font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
+                  title="Delay lyrics 0.5s later (e.g. video intro)"
+                >
+                  +0.5s
+                </button>
+                {syncOffset !== 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustOffset(-syncOffset)}
+                    className="ml-1 text-[11px] text-slate-400 hover:text-white underline cursor-pointer"
+                    title="Reset offset to 0s"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            )}
+
             <button
               type="button"
               onClick={onTogglePlay}

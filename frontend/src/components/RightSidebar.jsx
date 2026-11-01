@@ -60,10 +60,38 @@ export default function RightSidebar({
     currentTrack?.model?.toLowerCase().includes("flash");
 
   // Active synced lyric line tracking - strictly isolated to avoid unnecessary re-renders
+  const [currentTime, setCurrentTime] = useState(0);
+  const [syncOffset, setSyncOffset] = useState(0);
   const [activeLineIndex, setActiveLineIndex] = useState(-1);
   const lyricsContainerRef = useRef(null);
   const linesRef = useRef([]);
   linesRef.current = lyricsData?.lines || [];
+
+  // Load saved timing offset for current track
+  useEffect(() => {
+    if (!currentTrack?.id && !currentTrack?.url) {
+      setSyncOffset(0);
+      return;
+    }
+    const key = `kon_lyric_offset_${currentTrack.id || currentTrack.url}`;
+    try {
+      const saved = parseFloat(localStorage.getItem(key) || "0") || 0;
+      setSyncOffset(saved);
+    } catch (_) {
+      setSyncOffset(0);
+    }
+  }, [currentTrack]);
+
+  const handleAdjustOffset = (delta) => {
+    setSyncOffset((prev) => {
+      const next = Math.round((prev + delta) * 10) / 10;
+      const key = `kon_lyric_offset_${currentTrack?.id || currentTrack?.url}`;
+      try {
+        if (key) localStorage.setItem(key, String(next));
+      } catch (_) {}
+      return next;
+    });
+  };
 
   // Reset active line when track or lyrics payload changes
   useEffect(() => {
@@ -75,13 +103,15 @@ export default function RightSidebar({
     let lastIndex = -1;
 
     const handleTime = (e) => {
-      const cur = e.detail?.currentTime || 0;
+      const rawTime = e.detail?.currentTime || 0;
+      setCurrentTime(rawTime);
+      const effectiveTime = Math.max(0, rawTime - syncOffset);
       const lines = linesRef.current;
       if (!lines || lines.length === 0) return;
 
       let found = -1;
       for (let i = 0; i < lines.length; i++) {
-        if (cur >= lines[i].time) {
+        if (effectiveTime >= lines[i].time) {
           found = i;
         } else {
           break;
@@ -292,17 +322,59 @@ export default function RightSidebar({
             )}
           </span>
 
-          {currentTrack && onOpenFullscreenLyrics && (
-            <button
-              type="button"
-              onClick={onOpenFullscreenLyrics}
-              className="neu-raised px-2 py-1 rounded-lg text-[10px] font-bold text-[#0084FF] hover:text-white hover:bg-[#0084FF] transition-all cursor-pointer flex items-center gap-1 neu-btn-tactile"
-              title="Expand Lyrics to Full Screen"
-            >
-              <Maximize2 className="w-3 h-3" />
-              <span>Full Screen</span>
-            </button>
-          )}
+          <div className="flex items-center gap-1.5">
+            {/* Quick Timing Sync / Offset Control */}
+            {isSynced && (
+              <div className="flex items-center gap-1 neu-recessed px-1.5 py-0.5 rounded-lg border border-slate-700/60 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => handleAdjustOffset(-0.5)}
+                  className="px-1 py-0.2 rounded hover:text-[#0084FF] font-mono font-bold cursor-pointer transition-colors"
+                  title="Shift lyrics 0.5s earlier"
+                >
+                  -0.5s
+                </button>
+                <span
+                  className={`font-mono font-bold text-[10px] px-0.5 ${
+                    syncOffset !== 0 ? "text-[#F59E0B]" : "text-slate-400"
+                  }`}
+                  title={`Timing offset: ${syncOffset > 0 ? `+${syncOffset.toFixed(1)}s` : `${syncOffset.toFixed(1)}s`}`}
+                >
+                  {syncOffset !== 0 ? `${syncOffset > 0 ? "+" : ""}${syncOffset.toFixed(1)}s` : "0s"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustOffset(+0.5)}
+                  className="px-1 py-0.2 rounded hover:text-[#0084FF] font-mono font-bold cursor-pointer transition-colors"
+                  title="Delay lyrics 0.5s later (e.g. video intro)"
+                >
+                  +0.5s
+                </button>
+                {syncOffset !== 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleAdjustOffset(-syncOffset)}
+                    className="text-[9px] text-slate-400 hover:text-white px-0.5 underline cursor-pointer"
+                    title="Reset offset to 0s"
+                  >
+                    0
+                  </button>
+                )}
+              </div>
+            )}
+
+            {currentTrack && onOpenFullscreenLyrics && (
+              <button
+                type="button"
+                onClick={onOpenFullscreenLyrics}
+                className="neu-raised px-2 py-1 rounded-lg text-[10px] font-bold text-[#0084FF] hover:text-white hover:bg-[#0084FF] transition-all cursor-pointer flex items-center gap-1 neu-btn-tactile"
+                title="Expand Lyrics to Full Screen"
+              >
+                <Maximize2 className="w-3 h-3" />
+                <span>Full Screen</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Lyrics Content Display - Stable fixed height flex-1 min-h-[220px] so the sidebar never shifts */}
@@ -330,6 +402,18 @@ export default function RightSidebar({
             ref={lyricsContainerRef}
             className="relative neu-recessed p-2.5 rounded-xl flex-1 min-h-[220px] overflow-y-auto space-y-1 neu-custom-scrollbar"
           >
+            {/* Instrumental Intro Indicator */}
+            {lines.length > 0 && currentTime < (lines[0].time + syncOffset) && (
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0084FF]/10 border border-[#0084FF]/30 text-[#0084FF] text-xs font-semibold animate-pulse mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Music className="w-3.5 h-3.5 shrink-0" />
+                  <span>Instrumental Intro</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold shrink-0">
+                  Vocals in {Math.max(0, Math.ceil((lines[0].time + syncOffset) - currentTime))}s
+                </span>
+              </div>
+            )}
             {lines.map((line, idx) => {
               const isActive = idx === activeLineIndex;
               return (

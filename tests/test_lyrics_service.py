@@ -45,6 +45,22 @@ def test_parse_lrc_multiple_timestamps_and_sorting():
     assert lines[2]["text"] == "Chorus line repeated"
 
 
+def test_parse_lrc_offset_and_metadata_filtering():
+    lrc_sample = """
+    [ti:Test Title]
+    [ar:Test Artist]
+    [offset:1500]
+    [00:00.00]
+    [00:01.00] 作曲: Some Composer
+    [00:10.00] First real singing lyric
+    """
+    lines = parse_lrc(lrc_sample)
+    assert len(lines) == 1
+    assert lines[0]["text"] == "First real singing lyric"
+    # 10s + 1.5s offset = 11.5s
+    assert lines[0]["time"] == 11.50
+
+
 def test_parse_lrc_empty_or_malformed():
     assert parse_lrc("") == []
     assert parse_lrc("Just some plain text without timestamps") == []
