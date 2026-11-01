@@ -17,7 +17,6 @@ import {
   Sparkles,
   Mic2,
   Maximize2,
-  LocateFixed,
 } from "lucide-react";
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 
@@ -62,7 +61,6 @@ export default function RightSidebar({
   // Active synced lyric line tracking - strictly isolated to avoid unnecessary re-renders
   const [activeLineIndex, setActiveLineIndex] = useState(-1);
   const lyricsContainerRef = useRef(null);
-  const animFrameIdRef = useRef(null);
   const linesRef = useRef([]);
   linesRef.current = lyricsData?.lines || [];
 
@@ -102,8 +100,8 @@ export default function RightSidebar({
   const lines = lyricsData?.lines || [];
   const isSynced = lyricsData?.synced && lines.length > 0;
 
-  // Silky-smooth continuous glide for sidebar lyrics - gentle ease-out, isolated to container
-  const scrollToActiveLine = () => {
+  // Stable sidebar lyrics view: ONLY scrolls when the active line goes out of view
+  const ensureLineVisible = () => {
     const container = lyricsContainerRef.current;
     if (!container || activeLineIndex < 0) return;
 
@@ -114,42 +112,25 @@ export default function RightSidebar({
     const containerHeight = container.clientHeight;
     const elOffsetTop = activeEl.offsetTop;
     const elHeight = activeEl.clientHeight;
-    const targetScroll = Math.max(0, elOffsetTop - (containerHeight / 2) + (elHeight / 2));
 
-    if (animFrameIdRef.current) {
-      cancelAnimationFrame(animFrameIdRef.current);
-    }
+    // Check if line is already comfortably visible in the box
+    const isVisible =
+      elOffsetTop >= container.scrollTop + 8 &&
+      elOffsetTop + elHeight <= container.scrollTop + containerHeight - 8;
 
-    const startY = container.scrollTop;
-    const distance = targetScroll - startY;
-    if (Math.abs(distance) < 2) return;
+    // If already in view, stay completely STILL - do not move!
+    if (isVisible) return;
 
-    const duration = 550; // 550ms gentle glide
-    const startTime = performance.now();
-    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
-
-    const step = (now) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      container.scrollTop = startY + distance * easeOutCubic(progress);
-
-      if (progress < 1) {
-        animFrameIdRef.current = requestAnimationFrame(step);
-      } else {
-        animFrameIdRef.current = null;
-      }
-    };
-
-    animFrameIdRef.current = requestAnimationFrame(step);
+    // Gently bring the new batch of lines into view
+    const targetScroll = Math.max(0, elOffsetTop - 12);
+    container.scrollTo({
+      top: targetScroll,
+      behavior: "smooth",
+    });
   };
 
   useEffect(() => {
-    scrollToActiveLine();
-    return () => {
-      if (animFrameIdRef.current) {
-        cancelAnimationFrame(animFrameIdRef.current);
-      }
-    };
+    ensureLineVisible();
   }, [activeLineIndex]);
 
   const handleLineClick = (lineTime) => {
@@ -310,48 +291,35 @@ export default function RightSidebar({
             )}
           </span>
 
-          <div className="flex items-center gap-1.5">
-            {isSynced && (
-              <button
-                type="button"
-                onClick={scrollToActiveLine}
-                className="neu-raised p-1 rounded-lg text-[#0084FF] hover:bg-[#0084FF] hover:text-white transition-all cursor-pointer neu-btn-tactile"
-                title="Jump to playing lyric line"
-              >
-                <LocateFixed className="w-3 h-3" />
-              </button>
-            )}
-
-            {currentTrack && onOpenFullscreenLyrics && (
-              <button
-                type="button"
-                onClick={onOpenFullscreenLyrics}
-                className="neu-raised px-2 py-1 rounded-lg text-[10px] font-bold text-[#0084FF] hover:text-white hover:bg-[#0084FF] transition-all cursor-pointer flex items-center gap-1 neu-btn-tactile"
-                title="Expand Lyrics to Full Screen"
-              >
-                <Maximize2 className="w-3 h-3" />
-                <span>Full Screen</span>
-              </button>
-            )}
-          </div>
+          {currentTrack && onOpenFullscreenLyrics && (
+            <button
+              type="button"
+              onClick={onOpenFullscreenLyrics}
+              className="neu-raised px-2 py-1 rounded-lg text-[10px] font-bold text-[#0084FF] hover:text-white hover:bg-[#0084FF] transition-all cursor-pointer flex items-center gap-1 neu-btn-tactile"
+              title="Expand Lyrics to Full Screen"
+            >
+              <Maximize2 className="w-3 h-3" />
+              <span>Full Screen</span>
+            </button>
+          )}
         </div>
 
-        {/* Lyrics Content Display */}
+        {/* Lyrics Content Display - Stable fixed height h-44 so the sidebar never shifts */}
         {isLoadingLyrics ? (
-          <div className="neu-recessed p-4 rounded-xl text-center space-y-2">
+          <div className="neu-recessed p-4 rounded-xl text-center space-y-2 h-44 flex flex-col items-center justify-center">
             <Loader2 className="w-4 h-4 text-[#0084FF] animate-spin mx-auto" />
             <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] m-0">
               Loading lyrics...
             </p>
           </div>
         ) : lyricsError ? (
-          <div className="neu-recessed p-3.5 rounded-xl text-center">
+          <div className="neu-recessed p-3.5 rounded-xl text-center h-44 flex items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               {lyricsError}
             </p>
           </div>
         ) : !currentTrack ? (
-          <div className="neu-recessed p-3.5 rounded-xl text-center">
+          <div className="neu-recessed p-3.5 rounded-xl text-center h-44 flex items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               Play a song to view live lyrics here.
             </p>
@@ -359,7 +327,7 @@ export default function RightSidebar({
         ) : isSynced ? (
           <div
             ref={lyricsContainerRef}
-            className="relative neu-recessed px-2 py-16 max-h-48 overflow-y-auto space-y-1 neu-custom-scrollbar"
+            className="relative neu-recessed p-2.5 rounded-xl h-44 overflow-y-auto space-y-1 neu-custom-scrollbar"
           >
             {lines.map((line, idx) => {
               const isActive = idx === activeLineIndex;
@@ -383,7 +351,7 @@ export default function RightSidebar({
             })}
           </div>
         ) : lyricsData?.plain_lyrics ? (
-          <div className="neu-recessed p-3 rounded-xl max-h-48 overflow-y-auto neu-custom-scrollbar">
+          <div className="neu-recessed p-3 rounded-xl h-44 overflow-y-auto neu-custom-scrollbar">
             <span className="text-[9px] font-bold uppercase tracking-wider text-[#F59E0B] block mb-1">
               Unsynchronized
             </span>
@@ -393,7 +361,7 @@ export default function RightSidebar({
             </p>
           </div>
         ) : (
-          <div className="neu-recessed p-3.5 rounded-xl text-center space-y-1">
+          <div className="neu-recessed p-3.5 rounded-xl text-center space-y-1 h-44 flex flex-col items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               No lyrics found for this song.
             </p>
