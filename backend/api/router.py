@@ -90,6 +90,7 @@ class SettingsUpdateRequest(BaseModel):
     default_media_type: Optional[str] = None
     ffmpeg_path: Optional[str] = None
     glass_mode: Optional[bool] = None
+    custom_wallpaper: Optional[str] = None
 
 
 class ValidateFFmpegRequest(BaseModel):

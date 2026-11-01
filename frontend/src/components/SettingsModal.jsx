@@ -17,8 +17,39 @@ import {
   Sparkles,
   Sliders,
   HardDrive,
+  Image as ImageIcon,
+  Upload,
+  Trash2,
+  Link2,
 } from "lucide-react";
 import { validateFFmpeg, getCustomBackendUrl, setCustomBackendUrl } from "../api";
+
+const WALLPAPER_PRESETS = [
+  {
+    id: "obsidian-ember",
+    name: "Obsidian Ember",
+    value: "radial-gradient(ellipse at bottom left, #451a03 0%, #18181b 50%, #09090b 100%)",
+    style: "radial-gradient(ellipse at bottom left, #451a03 0%, #18181b 50%, #09090b 100%)",
+  },
+  {
+    id: "cosmic-void",
+    name: "Cosmic Void",
+    value: "radial-gradient(ellipse at top right, #1e1b4b 0%, #0f172a 50%, #030712 100%)",
+    style: "radial-gradient(ellipse at top right, #1e1b4b 0%, #0f172a 50%, #030712 100%)",
+  },
+  {
+    id: "cyber-synth",
+    name: "Cyber Synth",
+    value: "radial-gradient(ellipse at top left, #0e7490 0%, #0f172a 50%, #020617 100%)",
+    style: "radial-gradient(ellipse at top left, #0e7490 0%, #0f172a 50%, #020617 100%)",
+  },
+  {
+    id: "anime-twilight",
+    name: "Anime Twilight",
+    value: "radial-gradient(ellipse at center, #311042 0%, #110d21 55%, #05040a 100%)",
+    style: "radial-gradient(ellipse at center, #311042 0%, #110d21 55%, #05040a 100%)",
+  },
+];
 
 export default function SettingsModal({
   isOpen,
@@ -30,6 +61,8 @@ export default function SettingsModal({
   onSelectTheme,
   glassMode,
   onToggleGlassMode,
+  customWallpaper,
+  onSelectWallpaper,
 }) {
   const [activeTab, setActiveTab] = useState("general"); // "general" | "storage" | "advanced"
   const [downloadsDir, setDownloadsDir] = useState("");
@@ -37,6 +70,8 @@ export default function SettingsModal({
   const [defaultMediaType, setDefaultMediaType] = useState("video");
   const [ffmpegPath, setFfmpegPath] = useState("");
   const [glassModeEnabled, setGlassModeEnabled] = useState(false);
+  const [wallpaper, setWallpaper] = useState(customWallpaper || "");
+  const [urlInput, setUrlInput] = useState("");
   const [backendUrl, setBackendUrlState] = useState(() => getCustomBackendUrl());
   const [isSaved, setIsSaved] = useState(false);
   const [isOpeningFolder, setIsOpeningFolder] = useState(false);
@@ -53,9 +88,10 @@ export default function SettingsModal({
       setDefaultMediaType(currentSettings.default_media_type || "video");
       setFfmpegPath(currentSettings.ffmpeg_path || "");
       setGlassModeEnabled(Boolean(currentSettings.glass_mode ?? glassMode));
+      setWallpaper(currentSettings.custom_wallpaper ?? customWallpaper ?? "");
       setValidationResult(null);
     }
-  }, [currentSettings, isOpen, glassMode]);
+  }, [currentSettings, isOpen, glassMode, customWallpaper]);
 
   if (!isOpen) return null;
 
@@ -64,6 +100,51 @@ export default function SettingsModal({
     if (onToggleGlassMode) {
       onToggleGlassMode(enabled);
     }
+  };
+
+  const handleApplyWallpaper = (wp) => {
+    setWallpaper(wp);
+    if (onSelectWallpaper) {
+      onSelectWallpaper(wp);
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      const dataUrl = loadEvent.target.result;
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX_WIDTH = 1920;
+        const MAX_HEIGHT = 1080;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          if (width / height > MAX_WIDTH / MAX_HEIGHT) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          } else {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        const optimized = canvas.toDataURL("image/jpeg", 0.88);
+        handleApplyWallpaper(optimized);
+      };
+      img.onerror = () => {
+        handleApplyWallpaper(dataUrl);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleOpenFolder = async () => {
@@ -101,6 +182,7 @@ export default function SettingsModal({
       default_media_type: defaultMediaType,
       ffmpeg_path: ffmpegPath.trim(),
       glass_mode: glassModeEnabled,
+      custom_wallpaper: wallpaper,
     });
     setIsSaved(true);
     setTimeout(() => {
@@ -256,6 +338,139 @@ export default function SettingsModal({
                         }`}
                       />
                     </button>
+                  </div>
+                </div>
+
+                {/* Custom Wallpaper Section */}
+                <div className="p-3.5 rounded-xl neu-raised border border-slate-200/60 dark:border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className={`w-4 h-4 ${wallpaper ? "text-[#F59E0B]" : "text-[#64748B]"}`} />
+                      <div>
+                        <span className="text-xs font-bold text-[#1E293B] dark:text-[#F8FAFC] block">
+                          Custom Wallpaper
+                        </span>
+                        <span className="text-[10px] text-[#64748B] dark:text-[#94A3B8]">
+                          Background visible through frosted glass cards (5px corner radius)
+                        </span>
+                      </div>
+                    </div>
+                    {wallpaper ? (
+                      <button
+                        type="button"
+                        onClick={() => handleApplyWallpaper("")}
+                        className="px-2 py-1 rounded text-[11px] font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Remove custom wallpaper and return to default ambient reflection"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Remove</span>
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-[#64748B] dark:text-[#94A3B8] font-medium">
+                        Default Ambient
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Active Preview Thumbnail if set */}
+                  {wallpaper && (
+                    <div className="relative h-20 rounded-lg overflow-hidden border border-white/20 shadow-inner group">
+                      <div
+                        className="w-full h-full bg-cover bg-center"
+                        style={
+                          wallpaper.startsWith("data:") ||
+                          wallpaper.startsWith("http") ||
+                          wallpaper.startsWith("/") ||
+                          wallpaper.startsWith("file:")
+                            ? { backgroundImage: `url(${wallpaper})` }
+                            : { background: wallpaper }
+                        }
+                      />
+                      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-2">
+                        <div className="glass-card px-3 py-1 text-[11px] font-bold text-white shadow-lg flex items-center gap-1.5">
+                          <Check className="w-3 h-3 text-[#10B981]" />
+                          <span>Active Wallpaper (5px Corner Radius)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* File Upload & URL Inputs */}
+                  <div className="space-y-2">
+                    <label className="neu-recessed hover:bg-slate-200/50 dark:hover:bg-slate-800/50 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-[#1E293B] dark:text-[#F8FAFC] transition-colors border border-slate-200/60 dark:border-slate-800">
+                      <Upload className="w-3.5 h-3.5 text-[#0084FF]" />
+                      <span>Upload Wallpaper / Artwork</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                      />
+                    </label>
+
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative flex-1">
+                        <Link2 className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="url"
+                          value={urlInput}
+                          onChange={(e) => setUrlInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (urlInput.trim()) {
+                                handleApplyWallpaper(urlInput.trim());
+                                setUrlInput("");
+                              }
+                            }
+                          }}
+                          placeholder="Or paste wallpaper image URL..."
+                          className="w-full text-xs pl-8 pr-2.5 py-1.5 neu-recessed rounded-lg border border-slate-200/60 dark:border-slate-800 text-[#1E293B] dark:text-[#F8FAFC] focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (urlInput.trim()) {
+                            handleApplyWallpaper(urlInput.trim());
+                            setUrlInput("");
+                          }
+                        }}
+                        disabled={!urlInput.trim()}
+                        className="px-3 py-1.5 neu-accent rounded-lg text-xs font-bold disabled:opacity-40 cursor-pointer transition-opacity"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Curated Dark Atmosphere Presets */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold text-[#64748B] dark:text-[#94A3B8] uppercase tracking-wider block">
+                      Atmosphere Presets
+                    </span>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {WALLPAPER_PRESETS.map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleApplyWallpaper(preset.value)}
+                          className={`h-11 rounded-md overflow-hidden relative border transition-all cursor-pointer group ${
+                            wallpaper === preset.value
+                              ? "border-[#F59E0B] shadow-[0_0_8px_rgba(245,158,11,0.5)] ring-1 ring-[#F59E0B]"
+                              : "border-slate-700/60 hover:border-slate-400"
+                          }`}
+                          style={{
+                            background: preset.style,
+                          }}
+                          title={preset.name}
+                        >
+                          <span className="absolute inset-x-0 bottom-0 py-0.5 bg-black/60 backdrop-blur-[2px] text-[9px] font-bold text-white text-center truncate px-1">
+                            {preset.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

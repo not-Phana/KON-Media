@@ -65,6 +65,14 @@ export default function App() {
     }
   });
 
+  const [customWallpaper, setCustomWallpaper] = useState(() => {
+    try {
+      return localStorage.getItem("kon_custom_wallpaper") || "";
+    } catch (_) {
+      return "";
+    }
+  });
+
   const [health, setHealth] = useState(null);
   const [settings, setSettings] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -415,6 +423,12 @@ export default function App() {
             localStorage.setItem("kon_glass_mode", String(s.glass_mode));
           } catch (_) {}
         }
+        if (typeof s.custom_wallpaper === "string" && s.custom_wallpaper) {
+          setCustomWallpaper(s.custom_wallpaper);
+          try {
+            localStorage.setItem("kon_custom_wallpaper", s.custom_wallpaper);
+          } catch (_) {}
+        }
       }
       if (t) setActiveTasks(t);
       if (hist) setHistory(hist);
@@ -541,6 +555,19 @@ export default function App() {
       localStorage.setItem("kon_glass_mode", String(enabled));
     } catch (_) {}
     saveSettings({ glass_mode: enabled }).catch(() => {});
+  };
+
+  const handleSelectWallpaper = (wp) => {
+    const val = wp || "";
+    setCustomWallpaper(val);
+    try {
+      if (val) {
+        localStorage.setItem("kon_custom_wallpaper", val);
+      } else {
+        localStorage.removeItem("kon_custom_wallpaper");
+      }
+    } catch (_) {}
+    saveSettings({ custom_wallpaper: val }).catch(() => {});
   };
 
   // Handle URL analysis or keyword discovery
@@ -854,6 +881,16 @@ export default function App() {
           localStorage.setItem("kon_glass_mode", String(newSettings.glass_mode));
         } catch (_) {}
       }
+      if (typeof newSettings.custom_wallpaper === "string") {
+        setCustomWallpaper(newSettings.custom_wallpaper);
+        try {
+          if (newSettings.custom_wallpaper) {
+            localStorage.setItem("kon_custom_wallpaper", newSettings.custom_wallpaper);
+          } else {
+            localStorage.removeItem("kon_custom_wallpaper");
+          }
+        } catch (_) {}
+      }
       const updated = await saveSettings(newSettings);
       setSettings(updated);
       const h = await fetchHealth().catch(() => null);
@@ -864,9 +901,24 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen ${glassMode ? "bg-transparent" : "bg-[var(--bg-main)]"} text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between relative overflow-x-hidden`}>
-      {/* Living Ambient Artwork Reflection Backdrop for Glass Mode */}
-      {glassMode && (
+    <div className={`min-h-screen ${glassMode || customWallpaper ? "bg-transparent" : "bg-[var(--bg-main)]"} text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between relative overflow-x-hidden`}>
+      {/* Custom Wallpaper Backdrop OR Living Ambient Artwork Reflection Backdrop for Glass Mode */}
+      {customWallpaper ? (
+        <div
+          className="kon-custom-wallpaper-backdrop"
+          style={
+            customWallpaper.startsWith("data:") ||
+            customWallpaper.startsWith("http") ||
+            customWallpaper.startsWith("/") ||
+            customWallpaper.startsWith("file:")
+              ? { backgroundImage: `url(${customWallpaper})` }
+              : { background: customWallpaper }
+          }
+          aria-hidden="true"
+        >
+          <div className="kon-custom-wallpaper-overlay" />
+        </div>
+      ) : glassMode && (
         <div
           className="kon-glass-ambient-backdrop"
           style={
@@ -1096,6 +1148,8 @@ export default function App() {
         onSelectTheme={setTheme}
         glassMode={glassMode}
         onToggleGlassMode={handleToggleGlassMode}
+        customWallpaper={customWallpaper}
+        onSelectWallpaper={handleSelectWallpaper}
       />
 
       {/* KON Search 1.2 Rei Model Spotlight Modal */}

@@ -102,6 +102,7 @@ class SettingsStore:
             "default_media_type": "video",
             "ffmpeg_path": "",
             "glass_mode": False,
+            "custom_wallpaper": "",
         }
         self.store = AtomicJsonStore(state_dir / "settings.json", default_value=self.default_settings)
 

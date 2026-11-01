@@ -248,7 +248,7 @@ html.dark .neu-pill-inactive:hover {
    Exact visual replication of user's glass card reference:
    - 48% translucent dark charcoal glass with 16px frosted blur
    - 1px crisp frosted border with subtle top inset highlight
-   - 16px corner radiuses and deep diffuse shadow
+   - Restrained 5px corner radius across cards and buttons
    - Solid high-contrast primary button (matching "Continue")
    - Translucent frosted glass secondary button (matching "Cancel")
    ========================================================================== */
@@ -261,7 +261,7 @@ html.theme-glass .neu-card {
   -webkit-backdrop-filter: blur(16px) saturate(140%) brightness(110%) !important;
   backdrop-filter: blur(16px) saturate(140%) brightness(110%) !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: 16px !important;
+  border-radius: 5px !important;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -299,24 +299,47 @@ body.theme-glass {
   background-attachment: fixed !important;
 }
 
-/* Recessed Inset Glass Surfaces */
+/* Custom User Wallpaper Backdrop */
+.kon-custom-wallpaper-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  will-change: transform, opacity;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.kon-custom-wallpaper-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 8, 15, 0.40);
+  pointer-events: none;
+}
+
+/* Recessed Inset Glass Surfaces (5px radius) */
 .theme-glass .neu-recessed,
 html.theme-glass .neu-recessed {
   background: rgba(0, 0, 0, 0.32) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-radius: 5px !important;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45) !important;
 }
 
-/* Primary High-Contrast Button (Matching "Continue" in reference) */
+/* Primary High-Contrast Button (Matching "Continue" in reference, 5px radius) */
 .glass-btn-primary,
 .theme-glass .neu-accent,
 html.theme-glass .neu-accent {
   background: #FFFFFF !important;
   color: #0F172A !important;
   font-weight: 700 !important;
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   border: 1px solid rgba(255, 255, 255, 0.9) !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22) !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -338,7 +361,7 @@ html.theme-glass .neu-accent:active:not(:disabled) {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* Secondary Translucent Frosted Glass Button (Matching "Cancel" in reference) */
+/* Secondary Translucent Frosted Glass Button (Matching "Cancel" in reference, 5px radius) */
 .glass-btn-secondary,
 .theme-glass .neu-raised,
 html.theme-glass .neu-raised {
@@ -346,7 +369,7 @@ html.theme-glass .neu-raised {
   -webkit-backdrop-filter: blur(12px) !important;
   backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.20) !important;
-  border-radius: 12px !important;
+  border-radius: 5px !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18) !important;
   color: #FFFFFF !important;
   font-weight: 600 !important;
@@ -372,13 +395,21 @@ html.theme-glass .neu-raised:active:not(:disabled) {
   transform: translateY(0.5px) !important;
 }
 
-/* Warm Gold Active Pills */
+/* Active Pills (5px radius in Glass Mode) */
 .theme-glass .neu-pill-active,
 html.theme-glass .neu-pill-active {
   background: rgba(217, 119, 6, 0.20) !important;
   border: 1px solid rgba(245, 158, 11, 0.50) !important;
+  border-radius: 5px !important;
   color: #FDE68A !important;
   box-shadow: 0 0 14px rgba(217, 119, 6, 0.25) !important;
+}
+
+.theme-glass input,
+html.theme-glass input,
+.theme-glass select,
+html.theme-glass select {
+  border-radius: 5px !important;
 }
 
 /* Bottom Player Dock in Glass Mode */
