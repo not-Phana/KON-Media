@@ -245,82 +245,95 @@ html.dark .neu-pill-inactive:hover {
 
 /* ==========================================================================
    KON Media Glass Mode Design System
-   Exact optical glass material formula:
-   rgba(255, 255, 255, 0.04) + blur(2px) saturate(80%) brightness(140%)
+   Exact optical glass card reference:
+   Translucent frosted surface with background shining through,
+   blur(16px) saturate(140%), crisp white border, and warm gold accents.
    ========================================================================== */
 
 .glass {
-  background: rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: blur(2px) saturate(80%) brightness(140%);
-  backdrop-filter: blur(2px) saturate(80%) brightness(140%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 5px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.00);
+  background: rgba(16, 22, 34, 0.52);
+  -webkit-backdrop-filter: blur(16px) saturate(140%) brightness(110%);
+  backdrop-filter: blur(16px) saturate(140%) brightness(110%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass {
-    background: rgba(255, 255, 255, 0.64);
+    background: rgba(17, 23, 36, 0.95);
   }
 }
 
 .theme-glass,
 html.theme-glass,
 body.theme-glass {
-  --glass-surface: rgba(255, 255, 255, 0.04);
-  --glass-surface-elevated: rgba(255, 255, 255, 0.07);
-  --glass-surface-recessed: rgba(0, 0, 0, 0.25);
-  --glass-border: rgba(255, 255, 255, 0.07);
-  --glass-border-subtle: rgba(255, 255, 255, 0.04);
-  --glass-border-warm: rgba(245, 158, 11, 0.35);
+  --glass-surface: rgba(16, 22, 34, 0.52);
+  --glass-surface-elevated: rgba(22, 30, 46, 0.60);
+  --glass-surface-recessed: rgba(0, 0, 0, 0.30);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-subtle: rgba(255, 255, 255, 0.06);
+  --glass-border-warm: rgba(245, 158, 11, 0.45);
   --glass-gold: #F59E0B;
   --glass-gold-hover: #D97706;
   --glass-gold-light: #FDE68A;
 }
 
-/* Translucent Glass Cards matching exact optical glass formula */
+/* Atmospheric ambient cosmic aura in Glass Mode */
+html.theme-glass body,
+body.theme-glass {
+  background-color: #070B12 !important;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -5%, rgba(217, 119, 6, 0.20), transparent 70%),
+    radial-gradient(ellipse 65% 45% at 90% 50%, rgba(56, 189, 248, 0.15), transparent 60%),
+    radial-gradient(ellipse 60% 55% at 10% 75%, rgba(139, 92, 246, 0.13), transparent 60%),
+    radial-gradient(ellipse 50% 35% at 50% 100%, rgba(245, 158, 11, 0.12), transparent 60%) !important;
+  background-attachment: fixed !important;
+}
+
+/* Translucent Glass Cards matching user's exact glass card reference */
 .theme-glass .neu-card,
 html.theme-glass .neu-card {
-  background: rgba(255, 255, 255, 0.04) !important;
-  -webkit-backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
-  backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18) !important;
+  background: rgba(16, 22, 34, 0.52) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) brightness(110%) !important;
+  backdrop-filter: blur(16px) saturate(140%) brightness(110%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
 }
 
 /* Recessed Inset Glass Surfaces */
 .theme-glass .neu-recessed,
 html.theme-glass .neu-recessed {
-  background: rgba(0, 0, 0, 0.28) !important;
-  -webkit-backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
-  backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.40) !important;
+  background: rgba(0, 0, 0, 0.30) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45) !important;
 }
 
 /* Tactile Raised Glass Buttons & Surfaces */
 .theme-glass .neu-raised,
 html.theme-glass .neu-raised {
-  background: rgba(255, 255, 255, 0.05) !important;
-  -webkit-backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
-  backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.07) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.20) !important;
   color: #F8FAFC !important;
 }
 
 .theme-glass .neu-raised:hover:not(:disabled),
 html.theme-glass .neu-raised:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.09) !important;
-  border-color: rgba(245, 158, 11, 0.40) !important;
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
   color: #FDE68A !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25), 0 0 14px rgba(245, 158, 11, 0.15) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.30), 0 0 14px rgba(245, 158, 11, 0.20) !important;
   transform: translateY(-1px);
 }
 
 .theme-glass .neu-raised:active:not(:disabled),
 html.theme-glass .neu-raised:active:not(:disabled) {
-  background: rgba(0, 0, 0, 0.35) !important;
+  background: rgba(0, 0, 0, 0.40) !important;
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5) !important;
   border-color: rgba(245, 158, 11, 0.25) !important;
   color: #F59E0B !important;
@@ -330,15 +343,15 @@ html.theme-glass .neu-raised:active:not(:disabled) {
 .theme-glass .neu-accent,
 html.theme-glass .neu-accent {
   background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  box-shadow: 0 6px 18px rgba(180, 83, 9, 0.38), 0 1px 0 rgba(255, 255, 255, 0.15) inset !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 6px 18px rgba(180, 83, 9, 0.40), 0 1px 0 rgba(255, 255, 255, 0.18) inset !important;
   color: #FFFFFF !important;
 }
 
 .theme-glass .neu-accent:hover:not(:disabled),
 html.theme-glass .neu-accent:hover:not(:disabled) {
   background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
-  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.45) !important;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.50) !important;
 }
 
 .theme-glass .neu-accent:active:not(:disabled),
@@ -349,10 +362,20 @@ html.theme-glass .neu-accent:active:not(:disabled) {
 /* Warm Gold Active Pills */
 .theme-glass .neu-pill-active,
 html.theme-glass .neu-pill-active {
-  background: rgba(217, 119, 6, 0.18) !important;
-  border: 1px solid rgba(245, 158, 11, 0.45) !important;
+  background: rgba(217, 119, 6, 0.20) !important;
+  border: 1px solid rgba(245, 158, 11, 0.50) !important;
   color: #FDE68A !important;
-  box-shadow: 0 0 14px rgba(217, 119, 6, 0.2) !important;
+  box-shadow: 0 0 14px rgba(217, 119, 6, 0.25) !important;
+}
+
+/* Bottom Player Dock in Glass Mode */
+.theme-glass .neu-player-dock,
+html.theme-glass .neu-player-dock {
+  background: rgba(14, 20, 32, 0.65) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.40) !important;
 }
 
 /* Warm Gold Tint for Primary Accents in Glass Mode */
@@ -369,8 +392,8 @@ html.theme-glass .text-\[\#0084FF\] {
   height: 120%;
   z-index: 0;
   pointer-events: none;
-  filter: blur(80px) saturate(180%);
-  opacity: 0.22;
+  filter: blur(75px) saturate(170%);
+  opacity: 0.32;
   transform: translateZ(0);
   will-change: transform, opacity;
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), background-image 0.8s ease-in-out;

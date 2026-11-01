@@ -864,16 +864,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between relative overflow-x-hidden">
+    <div className={`min-h-screen ${glassMode ? "bg-transparent" : "bg-[var(--bg-main)]"} text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between relative overflow-x-hidden`}>
       {/* Living Ambient Artwork Reflection Backdrop for Glass Mode */}
-      {glassMode && currentTrack?.thumbnail && (
+      {glassMode && (
         <div
           className="kon-glass-ambient-backdrop"
-          style={{
-            backgroundImage: `url(${JSON.stringify(currentTrack.thumbnail)})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+          style={
+            currentTrack?.thumbnail
+              ? {
+                  backgroundImage: `url(${JSON.stringify(currentTrack.thumbnail)})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
           aria-hidden="true"
         />
       )}
