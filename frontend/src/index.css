@@ -245,68 +245,83 @@ html.dark .neu-pill-inactive:hover {
 
 /* ==========================================================================
    KON Media Glass Mode Design System
-   Native-feeling translucent charcoal surfaces, warm gold accents,
-   soft white text, restrained borders, and realistic backdrop blur.
+   Exact optical glass material formula:
+   rgba(255, 255, 255, 0.04) + blur(2px) saturate(80%) brightness(140%)
    ========================================================================== */
+
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(2px) saturate(80%) brightness(140%);
+  backdrop-filter: blur(2px) saturate(80%) brightness(140%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 5px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.00);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: rgba(255, 255, 255, 0.64);
+  }
+}
 
 .theme-glass,
 html.theme-glass,
 body.theme-glass {
-  --glass-surface: rgba(14, 20, 30, 0.65);
-  --glass-surface-elevated: rgba(20, 28, 42, 0.72);
-  --glass-surface-recessed: rgba(8, 12, 18, 0.60);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-border-subtle: rgba(255, 255, 255, 0.05);
+  --glass-surface: rgba(255, 255, 255, 0.04);
+  --glass-surface-elevated: rgba(255, 255, 255, 0.07);
+  --glass-surface-recessed: rgba(0, 0, 0, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --glass-border-subtle: rgba(255, 255, 255, 0.04);
   --glass-border-warm: rgba(245, 158, 11, 0.35);
   --glass-gold: #F59E0B;
   --glass-gold-hover: #D97706;
   --glass-gold-light: #FDE68A;
 }
 
-/* Translucent Charcoal Glass Cards */
+/* Translucent Glass Cards matching exact optical glass formula */
 .theme-glass .neu-card,
 html.theme-glass .neu-card {
-  background: rgba(14, 20, 30, 0.62) !important;
-  backdrop-filter: blur(24px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  -webkit-backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
+  backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18) !important;
 }
 
 /* Recessed Inset Glass Surfaces */
 .theme-glass .neu-recessed,
 html.theme-glass .neu-recessed {
-  background: rgba(8, 12, 18, 0.58) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(0, 0, 0, 0.28) !important;
+  -webkit-backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
+  backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.40) !important;
 }
 
 /* Tactile Raised Glass Buttons & Surfaces */
 .theme-glass .neu-raised,
 html.theme-glass .neu-raised {
-  background: rgba(20, 29, 44, 0.55) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  -webkit-backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
+  backdrop-filter: blur(2px) saturate(80%) brightness(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
   color: #F8FAFC !important;
 }
 
 .theme-glass .neu-raised:hover:not(:disabled),
 html.theme-glass .neu-raised:hover:not(:disabled) {
-  background: rgba(28, 40, 60, 0.70) !important;
+  background: rgba(255, 255, 255, 0.09) !important;
   border-color: rgba(245, 158, 11, 0.40) !important;
   color: #FDE68A !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 14px rgba(245, 158, 11, 0.15) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25), 0 0 14px rgba(245, 158, 11, 0.15) !important;
   transform: translateY(-1px);
 }
 
 .theme-glass .neu-raised:active:not(:disabled),
 html.theme-glass .neu-raised:active:not(:disabled) {
-  background: rgba(10, 15, 24, 0.75) !important;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6) !important;
+  background: rgba(0, 0, 0, 0.35) !important;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5) !important;
   border-color: rgba(245, 158, 11, 0.25) !important;
   color: #F59E0B !important;
 }
