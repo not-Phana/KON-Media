@@ -164,8 +164,39 @@ export default function RightSidebar({
   const lines = lyricsData?.lines || [];
   const isSynced = lyricsData?.synced && lines.length > 0;
 
+  const [isSidebarScrolledAway, setIsSidebarScrolledAway] = useState(false);
+  const userScrolledSidebarRef = useRef(false);
+
+  useEffect(() => {
+    const container = lyricsContainerRef.current;
+    if (!container) return;
+
+    const onUserScroll = () => {
+      userScrolledSidebarRef.current = true;
+      if (activeLineIndex < 0) return;
+      const lineElements = container.querySelectorAll("[data-sidebar-lyric]");
+      const activeEl = lineElements[activeLineIndex];
+      if (!activeEl) return;
+
+      const containerHeight = container.clientHeight;
+      const elOffsetTop = activeEl.offsetTop;
+      const elHeight = activeEl.clientHeight;
+
+      const isVisible =
+        elOffsetTop >= container.scrollTop + 8 &&
+        elOffsetTop + elHeight <= container.scrollTop + containerHeight - 8;
+
+      setIsSidebarScrolledAway(!isVisible);
+    };
+
+    container.addEventListener("scroll", onUserScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onUserScroll);
+  }, [activeLineIndex]);
+
   // Stable sidebar lyrics view: ONLY scrolls when the active line goes out of view
   const ensureLineVisible = () => {
+    userScrolledSidebarRef.current = false;
+    setIsSidebarScrolledAway(false);
     const container = lyricsContainerRef.current;
     if (!container || activeLineIndex < 0) return;
 
@@ -495,6 +526,26 @@ export default function RightSidebar({
                 </div>
               );
             })}
+            {/* Spotify-style floating Sync pill */}
+            {isSynced && isSidebarScrolledAway && (
+              <div className="sticky bottom-1 left-1/2 -translate-x-1/2 z-20 flex justify-center pb-1 pointer-events-auto animate-in fade-in zoom-in-95 duration-150">
+                <button
+                  type="button"
+                  onClick={ensureLineVisible}
+                  className="px-3.5 py-1 rounded-full bg-white hover:bg-neutral-100 text-black font-extrabold text-xs shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white"
+                  title="Sync view to playing lyric"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-black shrink-0">
+                    <rect x="2.5" y="8" width="2.5" height="8" rx="1.25" />
+                    <rect x="7" y="5" width="2.5" height="14" rx="1.25" />
+                    <rect x="11.5" y="2" width="2.5" height="20" rx="1.25" />
+                    <rect x="16" y="5" width="2.5" height="14" rx="1.25" />
+                    <rect x="20.5" y="8" width="2.5" height="8" rx="1.25" />
+                  </svg>
+                  <span className="tracking-tight text-black font-extrabold">Sync</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : lyricsData?.plain_lyrics ? (
           <div className="neu-recessed p-3 rounded-xl flex-1 min-h-[220px] overflow-y-auto neu-custom-scrollbar">
@@ -619,6 +670,26 @@ export default function RightSidebar({
                 </div>
               );
             })}
+            {/* Spotify-style floating Sync pill */}
+            {isSynced && isSidebarScrolledAway && (
+              <div className="sticky bottom-1 left-1/2 -translate-x-1/2 z-20 flex justify-center pb-1 pointer-events-auto animate-in fade-in zoom-in-95 duration-150">
+                <button
+                  type="button"
+                  onClick={ensureLineVisible}
+                  className="px-3.5 py-1 rounded-full bg-white hover:bg-neutral-100 text-black font-extrabold text-xs shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 border border-white"
+                  title="Sync view to playing lyric"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-black shrink-0">
+                    <rect x="2.5" y="8" width="2.5" height="8" rx="1.25" />
+                    <rect x="7" y="5" width="2.5" height="14" rx="1.25" />
+                    <rect x="11.5" y="2" width="2.5" height="20" rx="1.25" />
+                    <rect x="16" y="5" width="2.5" height="14" rx="1.25" />
+                    <rect x="20.5" y="8" width="2.5" height="8" rx="1.25" />
+                  </svg>
+                  <span className="tracking-tight text-black font-extrabold">Sync</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="neu-recessed p-3.5 rounded-xl text-center">

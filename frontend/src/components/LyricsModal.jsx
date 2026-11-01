@@ -642,30 +642,23 @@ export default function LyricsModal({
         )}
       </main>
 
-      {/* FROSTED GLASS "JUMP TO PLAYING" PILL (Placed right where user drew in lower third) */}
+      {/* SPOTIFY-STYLE "SYNC" FLOATING PILL */}
       {isSynced && isScrolledAway && (
         <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-40 animate-in fade-in zoom-in-95 duration-200">
           <button
             type="button"
             onClick={scrollToActiveLine}
-            className={`px-5 py-2.5 rounded-full bg-slate-900/60 dark:bg-black/50 backdrop-blur-2xl border text-white transition-all duration-300 cursor-pointer neu-btn-elastic flex items-center gap-2.5 font-bold text-xs sm:text-sm select-none group ${
-              glassMode
-                ? "border-white/20 hover:border-[#F59E0B]/70 shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(217,119,6,0.25)] hover:shadow-[0_12px_44px_rgba(245,158,11,0.45)]"
-                : "border-white/20 hover:border-[#38BDF8]/70 shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(56,189,248,0.25)] hover:shadow-[0_12px_44px_rgba(56,189,248,0.45)]"
-            }`}
-            title="Jump to currently playing lyric line"
+            className="px-5 py-2 rounded-full bg-white hover:bg-neutral-100 text-black font-extrabold text-sm select-none shadow-[0_10px_35px_rgba(0,0,0,0.6)] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer flex items-center gap-2 group border border-white"
+            title="Sync to currently playing lyric line"
           >
-            <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981] animate-pulse shrink-0" />
-            {scrollDirection === "down" ? (
-              <ArrowDown className={`w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5 shrink-0 ${
-                glassMode ? "text-[#F59E0B]" : "text-[#38BDF8]"
-              }`} />
-            ) : (
-              <ArrowUp className={`w-4 h-4 transition-transform duration-300 group-hover:-translate-y-0.5 shrink-0 ${
-                glassMode ? "text-[#F59E0B]" : "text-[#38BDF8]"
-              }`} />
-            )}
-            <span className="tracking-wide">Jump to playing</span>
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-black shrink-0">
+              <rect x="2.5" y="8" width="2.5" height="8" rx="1.25" />
+              <rect x="7" y="5" width="2.5" height="14" rx="1.25" />
+              <rect x="11.5" y="2" width="2.5" height="20" rx="1.25" />
+              <rect x="16" y="5" width="2.5" height="14" rx="1.25" />
+              <rect x="20.5" y="8" width="2.5" height="8" rx="1.25" />
+            </svg>
+            <span className="tracking-tight text-black font-extrabold">Sync</span>
           </button>
         </div>
       )}
