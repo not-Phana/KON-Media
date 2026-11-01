@@ -38,7 +38,7 @@ export default function LeftSidebar({
 
   return (
     <aside
-      className="hidden lg:flex flex-col justify-between w-80 xl:w-84 2xl:w-92 shrink-0 space-y-4 select-none sticky top-4 self-start h-[calc(100vh-2rem)] overflow-y-auto pr-1 neu-custom-scrollbar"
+      className="hidden lg:flex flex-col justify-between w-80 xl:w-84 2xl:w-92 shrink-0 space-y-4 select-none sticky top-2 self-start h-[calc(100vh-1rem)] overflow-y-auto pl-0 pr-1 neu-custom-scrollbar"
       aria-label="Navigation & Control Sidebar"
     >
       <div className="space-y-4">

@@ -933,9 +933,9 @@ export default function App() {
           aria-hidden="true"
         />
       )}
-      <div className={`relative z-10 max-w-[1920px] 2xl:max-w-full w-full mx-auto px-4 sm:px-6 py-4 ${currentTrack ? "pb-28" : ""}`}>
+      <div className={`relative z-10 w-full px-0 py-2 sm:py-3 ${currentTrack ? "pb-28" : ""}`}>
         {/* 3-Column Workstation Layout */}
-        <div className="flex items-start gap-6">
+        <div className="flex items-start gap-3 xl:gap-5 w-full px-0">
           {/* Left Sidebar: Navigation, Engine Switcher & Autonomous Learning */}
           <LeftSidebar
             activeView={activeView}

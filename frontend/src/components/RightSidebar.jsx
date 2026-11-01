@@ -151,7 +151,7 @@ export default function RightSidebar({
 
   return (
     <aside
-      className="hidden xl:flex flex-col w-88 2xl:w-[410px] shrink-0 space-y-4 select-none sticky top-4 self-start h-[calc(100vh-2rem)] overflow-y-auto pr-1 neu-custom-scrollbar"
+      className="hidden xl:flex flex-col w-88 2xl:w-[410px] shrink-0 space-y-4 select-none sticky top-2 self-start h-[calc(100vh-1rem)] overflow-y-auto pr-0 neu-custom-scrollbar"
       aria-label="Playback Spotlight & Queue Sidebar"
     >
       {/* 1. Now Playing Spotlight Card */}
