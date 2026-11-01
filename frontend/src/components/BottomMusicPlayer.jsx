@@ -73,7 +73,16 @@ export default function BottomMusicPlayer({
 }) {
   const audioRef = useRef(null);
   const listenedTriggeredRef = useRef(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(() => {
+    try {
+      const saved = parseFloat(localStorage.getItem("kon_player_current_time") || "0");
+      return saved > 0 ? saved : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const initialSeekTimeRef = useRef(currentTime);
+  const isInitialMountRef = useRef(true);
   const [duration, setDuration] = useState(0);
   const [bufferedPercent, setBufferedPercent] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -115,6 +124,20 @@ export default function BottomMusicPlayer({
     return () => window.removeEventListener("kon_audio_seek", handleAudioSeek);
   }, []);
 
+  // Save instantaneous playback position and state before page reloads
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (audioRef.current) {
+        try {
+          localStorage.setItem("kon_player_current_time", String(audioRef.current.currentTime || 0));
+          localStorage.setItem("kon_player_is_playing", String(!audioRef.current.paused));
+        } catch (_) {}
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   const rawStreamUrl = currentTrack?.stream_url || currentTrack?.direct_url;
   const audioSrc = rawStreamUrl ? getAudioStreamUrl(rawStreamUrl) : "";
 
@@ -124,9 +147,16 @@ export default function BottomMusicPlayer({
     if (!el) return;
 
     setPlayerError(null);
-    setCurrentTime(0);
     setBufferedPercent(0);
     listenedTriggeredRef.current = false;
+
+    // On fresh track change (not initial mount/refresh), start from 0
+    if (!isInitialMountRef.current) {
+      setCurrentTime(0);
+      try {
+        localStorage.setItem("kon_player_current_time", "0");
+      } catch (_) {}
+    }
 
     if (audioSrc) {
       el.src = audioSrc;
@@ -143,7 +173,14 @@ export default function BottomMusicPlayer({
             .catch((err) => {
               setIsBuffering(false);
               if (err.name === "NotAllowedError") {
-                if (onPause) onPause();
+                // Browser autoplay security held it back before user gesture
+                const startOnGesture = () => {
+                  el.play().catch(() => {});
+                  window.removeEventListener("pointerdown", startOnGesture);
+                  window.removeEventListener("keydown", startOnGesture);
+                };
+                window.addEventListener("pointerdown", startOnGesture, { once: true });
+                window.addEventListener("keydown", startOnGesture, { once: true });
               } else if (err.name !== "AbortError") {
                 console.warn("Audio play failed:", err);
               }
@@ -185,6 +222,11 @@ export default function BottomMusicPlayer({
     const cur = audioRef.current.currentTime || 0;
     setCurrentTime(cur);
 
+    // Persist instantaneous timestamp so reloads continue seamlessly
+    try {
+      localStorage.setItem("kon_player_current_time", String(cur));
+    } catch (_) {}
+
     // Emit live audio time update for lyrics synchronization
     window.dispatchEvent(
       new CustomEvent("kon_audio_timeupdate", {
@@ -212,6 +254,18 @@ export default function BottomMusicPlayer({
       setDuration(dur);
     } else if (currentTrack?.duration) {
       setDuration(currentTrack.duration);
+    }
+
+    // Seamless seek to saved position on page reload
+    if (isInitialMountRef.current && initialSeekTimeRef.current > 0) {
+      const targetTime = Math.min(
+        initialSeekTimeRef.current,
+        dur > 0 ? dur - 0.5 : initialSeekTimeRef.current
+      );
+      audioRef.current.currentTime = targetTime;
+      setCurrentTime(targetTime);
+      initialSeekTimeRef.current = 0;
+      isInitialMountRef.current = false;
     }
     setIsBuffering(false);
   }, [currentTrack]);

@@ -129,6 +129,46 @@ export default function App() {
   const [favorites, setFavorites] = useState(() => getFavorites());
   const [recentlyPlayed, setRecentlyPlayed] = useState(() => getRecentlyPlayed());
 
+  // Persist playback and navigation state across page reloads
+  useEffect(() => {
+    try {
+      if (currentTrack) {
+        localStorage.setItem("kon_player_current_track", JSON.stringify(currentTrack));
+      } else {
+        localStorage.removeItem("kon_player_current_track");
+      }
+    } catch (_) {}
+  }, [currentTrack]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_player_is_playing", String(isPlaying));
+    } catch (_) {}
+  }, [isPlaying]);
+
+  useEffect(() => {
+    try {
+      if (playbackQueue && playbackQueue.length > 0) {
+        localStorage.setItem("kon_player_queue", JSON.stringify(playbackQueue));
+      } else {
+        localStorage.removeItem("kon_player_queue");
+      }
+      localStorage.setItem("kon_player_queue_index", String(queueIndex));
+    } catch (_) {}
+  }, [playbackQueue, queueIndex]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_lyrics_modal_open", String(isLyricsModalOpen));
+    } catch (_) {}
+  }, [isLyricsModalOpen]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_active_view", activeView);
+    } catch (_) {}
+  }, [activeView]);
+
   // Reactive listeners for local storage state changes
   useEffect(() => {
     const handleFavChange = (e) => setFavorites(e.detail || getFavorites());
@@ -389,6 +429,14 @@ export default function App() {
   const handleClosePlayer = () => {
     setIsPlaying(false);
     setCurrentTrack(null);
+    try {
+      localStorage.removeItem("kon_player_current_track");
+      localStorage.removeItem("kon_player_is_playing");
+      localStorage.removeItem("kon_player_current_time");
+      localStorage.removeItem("kon_player_queue");
+      localStorage.removeItem("kon_player_queue_index");
+      localStorage.removeItem("kon_lyrics_modal_open");
+    } catch (_) {}
   };
 
   const handleTrackListen = (track, durationListened, isCompleted) => {
