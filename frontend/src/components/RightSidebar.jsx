@@ -151,13 +151,13 @@ export default function RightSidebar({
 
   return (
     <aside
-      className="hidden xl:flex flex-col w-72 2xl:w-80 shrink-0 space-y-4 select-none sticky top-5 self-start max-h-[calc(100vh-2.5rem)] overflow-y-auto pr-1 neu-custom-scrollbar"
+      className="hidden xl:flex flex-col w-88 2xl:w-[410px] shrink-0 space-y-4 select-none sticky top-4 self-start h-[calc(100vh-2rem)] overflow-y-auto pr-1 neu-custom-scrollbar"
       aria-label="Playback Spotlight & Queue Sidebar"
     >
       {/* 1. Now Playing Spotlight Card */}
       <div className="neu-card p-4 space-y-3.5 border border-slate-200/60 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
+          <span className="text-xs font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
             <Volume2 className="w-3.5 h-3.5 text-[#0084FF]" />
             Now Playing Spotlight
           </span>
@@ -211,13 +211,13 @@ export default function RightSidebar({
             {/* Song Metadata */}
             <div className="space-y-1">
               <h3
-                className="text-xs font-bold text-[#1E293B] dark:text-[#F8FAFC] truncate m-0 leading-tight"
+                className="text-sm font-bold text-[#1E293B] dark:text-[#F8FAFC] truncate m-0 leading-tight"
                 title={currentTrack.title}
               >
                 {currentTrack.title}
               </h3>
               <p
-                className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-medium truncate m-0"
+                className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium truncate m-0"
                 title={currentTrack.artist || currentTrack.uploader}
               >
                 {currentTrack.artist || currentTrack.uploader || "Unknown Artist"}
@@ -231,7 +231,7 @@ export default function RightSidebar({
                 <button
                   type="button"
                   onClick={onTogglePlay}
-                  className="neu-accent p-2 rounded-xl text-white cursor-pointer neu-btn-elastic"
+                  className="neu-accent p-2.5 rounded-lg text-white cursor-pointer neu-btn-elastic"
                   title={isPlaying ? "Pause" : "Play"}
                 >
                   {isPlaying ? (
@@ -284,7 +284,7 @@ export default function RightSidebar({
       {/* 2. LIVE SYNCHRONIZED LYRICS CARD (Easy to find, right under spotlight!) */}
       <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-wider text-[#0084FF] flex items-center gap-1.5">
+          <span className="text-xs font-black uppercase tracking-wider text-[#0084FF] flex items-center gap-1.5">
             <Mic2 className="w-3.5 h-3.5 text-[#0084FF]" />
             Live Lyrics
             {isSynced && (
@@ -305,22 +305,22 @@ export default function RightSidebar({
           )}
         </div>
 
-        {/* Lyrics Content Display - Stable fixed height h-44 so the sidebar never shifts */}
+        {/* Lyrics Content Display - Stable fixed height h-64 sm:h-72 so the sidebar never shifts */}
         {isLoadingLyrics ? (
-          <div className="neu-recessed p-4 rounded-xl text-center space-y-2 h-44 flex flex-col items-center justify-center">
+          <div className="neu-recessed p-4 rounded-xl text-center space-y-2 h-64 sm:h-72 flex flex-col items-center justify-center">
             <Loader2 className="w-4 h-4 text-[#0084FF] animate-spin mx-auto" />
             <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] m-0">
               Loading lyrics...
             </p>
           </div>
         ) : lyricsError ? (
-          <div className="neu-recessed p-3.5 rounded-xl text-center h-44 flex items-center justify-center">
+          <div className="neu-recessed p-3.5 rounded-xl text-center h-64 sm:h-72 flex items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               {lyricsError}
             </p>
           </div>
         ) : !currentTrack ? (
-          <div className="neu-recessed p-3.5 rounded-xl text-center h-44 flex items-center justify-center">
+          <div className="neu-recessed p-3.5 rounded-xl text-center h-64 sm:h-72 flex items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               Play a song to view live lyrics here.
             </p>
@@ -328,7 +328,7 @@ export default function RightSidebar({
         ) : isSynced ? (
           <div
             ref={lyricsContainerRef}
-            className="relative neu-recessed p-2.5 rounded-xl h-44 overflow-y-auto space-y-1 neu-custom-scrollbar"
+            className="relative neu-recessed p-2.5 rounded-xl h-64 sm:h-72 overflow-y-auto space-y-1 neu-custom-scrollbar"
           >
             {lines.map((line, idx) => {
               const isActive = idx === activeLineIndex;
@@ -354,7 +354,7 @@ export default function RightSidebar({
             })}
           </div>
         ) : lyricsData?.plain_lyrics ? (
-          <div className="neu-recessed p-3 rounded-xl h-44 overflow-y-auto neu-custom-scrollbar">
+          <div className="neu-recessed p-3 rounded-xl h-64 sm:h-72 overflow-y-auto neu-custom-scrollbar">
             <span className="text-[9px] font-bold uppercase tracking-wider text-[#F59E0B] block mb-1">
               Unsynchronized
             </span>
@@ -364,7 +364,7 @@ export default function RightSidebar({
             </p>
           </div>
         ) : (
-          <div className="neu-recessed p-3.5 rounded-xl text-center space-y-1 h-44 flex flex-col items-center justify-center">
+          <div className="neu-recessed p-3.5 rounded-xl text-center space-y-1 h-64 sm:h-72 flex flex-col items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               No lyrics found for this song.
             </p>
@@ -375,7 +375,7 @@ export default function RightSidebar({
       {/* 3. Listening Queue Quick Peek */}
       <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
+          <span className="text-xs font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
             <ListMusic className="w-3.5 h-3.5 text-[#8B5CF6]" />
             Up Next Queue ({playbackQueue.length})
           </span>
@@ -400,7 +400,7 @@ export default function RightSidebar({
                 className="p-2 rounded-xl neu-raised neu-card-hover flex items-center gap-2.5 cursor-pointer group transition-all"
                 title={`Play next: ${track.title}`}
               >
-                <div className="w-8 h-8 rounded-lg neu-recessed overflow-hidden shrink-0 relative flex items-center justify-center">
+                <div className="w-10 h-10 rounded-md neu-recessed overflow-hidden shrink-0 relative flex items-center justify-center">
                   {track.thumbnail ? (
                     <img
                       src={track.thumbnail}
@@ -413,7 +413,7 @@ export default function RightSidebar({
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-[11px] font-bold text-[#1E293B] dark:text-[#F8FAFC] truncate m-0">
+                  <h4 className="text-xs font-bold text-[#1E293B] dark:text-[#F8FAFC] truncate m-0">
                     {track.clean_title || track.title}
                   </h4>
                   <p className="text-[10px] text-[#64748B] dark:text-[#94A3B8] truncate m-0">
@@ -435,7 +435,7 @@ export default function RightSidebar({
       {/* 4. Active Downloads Stream Widget */}
       <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
+          <span className="text-xs font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
             <Download className="w-3.5 h-3.5 text-[#10B981]" />
             Downloads Stream
           </span>

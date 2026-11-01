@@ -38,7 +38,7 @@ export default function LeftSidebar({
 
   return (
     <aside
-      className="hidden lg:flex flex-col justify-between w-64 xl:w-72 shrink-0 space-y-4 select-none sticky top-5 self-start max-h-[calc(100vh-2.5rem)] overflow-y-auto pr-1"
+      className="hidden lg:flex flex-col justify-between w-80 xl:w-84 2xl:w-92 shrink-0 space-y-4 select-none sticky top-4 self-start h-[calc(100vh-2rem)] overflow-y-auto pr-1 neu-custom-scrollbar"
       aria-label="Navigation & Control Sidebar"
     >
       <div className="space-y-4">
@@ -46,12 +46,12 @@ export default function LeftSidebar({
         <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <KonLogo size={38} />
+              <KonLogo size={44} />
               <div>
-                <h1 className="text-base font-black tracking-tight text-[#1E293B] dark:text-[#F8FAFC] m-0 leading-tight">
+                <h1 className="text-lg font-black tracking-tight text-[#1E293B] dark:text-[#F8FAFC] m-0 leading-tight">
                   KON <span className="text-[#0084FF]">Media</span>
                 </h1>
-                <p className="text-[10px] text-[#64748B] dark:text-[#94A3B8] font-medium m-0">
+                <p className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium m-0">
                   Desktop Search &amp; Player
                 </p>
               </div>
@@ -87,7 +87,7 @@ export default function LeftSidebar({
 
         {/* Navigation Section */}
         <nav className="neu-card p-3 space-y-1.5 border border-slate-200/60 dark:border-slate-800" aria-label="Main Views">
-          <span className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] block">
+          <span className="px-3.5 py-1 text-xs font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] block">
             Workspace
           </span>
 
@@ -95,14 +95,14 @@ export default function LeftSidebar({
           <button
             type="button"
             onClick={() => onViewChange("search")}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
+            className={`w-full px-4 py-3 rounded-lg text-sm font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
               activeView === "search"
                 ? "neu-recessed text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10"
                 : "neu-raised text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Search className="w-4 h-4 shrink-0" />
+              <Search className="w-5 h-5 shrink-0" />
               <span>Search &amp; Discover</span>
             </div>
           </button>
@@ -111,14 +111,14 @@ export default function LeftSidebar({
           <button
             type="button"
             onClick={() => onViewChange("favorites")}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
+            className={`w-full px-4 py-3 rounded-lg text-sm font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
               activeView === "favorites"
                 ? "neu-recessed text-[#EF4444] border border-[#EF4444]/30 bg-[#EF4444]/10"
                 : "neu-raised text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Heart className={`w-4 h-4 shrink-0 ${activeView === "favorites" ? "fill-current" : ""}`} />
+              <Heart className={`w-5 h-5 shrink-0 ${activeView === "favorites" ? "fill-current" : ""}`} />
               <span>Favorites</span>
             </div>
             {favoritesCount > 0 && (
@@ -136,14 +136,14 @@ export default function LeftSidebar({
           <button
             type="button"
             onClick={() => onViewChange("recent")}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
+            className={`w-full px-4 py-3 rounded-lg text-sm font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
               activeView === "recent"
                 ? "neu-recessed text-[#8B5CF6] border border-[#8B5CF6]/30 bg-[#8B5CF6]/10"
                 : "neu-raised text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Clock className="w-4 h-4 shrink-0" />
+              <Clock className="w-5 h-5 shrink-0" />
               <span>Recently Played</span>
             </div>
             {recentCount > 0 && (
@@ -161,14 +161,14 @@ export default function LeftSidebar({
           <button
             type="button"
             onClick={() => onViewChange("downloads")}
-            className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
+            className={`w-full px-4 py-3 rounded-lg text-sm font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
               activeView === "downloads"
                 ? "neu-recessed text-[#10B981] border border-[#10B981]/30 bg-[#10B981]/10"
                 : "neu-raised text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Download className="w-4 h-4 shrink-0" />
+              <Download className="w-5 h-5 shrink-0" />
               <span>Downloads</span>
             </div>
             {activeDownloadsCount > 0 && (
@@ -182,7 +182,7 @@ export default function LeftSidebar({
         {/* Engine Mode Control Hub */}
         <div className="neu-card p-3.5 space-y-2.5 border border-slate-200/60 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1">
+            <span className="text-xs font-black uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
               <Cpu className="w-3 h-3 text-[#0084FF]" />
               Search Engine
             </span>
@@ -201,7 +201,7 @@ export default function LeftSidebar({
             <button
               type="button"
               onClick={() => onEngineModeChange && onEngineModeChange("rei")}
-              className={`p-2.5 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex flex-col items-center gap-1.5 text-center transition-all ${
+              className={`p-3 rounded-lg text-sm font-bold cursor-pointer neu-btn-tactile flex flex-col items-center gap-2 text-center transition-all ${
                 !isFlash
                   ? "neu-recessed text-[#0084FF] border border-[#0084FF]/35 bg-[#0084FF]/10 shadow-xs"
                   : "neu-raised text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B]"
@@ -216,7 +216,7 @@ export default function LeftSidebar({
             <button
               type="button"
               onClick={() => onEngineModeChange && onEngineModeChange("flash")}
-              className={`p-2.5 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex flex-col items-center gap-1.5 text-center transition-all ${
+              className={`p-3 rounded-lg text-sm font-bold cursor-pointer neu-btn-tactile flex flex-col items-center gap-2 text-center transition-all ${
                 isFlash
                   ? "neu-recessed text-[#F59E0B] border border-[#F59E0B]/35 bg-[#F59E0B]/10 shadow-xs"
                   : "neu-raised text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B]"
@@ -228,7 +228,7 @@ export default function LeftSidebar({
             </button>
           </div>
 
-          <p className="text-[10px] text-[#64748B] dark:text-[#94A3B8] m-0 font-medium leading-relaxed">
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8] m-0 font-medium leading-relaxed">
             {isFlash
               ? "Speed mode active: Sub-8ms latency and lightweight filtering."
               : "Precision mode active: Deeper musical semantics & title cleanups."}
@@ -238,21 +238,21 @@ export default function LeftSidebar({
         {/* Autonomous Continuous Learning Hub Widget */}
         <div className="neu-card p-3.5 space-y-2.5 border border-[#6366F1]/20 dark:border-[#6366F1]/30">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#6366F1] flex items-center gap-1.5">
+            <span className="text-xs font-black uppercase tracking-wider text-[#6366F1] flex items-center gap-1.5">
               <Brain className="w-3.5 h-3.5 text-[#6366F1]" />
               Continuous Learning
             </span>
             <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
           </div>
 
-          <p className="text-[11px] text-[#475569] dark:text-[#CBD5E1] m-0 leading-relaxed font-medium">
+          <p className="text-xs text-[#475569] dark:text-[#CBD5E1] m-0 leading-relaxed font-medium">
             Self-improving ranking via background signals and evaluation gatekeepers.
           </p>
 
           <button
             type="button"
             onClick={onOpenLearningDashboard}
-            className="w-full neu-raised px-3 py-2 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center justify-center gap-2 text-[#6366F1] hover:text-[#4F46E5] border border-[#6366F1]/20 transition-colors"
+            className="w-full neu-raised px-4 py-2.5 rounded-lg text-xs font-bold cursor-pointer neu-btn-tactile flex items-center justify-center gap-2 text-[#6366F1] hover:text-[#4F46E5] border border-[#6366F1]/20 transition-colors"
             title="Open Autonomous Continuous Learning Center"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#6366F1]" />
@@ -278,7 +278,7 @@ export default function LeftSidebar({
         <button
           type="button"
           onClick={() => onOpenFile && onOpenFile()}
-          className="w-full neu-raised px-3 py-2 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center justify-center gap-2 text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] transition-colors"
+          className="w-full neu-raised px-4 py-2.5 rounded-lg text-xs font-bold cursor-pointer neu-btn-tactile flex items-center justify-center gap-2 text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] transition-colors"
           title="Open Downloads Folder in Windows Explorer"
         >
           <FolderOpen className="w-3.5 h-3.5 text-[#0084FF]" />
