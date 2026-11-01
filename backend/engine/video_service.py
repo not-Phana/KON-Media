@@ -297,6 +297,27 @@ async def resolve_video_stream(
             if not direct_video_url:
                 return {"playable": False, "error": "No playable video stream found"}
 
+            # If chosen video format lacks an audio track (e.g. YouTube DASH streams),
+            # extract the best matching audio stream for synchronized in-app playback
+            direct_audio_url = None
+            if chosen_format.get("acodec") in (None, "none"):
+                audio_fmts = [
+                    f for f in formats
+                    if f.get("acodec") not in (None, "none")
+                    and f.get("vcodec") in (None, "none")
+                    and f.get("url")
+                ]
+                if audio_fmts:
+                    # Prefer m4a (AAC) for universal browser playback
+                    m4a_fmts = [f for f in audio_fmts if f.get("ext") == "m4a"]
+                    if m4a_fmts:
+                        m4a_fmts.sort(key=lambda f: f.get("abr") or 0)
+                        chosen_audio = m4a_fmts[-1]
+                    else:
+                        audio_fmts.sort(key=lambda f: f.get("abr") or 0)
+                        chosen_audio = audio_fmts[-1]
+                    direct_audio_url = chosen_audio.get("url")
+
             video_title = info.get("title") or title or "Video Preview"
             resolved_uploader = uploader or info.get("uploader") or info.get("channel") or ""
             thumbnail = info.get("thumbnail")
@@ -335,6 +356,9 @@ async def resolve_video_stream(
                 "embed_url": f"https://www.youtube-nocookie.com/embed/{yt_id}?autoplay=1&enablejsapi=1&rel=0" if yt_id else None,
                 "direct_url": direct_video_url,
                 "stream_url": f"/api/video/stream?url={quote(direct_video_url, safe='')}",
+                "direct_audio_url": direct_audio_url,
+                "audio_stream_url": f"/api/audio/stream?url={quote(direct_audio_url, safe='')}" if direct_audio_url else None,
+                "has_audio": chosen_format.get("acodec") not in (None, "none") or bool(direct_audio_url),
                 "title": video_title,
                 "uploader": resolved_uploader,
                 "duration": duration,
