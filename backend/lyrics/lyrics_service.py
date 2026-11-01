@@ -233,6 +233,32 @@ class LyricsCache:
         except Exception as e:
             log.warning(f"Lyrics cache write error: {e}")
 
+    def update_offset(self, title: str, artist: str, offset_seconds: float) -> bool:
+        """Update or apply [offset: +/-ms] tag to cached synced lyrics."""
+        key = self._make_key(title, artist)
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT synced_lyrics FROM lyrics_cache WHERE cache_key = ?", (key,))
+                row = cursor.fetchone()
+                if not row or not row["synced_lyrics"]:
+                    return False
+
+                raw = row["synced_lyrics"]
+                clean_raw = LRC_OFFSET_REGEX.sub("", raw).lstrip()
+                ms = int(round(offset_seconds * 1000))
+                new_lrc = f"[offset: {ms}]\n{clean_raw}" if ms != 0 else clean_raw
+                conn.execute(
+                    "UPDATE lyrics_cache SET synced_lyrics = ? WHERE cache_key = ?",
+                    (new_lrc, key)
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            log.warning(f"Error updating offset in lyrics cache: {e}")
+            return False
+
 
 class LyricsService:
     """Lyrics retrieval and synchronization coordinator."""
@@ -390,6 +416,47 @@ class LyricsService:
             log.warning(f"Error checking local lrc file: {e}")
         return None
 
+    def set_offset(
+        self,
+        title: str,
+        artist: Optional[str] = None,
+        offset_seconds: float = 0.0,
+        file_path: Optional[str] = None,
+    ) -> bool:
+        """Persist a manual offset adjustment to cache and local sidecar .lrc file."""
+        c_title, c_artist = clean_music_title(title, artist)
+        updated = self.cache.update_offset(c_title, c_artist, offset_seconds)
+
+        # If file_path is provided, update or write sidecar .lrc
+        if file_path:
+            try:
+                audio_p = Path(file_path)
+                if audio_p.exists():
+                    lrc_p = audio_p.with_suffix(".lrc")
+                    content = ""
+                    if lrc_p.exists():
+                        content = lrc_p.read_text(encoding="utf-8", errors="replace")
+                    else:
+                        cached = self.cache.get(c_title, c_artist)
+                        if cached and cached.get("synced"):
+                            with sqlite3.connect(self.cache.db_path) as conn:
+                                cur = conn.cursor()
+                                key = self.cache._make_key(c_title, c_artist)
+                                cur.execute("SELECT synced_lyrics FROM lyrics_cache WHERE cache_key = ?", (key,))
+                                r = cur.fetchone()
+                                if r and r[0]:
+                                    content = r[0]
+                    if content:
+                        clean_content = LRC_OFFSET_REGEX.sub("", content).lstrip()
+                        ms = int(round(offset_seconds * 1000))
+                        new_content = f"[offset: {ms}]\n{clean_content}" if ms != 0 else clean_content
+                        lrc_p.write_text(new_content, encoding="utf-8")
+                        updated = True
+            except Exception as e:
+                log.warning(f"Failed to update sidecar .lrc offset: {e}")
+
+        return updated
+
     async def _fetch_from_lrclib(
         self,
         title: str,
@@ -441,6 +508,20 @@ class LyricsService:
                     if res.status_code == 200:
                         results = res.json()
                         if isinstance(results, list) and len(results) > 0:
+                            # If duration is provided, prioritize closest duration match
+                            if duration and duration > 0:
+                                best_item = None
+                                best_diff = 999.0
+                                for item in results:
+                                    cand_dur = item.get("duration")
+                                    if cand_dur and item.get("syncedLyrics"):
+                                        diff = abs(float(cand_dur) - float(duration))
+                                        if diff < best_diff and diff <= 4.0:
+                                            best_diff = diff
+                                            best_item = item
+                                if best_item:
+                                    return best_item
+
                             for item in results:
                                 if item.get("syncedLyrics"):
                                     return item

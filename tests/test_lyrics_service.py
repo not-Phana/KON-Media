@@ -152,3 +152,16 @@ def test_api_lyrics_endpoint():
     assert "synced" in data
     assert "lines" in data
     assert isinstance(data["lines"], list)
+
+
+def test_lyrics_offset_endpoint():
+    # Test lyrics offset update endpoint
+    resp = client.post("/api/lyrics/offset", json={
+        "title": "Thank You!!",
+        "artist": "HOME MADE 家族",
+        "offset": 17.0,
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["offset"] == 17.0

@@ -599,3 +599,21 @@ export async function fetchLyrics({ title, artist = "", duration = null, filePat
     return { found: false, synced: false, lines: [], plain_lyrics: null, error: err.message };
   }
 }
+
+export async function saveLyricsOffset({ title, artist = "", offset = 0, filePath = null } = {}) {
+  try {
+    const res = await fetch(`${API_BASE}/lyrics/offset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        artist,
+        offset,
+        file_path: filePath,
+      }),
+    });
+    return await res.json();
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}

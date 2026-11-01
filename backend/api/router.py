@@ -97,6 +97,13 @@ class ValidateFFmpegRequest(BaseModel):
     ffmpeg_path: Optional[str] = None
 
 
+class LyricsOffsetRequest(BaseModel):
+    title: str = Field(..., description="Track or song title")
+    artist: Optional[str] = Field(None, description="Artist name")
+    offset: float = Field(..., description="Offset in seconds to apply")
+    file_path: Optional[str] = Field(None, description="Optional local file path to update sidecar .lrc")
+
+
 class SearchFeedbackRequest(BaseModel):
     query: str
     selected_id: str
@@ -933,3 +940,17 @@ async def get_lyrics_endpoint(
         duration=duration,
         file_path=file_path,
     )
+
+
+@router.post("/lyrics/offset")
+async def save_lyrics_offset_endpoint(req: LyricsOffsetRequest):
+    """Save calibrated timing offset to local SQLite cache and sidecar .lrc file."""
+    from backend.lyrics.lyrics_service import get_lyrics_service
+    service = get_lyrics_service()
+    success = service.set_offset(
+        title=req.title,
+        artist=req.artist,
+        offset_seconds=req.offset,
+        file_path=req.file_path,
+    )
+    return {"ok": True, "offset": req.offset, "persisted": success}

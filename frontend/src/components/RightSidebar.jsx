@@ -17,8 +17,10 @@ import {
   Sparkles,
   Mic2,
   Maximize2,
+  Target,
 } from "lucide-react";
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
+import { saveLyricsOffset } from "../api";
 
 function formatDuration(seconds) {
   if (!seconds || seconds <= 0) return "";
@@ -67,6 +69,11 @@ export default function RightSidebar({
   const linesRef = useRef([]);
   linesRef.current = lyricsData?.lines || [];
 
+  const syncOffsetRef = useRef(0);
+  useEffect(() => {
+    syncOffsetRef.current = syncOffset;
+  }, [syncOffset]);
+
   // Load saved timing offset for current track
   useEffect(() => {
     if (!currentTrack?.id && !currentTrack?.url) {
@@ -82,15 +89,35 @@ export default function RightSidebar({
     }
   }, [currentTrack]);
 
+  const handleSetOffset = (newOffset) => {
+    const rounded = Math.round(newOffset * 10) / 10;
+    setSyncOffset(rounded);
+    const key = `kon_lyric_offset_${currentTrack?.id || currentTrack?.url}`;
+    try {
+      if (key) localStorage.setItem(key, String(rounded));
+    } catch (_) {}
+    if (currentTrack) {
+      saveLyricsOffset({
+        title: currentTrack.song_title || currentTrack.clean_title || currentTrack.title,
+        artist: currentTrack.artist || currentTrack.uploader || "",
+        offset: rounded,
+        filePath: currentTrack.file_path,
+      });
+    }
+  };
+
   const handleAdjustOffset = (delta) => {
-    setSyncOffset((prev) => {
-      const next = Math.round((prev + delta) * 10) / 10;
-      const key = `kon_lyric_offset_${currentTrack?.id || currentTrack?.url}`;
-      try {
-        if (key) localStorage.setItem(key, String(next));
-      } catch (_) {}
-      return next;
-    });
+    handleSetOffset(syncOffset + delta);
+  };
+
+  const handleSyncToNow = () => {
+    const lines = linesRef.current;
+    if (!lines || lines.length === 0) return;
+    const targetLine = activeLineIndex >= 0 ? lines[activeLineIndex] : lines[0];
+    if (targetLine) {
+      const delta = currentTime - targetLine.time;
+      handleSetOffset(delta);
+    }
   };
 
   // Reset active line when track or lyrics payload changes
@@ -105,7 +132,7 @@ export default function RightSidebar({
     const handleTime = (e) => {
       const rawTime = e.detail?.currentTime || 0;
       setCurrentTime(rawTime);
-      const effectiveTime = Math.max(0, rawTime - syncOffset);
+      const effectiveTime = Math.max(0, rawTime - syncOffsetRef.current);
       const lines = linesRef.current;
       if (!lines || lines.length === 0) return;
 
@@ -165,7 +192,8 @@ export default function RightSidebar({
   }, [activeLineIndex]);
 
   const handleLineClick = (lineTime) => {
-    window.dispatchEvent(new CustomEvent("kon_audio_seek", { detail: { time: lineTime } }));
+    const target = Math.max(0, lineTime + (syncOffsetRef.current || 0));
+    window.dispatchEvent(new CustomEvent("kon_audio_seek", { detail: { time: target } }));
   };
 
   // Next up items in queue (excluding current)
@@ -328,6 +356,14 @@ export default function RightSidebar({
               <div className="flex items-center gap-1 neu-recessed px-1.5 py-0.5 rounded-lg border border-slate-700/60 text-[10px]">
                 <button
                   type="button"
+                  onClick={() => handleAdjustOffset(-1.0)}
+                  className="px-1 py-0.2 rounded hover:text-[#0084FF] font-mono font-bold cursor-pointer transition-colors"
+                  title="Shift lyrics 1.0s earlier"
+                >
+                  -1s
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleAdjustOffset(-0.5)}
                   className="px-1 py-0.2 rounded hover:text-[#0084FF] font-mono font-bold cursor-pointer transition-colors"
                   title="Shift lyrics 0.5s earlier"
@@ -346,14 +382,31 @@ export default function RightSidebar({
                   type="button"
                   onClick={() => handleAdjustOffset(+0.5)}
                   className="px-1 py-0.2 rounded hover:text-[#0084FF] font-mono font-bold cursor-pointer transition-colors"
-                  title="Delay lyrics 0.5s later (e.g. video intro)"
+                  title="Delay lyrics 0.5s later"
                 >
                   +0.5s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustOffset(+1.0)}
+                  className="px-1 py-0.2 rounded hover:text-[#0084FF] font-mono font-bold cursor-pointer transition-colors"
+                  title="Delay lyrics 1.0s later"
+                >
+                  +1s
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSyncToNow}
+                  className="px-1 py-0.2 rounded text-[#10B981] hover:bg-[#10B981]/15 font-bold cursor-pointer transition-colors flex items-center gap-0.5"
+                  title="Sync active lyric to current audio playback time"
+                >
+                  <Target className="w-2.5 h-2.5" />
+                  <span>Sync</span>
                 </button>
                 {syncOffset !== 0 && (
                   <button
                     type="button"
-                    onClick={() => handleAdjustOffset(-syncOffset)}
+                    onClick={() => handleSetOffset(0)}
                     className="text-[9px] text-slate-400 hover:text-white px-0.5 underline cursor-pointer"
                     title="Reset offset to 0s"
                   >

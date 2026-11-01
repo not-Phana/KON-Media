@@ -18,8 +18,9 @@ import {
   RotateCcw,
   ArrowDown,
   ArrowUp,
+  Target,
 } from "lucide-react";
-import { fetchLyrics } from "../api";
+import { fetchLyrics, saveLyricsOffset } from "../api";
 
 function formatTime(seconds) {
   if (!seconds || isNaN(seconds) || seconds < 0) return "0:00";
@@ -60,15 +61,31 @@ export default function LyricsModal({
     }
   }, [currentTrack]);
 
+  const handleSetOffset = (newOffset) => {
+    const rounded = Math.round(newOffset * 10) / 10;
+    setSyncOffset(rounded);
+    const key = `kon_lyric_offset_${currentTrack?.id || currentTrack?.url}`;
+    try {
+      if (key) localStorage.setItem(key, String(rounded));
+    } catch (_) {}
+    if (currentTrack) {
+      saveLyricsOffset({
+        title: currentTrack.song_title || currentTrack.clean_title || currentTrack.title,
+        artist: currentTrack.artist || currentTrack.uploader || "",
+        offset: rounded,
+        filePath: currentTrack.file_path,
+      });
+    }
+  };
+
   const handleAdjustOffset = (delta) => {
-    setSyncOffset((prev) => {
-      const next = Math.round((prev + delta) * 10) / 10;
-      const key = `kon_lyric_offset_${currentTrack?.id || currentTrack?.url}`;
-      try {
-        if (key) localStorage.setItem(key, String(next));
-      } catch (_) {}
-      return next;
-    });
+    handleSetOffset(syncOffset + delta);
+  };
+
+  const handleSyncLineToNow = (line) => {
+    if (!line) return;
+    const delta = currentTime - line.time;
+    handleSetOffset(delta);
   };
   const containerRef = useRef(null);
   const userScrolledRef = useRef(false);
@@ -311,7 +328,8 @@ export default function LyricsModal({
     userScrolledRef.current = false;
     setIsScrolledAway(false);
     if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
-    window.dispatchEvent(new CustomEvent("kon_audio_seek", { detail: { time: lineTime } }));
+    const targetAudioTime = Math.max(0, lineTime + syncOffset);
+    window.dispatchEvent(new CustomEvent("kon_audio_seek", { detail: { time: targetAudioTime } }));
   };
 
   // Perform in-modal manual search / retry
@@ -547,7 +565,7 @@ export default function LyricsModal({
                   key={`${line.time}_${idx}`}
                   data-theater-line={idx}
                   onClick={() => handleLineClick(line.time)}
-                  className={`transition-all duration-500 ease-out cursor-pointer rounded-2xl px-4 py-3 leading-relaxed tracking-tight select-none text-2xl sm:text-3xl md:text-4xl ${
+                  className={`group relative transition-all duration-500 ease-out cursor-pointer rounded-2xl px-4 py-3 leading-relaxed tracking-tight select-none text-2xl sm:text-3xl md:text-4xl ${
                     isActive
                       ? glassMode
                         ? "text-[#FDE68A] font-black opacity-100 drop-shadow-[0_2px_28px_rgba(245,158,11,0.45)]"
@@ -556,11 +574,25 @@ export default function LyricsModal({
                       ? "text-slate-400 font-bold opacity-30 hover:opacity-75"
                       : "text-slate-300 font-bold opacity-45 hover:opacity-85"
                   }`}
-                  title={`Jump to ${formatTime(line.time)}`}
+                  title={`Jump to ${formatTime(line.time + syncOffset)}`}
                 >
                   <span className="block font-sans break-words">
                     {line.text || "..."}
                   </span>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-1 flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSyncLineToNow(line);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-slate-900/90 border border-slate-700/80 text-emerald-400 hover:text-white hover:bg-emerald-600 cursor-pointer shadow-md"
+                      title={`Align this lyric line to current playback time (${formatTime(currentTime)})`}
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                      <span>Sync this line to now ({formatTime(currentTime)})</span>
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -665,20 +697,36 @@ export default function LyricsModal({
           <div className="flex items-center gap-3 mx-auto sm:mx-0">
             {/* Timing Sync Calibration Pill */}
             {isSynced && (
-              <div className="flex items-center gap-1.5 neu-recessed px-3 py-1.5 rounded-xl border border-slate-700/60 text-xs">
+              <div className="flex items-center gap-1 neu-recessed px-2.5 py-1.5 rounded-xl border border-slate-700/60 text-xs">
                 <span className="text-[10px] uppercase font-bold text-[#94A3B8] tracking-wider mr-1">
                   Sync:
                 </span>
                 <button
                   type="button"
+                  onClick={() => handleAdjustOffset(-5.0)}
+                  className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
+                  title="Shift lyrics 5.0s earlier"
+                >
+                  -5s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustOffset(-1.0)}
+                  className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
+                  title="Shift lyrics 1.0s earlier"
+                >
+                  -1s
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleAdjustOffset(-0.5)}
-                  className="px-2 py-0.5 rounded text-xs font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
+                  className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
                   title="Shift lyrics 0.5s earlier"
                 >
                   -0.5s
                 </button>
                 <span
-                  className={`font-mono font-bold text-xs px-1 ${
+                  className={`font-mono font-bold text-xs px-1.5 ${
                     syncOffset !== 0 ? "text-[#F59E0B]" : "text-slate-300"
                   }`}
                   title={`Timing offset: ${syncOffset > 0 ? `+${syncOffset.toFixed(1)}s` : `${syncOffset.toFixed(1)}s`}`}
@@ -688,15 +736,40 @@ export default function LyricsModal({
                 <button
                   type="button"
                   onClick={() => handleAdjustOffset(+0.5)}
-                  className="px-2 py-0.5 rounded text-xs font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
-                  title="Delay lyrics 0.5s later (e.g. video intro)"
+                  className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
+                  title="Delay lyrics 0.5s later"
                 >
                   +0.5s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustOffset(+1.0)}
+                  className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
+                  title="Delay lyrics 1.0s later"
+                >
+                  +1s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustOffset(+5.0)}
+                  className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold neu-raised hover:text-[#0084FF] cursor-pointer transition-colors"
+                  title="Delay lyrics 5.0s later"
+                >
+                  +5s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSyncLineToNow(activeLineIndex >= 0 ? lines[activeLineIndex] : lines[0])}
+                  className="px-2 py-0.5 rounded text-[11px] font-bold text-emerald-400 hover:text-white hover:bg-emerald-600/80 cursor-pointer transition-colors flex items-center gap-1"
+                  title="Sync active lyric to current audio playback time"
+                >
+                  <Target className="w-3 h-3" />
+                  <span>Sync Here</span>
                 </button>
                 {syncOffset !== 0 && (
                   <button
                     type="button"
-                    onClick={() => handleAdjustOffset(-syncOffset)}
+                    onClick={() => handleSetOffset(0)}
                     className="ml-1 text-[11px] text-slate-400 hover:text-white underline cursor-pointer"
                     title="Reset offset to 0s"
                   >
