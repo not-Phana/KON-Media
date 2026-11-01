@@ -275,6 +275,14 @@ export default function ModelInfoModal({ isOpen, onClose }) {
               <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
               <span>Dual Modes: Rei (Precision) &amp; Rei Flash (Speed)</span>
             </div>
+            <div className="neu-recessed p-2.5 rounded-xl flex items-center gap-2 font-medium text-[#334155]">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+              <span>YouTuber / Creator Recognition &amp; Channel Spotlight Cards</span>
+            </div>
+            <div className="neu-recessed p-2.5 rounded-xl flex items-center gap-2 font-medium text-[#334155]">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
+              <span>Plot &amp; Description Keyword Matching Engine</span>
+            </div>
           </div>
         </div>
 

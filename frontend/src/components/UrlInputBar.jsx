@@ -2,6 +2,7 @@ import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Search,
+  ChevronDown,
   Clipboard,
   X,
   Loader2,
@@ -56,6 +57,25 @@ export default function UrlInputBar({
       return "all";
     }
   });
+
+  const [showCreatorGuide, setShowCreatorGuide] = useState(() => {
+    try {
+      const val = localStorage.getItem("kon_show_creator_guide");
+      return val !== null ? val === "true" : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleCreatorGuide = () => {
+    setShowCreatorGuide((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("kon_show_creator_guide", String(next));
+      } catch (_) {}
+      return next;
+    });
+  };
 
   const handleSearchModeChange = (mode) => {
     try {
@@ -300,7 +320,7 @@ export default function UrlInputBar({
       return "Search any song, artist, or keyword (e.g. Bankai, I Wanna Be, Shelter)...";
     }
     if (searchMode === "video") {
-      return "Search videos, music videos, or paste video URL...";
+      return "Search YouTuber, creator or video premise (e.g. ELEVENZ video, or plot summary)...";
     }
     return "Search any song, artist, video, or paste URL...";
   };
@@ -348,6 +368,21 @@ export default function UrlInputBar({
           >
             <Globe className="w-3.5 h-3.5" />
             <span>All Sources</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleCreatorGuide}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+              showCreatorGuide && searchMode === "video"
+                ? "neu-raised text-[#0084FF] border border-[#0084FF]/30"
+                : "text-[#64748B] hover:text-[#0084FF] dark:text-[#94A3B8]"
+            }`}
+            title="Toggle YouTuber & Video Discovery Guide"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#0084FF]" />
+            <span className="hidden sm:inline">Creator Guide</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showCreatorGuide && searchMode === "video" ? "rotate-180" : ""}`} />
           </button>
         </div>
 
@@ -417,6 +452,87 @@ export default function UrlInputBar({
           </p>
         </div>
       </div>
+
+      {/* Creator & Video Discovery Guide Banner */}
+      {showCreatorGuide && searchMode === "video" && (
+        <div className="neu-card p-4 rounded-2xl border border-[#0084FF]/30 bg-gradient-to-r from-[#0084FF]/8 via-transparent to-[#0084FF]/5 animate-fade-in space-y-3">
+          <div className="flex items-center justify-between gap-3 pb-1 border-b border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg neu-recessed flex items-center justify-center text-[#0084FF] shrink-0">
+                <Sparkles className="w-4 h-4 text-[#0084FF]" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-[#1E293B] dark:text-[#F1F5F9] m-0">
+                  YouTuber / Creator Recognition &amp; Video Discovery System
+                </h4>
+                <p className="text-[10px] text-[#64748B] dark:text-[#94A3B8] m-0">
+                  Search creator profiles, channel uploads, and videos by plot or description
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={toggleCreatorGuide}
+              className="text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] p-1 cursor-pointer transition-colors rounded-lg"
+              title="Hide guide"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Two Key Capabilities */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="neu-recessed p-3 rounded-xl space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-[#0084FF]">
+                <User className="w-3.5 h-3.5" />
+                <span>1. Creator &amp; Channel Spotlight</span>
+              </div>
+              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] m-0 leading-relaxed font-medium">
+                Type any YouTuber or channel name (e.g. <strong>ELEVENZ</strong>, <strong>Markiplier</strong>, <strong>Veritasium</strong>) to see official channel profiles with subscriber counts, channel bios, and direct channel links.
+              </p>
+            </div>
+
+            <div className="neu-recessed p-3 rounded-xl space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-[#0084FF]">
+                <Film className="w-3.5 h-3.5" />
+                <span>2. Search by Plot &amp; Description</span>
+              </div>
+              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] m-0 leading-relaxed font-medium">
+                Remember a video by what happens in it? Enter the plot or description premise (e.g. <em>My Ex-Girlfriend Trapped Me In Her Basement</em>). Our engine indexes video descriptions to find it.
+              </p>
+            </div>
+          </div>
+
+          {/* Interactive Quick-Try Example Chips */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-[11px] font-bold text-[#64748B] dark:text-[#94A3B8]">
+              Try example searches:
+            </span>
+            {[
+              { label: "ELEVENZ video", query: "ELEVENZ video" },
+              { label: "My Ex-Girlfriend Trapped Me In Her Basement", query: "My Ex-Girlfriend Trapped Me In Her Basement" },
+              { label: "ELEVENZ My Ex-Girlfriend Trapped Me In Her Basement", query: "ELEVENZ My Ex-Girlfriend Trapped Me In Her Basement" },
+              { label: "Markiplier gameplay", query: "Markiplier gameplay" },
+            ].map((sample, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  handleSearchModeChange("video");
+                  setUrl(sample.query);
+                  dismissSuggestions();
+                  onAnalyze(sample.query, "video", activeEngineMode);
+                }}
+                className="neu-raised neu-btn-tactile px-2.5 py-1 rounded-lg text-xs text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] cursor-pointer flex items-center gap-1.5 border border-slate-200/40 dark:border-slate-700/40"
+                title={`Click to search: "${sample.query}"`}
+              >
+                <Search className="w-3 h-3 text-[#0084FF]" />
+                <span>{sample.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Error Feedback Banner */}
       {error && (

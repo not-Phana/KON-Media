@@ -516,6 +516,13 @@ export default function SearchResultsCard({
               )}
             </span>
           </button>
+
+          {searchMode === "video" && (
+            <span className="neu-recessed px-2.5 py-1 rounded-full text-[11px] font-bold text-[#0084FF] inline-flex items-center gap-1.5 border border-[#0084FF]/25">
+              <Film className="w-3 h-3 text-[#0084FF]" />
+              <span>Creator &amp; Video Mode</span>
+            </span>
+          )}
         </div>
 
         <button
