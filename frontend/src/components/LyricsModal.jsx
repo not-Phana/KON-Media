@@ -16,7 +16,6 @@ import {
   Sparkles,
   Search,
   RotateCcw,
-  LocateFixed,
   ArrowDown,
   ArrowUp,
 } from "lucide-react";
@@ -188,20 +187,13 @@ export default function LyricsModal({
     animFrameIdRef.current = requestAnimationFrame(step);
   }, [activeLineIndex]);
 
-  // Detect physical user manual scrolling (wheel/touch) so we do not fight user input
+  // Detect physical user manual scrolling (wheel/touch/pointer/keys)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const onUserInteraction = () => {
       userScrolledRef.current = true;
-      if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
-      // Give the user 10s to read lyrics before resuming auto-follow
-      userScrollTimeoutRef.current = setTimeout(() => {
-        userScrolledRef.current = false;
-        scrollToActiveLine();
-      }, 10000);
-
       if (animFrameIdRef.current) {
         cancelAnimationFrame(animFrameIdRef.current);
         animFrameIdRef.current = null;
@@ -217,7 +209,7 @@ export default function LyricsModal({
       container.removeEventListener("touchstart", onUserInteraction);
       container.removeEventListener("pointerdown", onUserInteraction);
     };
-  }, [scrollToActiveLine]);
+  }, []);
 
   // Check scroll position to determine if user has scrolled away from the active line
   useEffect(() => {
@@ -239,13 +231,19 @@ export default function LyricsModal({
       const elHeight = activeEl.clientHeight;
       const targetScroll = Math.max(0, elOffsetTop - (containerHeight / 2) + (elHeight / 2));
 
+      // If scrolling was not initiated by our own programmatic glide, mark as user scroll
+      if (animFrameIdRef.current === null) {
+        userScrolledRef.current = true;
+      }
+
       const diff = targetScroll - container.scrollTop;
-      // If user is more than 80px away from the center of the playing line
-      if (Math.abs(diff) > 80) {
+      // If user is more than 40px away from the center of the playing line
+      if (Math.abs(diff) > 40) {
         setIsScrolledAway(true);
         setScrollDirection(diff > 0 ? "down" : "up");
-      } else if (!userScrolledRef.current) {
+      } else if (!userScrolledRef.current || Math.abs(diff) <= 20) {
         setIsScrolledAway(false);
+        userScrolledRef.current = false;
       }
     };
 
@@ -545,22 +543,22 @@ export default function LyricsModal({
         )}
       </main>
 
-      {/* FLOATING "JUMP TO CURRENT" PILL BUTTON (Visible when user scrolls away) */}
+      {/* FROSTED GLASS "JUMP TO PLAYING" PILL (Placed right where user drew in lower third) */}
       {isSynced && isScrolledAway && (
-        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-40 animate-in fade-in zoom-in-95 duration-200">
           <button
             type="button"
             onClick={scrollToActiveLine}
-            className="neu-raised px-4 py-2 rounded-full bg-slate-900/95 backdrop-blur-md border border-[#0084FF]/60 text-[#38BDF8] hover:text-white hover:bg-[#0084FF] transition-all duration-200 cursor-pointer neu-btn-elastic flex items-center gap-2 shadow-[0_4px_24px_rgba(0,132,255,0.4)] font-bold text-xs group"
+            className="px-5 py-2.5 rounded-full bg-slate-900/60 dark:bg-black/50 backdrop-blur-2xl border border-white/20 hover:border-[#38BDF8]/70 text-white shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(56,189,248,0.25)] hover:shadow-[0_12px_44px_rgba(56,189,248,0.45)] transition-all duration-300 cursor-pointer neu-btn-elastic flex items-center gap-2.5 font-bold text-xs sm:text-sm select-none group"
             title="Jump to currently playing lyric line"
           >
+            <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981] animate-pulse shrink-0" />
             {scrollDirection === "down" ? (
-              <ArrowDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
+              <ArrowDown className="w-4 h-4 text-[#38BDF8] transition-transform duration-300 group-hover:translate-y-0.5 shrink-0" />
             ) : (
-              <ArrowUp className="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+              <ArrowUp className="w-4 h-4 text-[#38BDF8] transition-transform duration-300 group-hover:-translate-y-0.5 shrink-0" />
             )}
-            <span>Jump to playing</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+            <span className="tracking-wide">Jump to playing</span>
           </button>
         </div>
       )}
@@ -593,22 +591,7 @@ export default function LyricsModal({
             Tip: Click any lyric line to jump to that moment · [Space] Play/Pause · [Esc] Close
           </p>
 
-          <div className="flex items-center gap-2.5 mx-auto sm:mx-0">
-            {isSynced && (
-              <button
-                type="button"
-                onClick={scrollToActiveLine}
-                className={`p-2.5 rounded-xl transition-all cursor-pointer neu-btn-elastic border ${
-                  isScrolledAway
-                    ? "neu-recessed text-[#0084FF] border-[#0084FF]/60 bg-[#0084FF]/10 shadow-[0_0_16px_rgba(0,132,255,0.3)] animate-pulse"
-                    : "neu-raised text-[#94A3B8] hover:text-[#0084FF] border-slate-700/60"
-                }`}
-                title="Jump to currently playing lyric"
-              >
-                <LocateFixed className="w-4 h-4" />
-              </button>
-            )}
-
+          <div className="flex items-center gap-3 mx-auto sm:mx-0">
             <button
               type="button"
               onClick={onTogglePlay}
