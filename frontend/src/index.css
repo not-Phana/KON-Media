@@ -244,35 +244,43 @@ html.dark .neu-pill-inactive:hover {
 }
 
 /* ==========================================================================
-   KON Media Glass Mode Design System
-   Exact optical glass card reference:
-   Translucent frosted surface with background shining through,
-   blur(16px) saturate(140%), crisp white border, and warm gold accents.
+   KON Media Glass Card Design System
+   Exact visual replication of user's glass card reference:
+   - 48% translucent dark charcoal glass with 16px frosted blur
+   - 1px crisp frosted border with subtle top inset highlight
+   - 16px corner radiuses and deep diffuse shadow
+   - Solid high-contrast primary button (matching "Continue")
+   - Translucent frosted glass secondary button (matching "Cancel")
    ========================================================================== */
 
-.glass {
-  background: rgba(16, 22, 34, 0.52);
-  -webkit-backdrop-filter: blur(16px) saturate(140%) brightness(110%);
-  backdrop-filter: blur(16px) saturate(140%) brightness(110%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+.glass-card,
+.glass,
+.theme-glass .neu-card,
+html.theme-glass .neu-card {
+  background: rgba(18, 24, 38, 0.48) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) brightness(110%) !important;
+  backdrop-filter: blur(16px) saturate(140%) brightness(110%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass {
-    background: rgba(17, 23, 36, 0.95);
+  .glass,
+  .glass-card,
+  .theme-glass .neu-card {
+    background: rgba(17, 23, 36, 0.95) !important;
   }
 }
 
 .theme-glass,
 html.theme-glass,
 body.theme-glass {
-  --glass-surface: rgba(16, 22, 34, 0.52);
-  --glass-surface-elevated: rgba(22, 30, 46, 0.60);
-  --glass-surface-recessed: rgba(0, 0, 0, 0.30);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-border-subtle: rgba(255, 255, 255, 0.06);
+  --glass-surface: rgba(18, 24, 38, 0.48);
+  --glass-surface-elevated: rgba(26, 34, 52, 0.58);
+  --glass-surface-recessed: rgba(0, 0, 0, 0.32);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border-subtle: rgba(255, 255, 255, 0.08);
   --glass-border-warm: rgba(245, 158, 11, 0.45);
   --glass-gold: #F59E0B;
   --glass-gold-hover: #D97706;
@@ -291,72 +299,77 @@ body.theme-glass {
   background-attachment: fixed !important;
 }
 
-/* Translucent Glass Cards matching user's exact glass card reference */
-.theme-glass .neu-card,
-html.theme-glass .neu-card {
-  background: rgba(16, 22, 34, 0.52) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(140%) brightness(110%) !important;
-  backdrop-filter: blur(16px) saturate(140%) brightness(110%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
-}
-
 /* Recessed Inset Glass Surfaces */
 .theme-glass .neu-recessed,
 html.theme-glass .neu-recessed {
-  background: rgba(0, 0, 0, 0.30) !important;
+  background: rgba(0, 0, 0, 0.32) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45) !important;
 }
 
-/* Tactile Raised Glass Buttons & Surfaces */
-.theme-glass .neu-raised,
-html.theme-glass .neu-raised {
-  background: rgba(255, 255, 255, 0.07) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.20) !important;
-  color: #F8FAFC !important;
-}
-
-.theme-glass .neu-raised:hover:not(:disabled),
-html.theme-glass .neu-raised:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.13) !important;
-  border-color: rgba(245, 158, 11, 0.45) !important;
-  color: #FDE68A !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.30), 0 0 14px rgba(245, 158, 11, 0.20) !important;
-  transform: translateY(-1px);
-}
-
-.theme-glass .neu-raised:active:not(:disabled),
-html.theme-glass .neu-raised:active:not(:disabled) {
-  background: rgba(0, 0, 0, 0.40) !important;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5) !important;
-  border-color: rgba(245, 158, 11, 0.25) !important;
-  color: #F59E0B !important;
-}
-
-/* Warm Gold Tactile Accent Buttons */
+/* Primary High-Contrast Button (Matching "Continue" in reference) */
+.glass-btn-primary,
 .theme-glass .neu-accent,
 html.theme-glass .neu-accent {
-  background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  box-shadow: 0 6px 18px rgba(180, 83, 9, 0.40), 0 1px 0 rgba(255, 255, 255, 0.18) inset !important;
-  color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
+.glass-btn-primary:hover:not(:disabled),
 .theme-glass .neu-accent:hover:not(:disabled),
 html.theme-glass .neu-accent:hover:not(:disabled) {
-  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
-  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.50) !important;
+  background: #F8FAFC !important;
+  color: #000000 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.35) !important;
 }
 
+.glass-btn-primary:active:not(:disabled),
 .theme-glass .neu-accent:active:not(:disabled),
 html.theme-glass .neu-accent:active:not(:disabled) {
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+  transform: translateY(0.5px) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Secondary Translucent Frosted Glass Button (Matching "Cancel" in reference) */
+.glass-btn-secondary,
+.theme-glass .neu-raised,
+html.theme-glass .neu-raised {
+  background: rgba(255, 255, 255, 0.08) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18) !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.glass-btn-secondary:hover:not(:disabled),
+.theme-glass .neu-raised:hover:not(:disabled),
+html.theme-glass .neu-raised:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.40) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25), 0 0 14px rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.glass-btn-secondary:active:not(:disabled),
+.theme-glass .neu-raised:active:not(:disabled),
+html.theme-glass .neu-raised:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(0.5px) !important;
 }
 
 /* Warm Gold Active Pills */
