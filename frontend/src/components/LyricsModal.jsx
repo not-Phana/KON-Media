@@ -72,6 +72,7 @@ export default function LyricsModal({
   };
   const containerRef = useRef(null);
   const userScrolledRef = useRef(false);
+  const isProgrammaticScrollRef = useRef(false);
   const userScrollTimeoutRef = useRef(null);
   const animFrameIdRef = useRef(null);
   const [isScrolledAway, setIsScrolledAway] = useState(false);
@@ -170,15 +171,22 @@ export default function LyricsModal({
   // Smooth glide to the currently active lyric line
   const scrollToActiveLine = useCallback(() => {
     userScrolledRef.current = false;
+    isProgrammaticScrollRef.current = true;
     setIsScrolledAway(false);
     if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
 
     const container = containerRef.current;
-    if (!container || activeLineIndex < 0) return;
+    if (!container || activeLineIndex < 0) {
+      isProgrammaticScrollRef.current = false;
+      return;
+    }
 
     const lineElements = container.querySelectorAll("[data-theater-line]");
     const activeEl = lineElements[activeLineIndex];
-    if (!activeEl) return;
+    if (!activeEl) {
+      isProgrammaticScrollRef.current = false;
+      return;
+    }
 
     const containerHeight = container.clientHeight;
     const elOffsetTop = activeEl.offsetTop;
@@ -192,7 +200,10 @@ export default function LyricsModal({
     const startY = container.scrollTop;
     const distance = targetScroll - startY;
 
-    if (Math.abs(distance) < 2) return;
+    if (Math.abs(distance) < 2) {
+      isProgrammaticScrollRef.current = false;
+      return;
+    }
 
     const duration = 750; // 750ms gentle, slow cinematic glide
     const startTime = performance.now();
@@ -209,6 +220,7 @@ export default function LyricsModal({
         animFrameIdRef.current = requestAnimationFrame(step);
       } else {
         animFrameIdRef.current = null;
+        isProgrammaticScrollRef.current = false;
         setIsScrolledAway(false);
       }
     };
@@ -223,6 +235,7 @@ export default function LyricsModal({
 
     const onUserInteraction = () => {
       userScrolledRef.current = true;
+      isProgrammaticScrollRef.current = false;
       if (animFrameIdRef.current) {
         cancelAnimationFrame(animFrameIdRef.current);
         animFrameIdRef.current = null;
@@ -246,7 +259,8 @@ export default function LyricsModal({
     if (!container) return;
 
     const checkScrollPosition = () => {
-      if (activeLineIndex < 0) {
+      // If auto-scrolling normally or user hasn't manually scrolled, never show "Jump to playing"
+      if (isProgrammaticScrollRef.current || !userScrolledRef.current || activeLineIndex < 0) {
         setIsScrolledAway(false);
         return;
       }
@@ -260,17 +274,12 @@ export default function LyricsModal({
       const elHeight = activeEl.clientHeight;
       const targetScroll = Math.max(0, elOffsetTop - (containerHeight / 2) + (elHeight / 2));
 
-      // If scrolling was not initiated by our own programmatic glide, mark as user scroll
-      if (animFrameIdRef.current === null) {
-        userScrolledRef.current = true;
-      }
-
       const diff = targetScroll - container.scrollTop;
-      // If user is more than 40px away from the center of the playing line
-      if (Math.abs(diff) > 40) {
+      // Only show pill if user manually scrolled more than 50px away from active line
+      if (Math.abs(diff) > 50) {
         setIsScrolledAway(true);
         setScrollDirection(diff > 0 ? "down" : "up");
-      } else if (!userScrolledRef.current || Math.abs(diff) <= 20) {
+      } else {
         setIsScrolledAway(false);
         userScrolledRef.current = false;
       }
