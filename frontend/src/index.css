@@ -551,51 +551,53 @@ html.dark .border-\[\#FCA5A5\] {
   border-color: rgba(239, 68, 68, 0.35) !important;
 }
 
-/* Custom Scrollbars */
+/* Clean Invisible Scrollbars for Professional UI (Spotify-Style) */
+.no-scrollbar,
+.neu-custom-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.neu-custom-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Global Scrollbar Customization: strictly remove legacy Windows arrow buttons */
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #E4EAF2;
-  border-radius: 4px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CAD5E2;
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #B4C2D3;
-}
-
-html[data-theme="dark"] ::-webkit-scrollbar-track,
-html.dark ::-webkit-scrollbar-track {
-  background: #0A0E17;
+  background: rgba(148, 163, 184, 0.45);
 }
 
 html[data-theme="dark"] ::-webkit-scrollbar-thumb,
 html.dark ::-webkit-scrollbar-thumb {
-  background: #1E293B;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
-}
-
-/* Modern standard scrollbar-color */
-@supports (scrollbar-color: auto) {
-  :root {
-    scrollbar-color: #CAD5E2 #E4EAF2;
-  }
-  html[data-theme="dark"],
-  html.dark {
-    scrollbar-color: #1E293B #0A0E17;
-  }
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* ==========================================================================

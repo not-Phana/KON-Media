@@ -507,10 +507,14 @@ export default function LyricsModal({
         </form>
       )}
 
-      {/* CENTER STAGE: LYRICS SCROLLER */}
+      {/* CENTER STAGE: LYRICS SCROLLER (Hidden scrollbar like Spotify) */}
       <main
         ref={containerRef}
-        className="relative z-10 flex-1 overflow-y-auto px-4 sm:px-8 neu-custom-scrollbar max-w-4xl mx-auto w-full text-center"
+        className="relative z-10 flex-1 overflow-y-auto px-4 sm:px-8 no-scrollbar neu-custom-scrollbar max-w-4xl mx-auto w-full text-center select-none"
+        style={{
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
       >
         {isLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-3 py-20">

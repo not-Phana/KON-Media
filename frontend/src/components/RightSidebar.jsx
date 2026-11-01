@@ -246,7 +246,11 @@ export default function RightSidebar({
 
   return (
     <aside
-      className="hidden xl:flex flex-col w-88 2xl:w-[410px] shrink-0 space-y-4 select-none sticky top-2 self-start h-[calc(100vh-1rem)] overflow-y-auto pr-0 neu-custom-scrollbar"
+      className="hidden xl:flex flex-col w-88 2xl:w-[410px] shrink-0 space-y-4 select-none sticky top-2 self-start h-[calc(100vh-1rem)] overflow-y-auto pr-0 no-scrollbar neu-custom-scrollbar"
+      style={{
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+      }}
       aria-label="Playback Spotlight & Queue Sidebar"
     >
       {/* 1. Now Playing Spotlight Card */}
@@ -490,7 +494,11 @@ export default function RightSidebar({
         ) : isSynced ? (
           <div
             ref={lyricsContainerRef}
-            className="relative neu-recessed p-2.5 rounded-xl flex-1 min-h-[220px] overflow-y-auto space-y-1 neu-custom-scrollbar"
+            className="relative neu-recessed p-2.5 rounded-xl flex-1 min-h-[220px] overflow-y-auto space-y-1 no-scrollbar neu-custom-scrollbar"
+            style={{
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
           >
             {/* Instrumental Intro Indicator */}
             {lines.length > 0 && currentTime < (lines[0].time + syncOffset) && (
@@ -548,7 +556,13 @@ export default function RightSidebar({
             )}
           </div>
         ) : lyricsData?.plain_lyrics ? (
-          <div className="neu-recessed p-3 rounded-xl flex-1 min-h-[220px] overflow-y-auto neu-custom-scrollbar">
+          <div
+            className="neu-recessed p-3 rounded-xl flex-1 min-h-[220px] overflow-y-auto no-scrollbar neu-custom-scrollbar"
+            style={{
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
+          >
             <span className="text-[9px] font-bold uppercase tracking-wider text-[#F59E0B] block mb-1">
               Unsynchronized
             </span>
