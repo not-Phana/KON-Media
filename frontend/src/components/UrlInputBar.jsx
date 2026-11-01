@@ -320,7 +320,7 @@ export default function UrlInputBar({
       return "Search any song, artist, or keyword (e.g. Bankai, I Wanna Be, Shelter)...";
     }
     if (searchMode === "video") {
-      return "Search YouTuber, creator or video premise (e.g. ELEVENZ video, or plot summary)...";
+      return "Search YouTuber, creator or video premise (e.g. MrBeast challenge, Veritasium, or plot summary)...";
     }
     return "Search any song, artist, video, or paste URL...";
   };
@@ -488,7 +488,7 @@ export default function UrlInputBar({
                 <span>1. Creator &amp; Channel Spotlight</span>
               </div>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] m-0 leading-relaxed font-medium">
-                Type any YouTuber or channel name (e.g. <strong>ELEVENZ</strong>, <strong>Markiplier</strong>, <strong>Veritasium</strong>) to see official channel profiles with subscriber counts, channel bios, and direct channel links.
+                Type any creator or YouTuber name (e.g. <strong>MrBeast</strong>, <strong>Veritasium</strong>, <strong>MKBHD</strong>) to see verified channel cards with subscriber counts, channel bios, and direct channel links.
               </p>
             </div>
 
@@ -498,7 +498,7 @@ export default function UrlInputBar({
                 <span>2. Search by Plot &amp; Description</span>
               </div>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] m-0 leading-relaxed font-medium">
-                Remember a video by what happens in it? Enter the plot or description premise (e.g. <em>My Ex-Girlfriend Trapped Me In Her Basement</em>). Our engine indexes video descriptions to find it.
+                Remember a video by its topic or story? Enter the plot or premise (e.g. <em>Surviving 7 Days in an Abandoned City</em> or <em>How Black Holes Bend Light</em>). Our engine indexes video descriptions to find it.
               </p>
             </div>
           </div>
@@ -509,10 +509,11 @@ export default function UrlInputBar({
               Try example searches:
             </span>
             {[
-              { label: "ELEVENZ video", query: "ELEVENZ video" },
-              { label: "My Ex-Girlfriend Trapped Me In Her Basement", query: "My Ex-Girlfriend Trapped Me In Her Basement" },
-              { label: "ELEVENZ My Ex-Girlfriend Trapped Me In Her Basement", query: "ELEVENZ My Ex-Girlfriend Trapped Me In Her Basement" },
-              { label: "Markiplier gameplay", query: "Markiplier gameplay" },
+              { label: "MrBeast challenge", query: "MrBeast challenge" },
+              { label: "Veritasium physics", query: "Veritasium physics" },
+              { label: "MKBHD smartphone review", query: "MKBHD smartphone review" },
+              { label: "Surviving 7 days in the wild", query: "Surviving 7 days in the wild" },
+              { label: "Markiplier horror game", query: "Markiplier horror game" },
             ].map((sample, idx) => (
               <button
                 key={idx}
