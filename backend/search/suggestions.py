@@ -852,7 +852,9 @@ class SuggestionEngine:
             return []
 
         queries_to_fetch = [clean_q]
-        if media_type == "audio" and len(clean_q.split()) <= 3:
+        video_clues = {"video", "videos", "youtuber", "channel", "vlog", "gameplay", "clip", "stream"}
+        is_video_query = any(k in clean_q.lower().split() for k in video_clues)
+        if media_type == "audio" and not is_video_query and len(clean_q.split()) <= 3:
             music_clues = {"song", "ost", "theme", "soundtrack", "opening", "ending", "music", "op", "ed"}
             if not any(t in clean_q.lower().split() for t in music_clues):
                 queries_to_fetch.append(f"{clean_q} ost")
@@ -901,7 +903,9 @@ class SuggestionEngine:
             return []
 
         search_query = clean_q
-        if media_type == "audio" and len(clean_q.split()) <= 3:
+        video_clues = {"video", "videos", "youtuber", "channel", "vlog", "gameplay", "clip", "stream"}
+        is_video_query = any(k in clean_q.lower().split() for k in video_clues)
+        if media_type == "audio" and not is_video_query and len(clean_q.split()) <= 3:
             music_clues = {"song", "ost", "theme", "soundtrack", "opening", "ending", "music", "op", "ed"}
             if not any(t in clean_q.lower().split() for t in music_clues):
                 search_query = f"{clean_q} ost"
@@ -1579,7 +1583,7 @@ class SuggestionEngine:
         provider_candidates: List[Dict[str, Any]] = []
 
         # When strong local / Rust discoveries already exist, never stall typing on network query lookups
-        query_timeout = 0.04 if has_strong_local else 0.22
+        query_timeout = 0.04 if has_strong_local else 0.45
         try:
             query_suggestions = futures["queries"].result(timeout=query_timeout)
         except Exception:

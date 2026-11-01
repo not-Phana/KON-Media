@@ -197,14 +197,88 @@ class YouTubeSearchProvider(SearchProvider):
                 .get("sectionListRenderer", {})
                 .get("contents", [])
             )
+            existing_ids = set()
             for sec in contents:
                 items = sec.get("itemSectionRenderer", {}).get("contents", [])
                 for item in items:
+                    # 1. Parse YouTuber / Creator Channels
+                    cr = item.get("channelRenderer")
+                    if cr:
+                        cid = cr.get("channelId")
+                        if cid and f"yt_ch_{cid}" not in existing_ids:
+                            ch_title = "".join(r.get("text", "") for r in cr.get("title", {}).get("runs", [])) or cr.get("title", {}).get("simpleText", "")
+                            sub_text = cr.get("subscriberCountText", {}).get("simpleText", "") or "".join(r.get("text", "") for r in cr.get("subscriberCountText", {}).get("runs", []))
+                            vid_count_text = cr.get("videoCountText", {}).get("simpleText", "") or "".join(r.get("text", "") for r in cr.get("videoCountText", {}).get("runs", []))
+                            desc = "".join(r.get("text", "") for r in cr.get("descriptionSnippet", {}).get("runs", []))
+                            thumbs = cr.get("thumbnail", {}).get("thumbnails", [])
+                            thumb = thumbs[-1].get("url") if thumbs else None
+                            if thumb and thumb.startswith("//"):
+                                thumb = f"https:{thumb}"
+                            ch_url = f"https://www.youtube.com/channel/{cid}"
+                            if sub_text and sub_text.startswith("@"):
+                                ch_url = f"https://www.youtube.com/{sub_text}"
+
+                            cand = CandidateResult(
+                                id=f"yt_ch_{cid}",
+                                title=ch_title,
+                                uploader=ch_title,
+                                url=ch_url,
+                                description=desc,
+                                thumbnail=thumb,
+                                platform="youtube",
+                                is_channel=True,
+                                content_type="channel",
+                                is_music=False,
+                                subscriber_count=sub_text,
+                                video_count=vid_count_text,
+                                channel_id=cid,
+                                channel_url=ch_url,
+                                score=1.2,
+                            )
+                            candidates.append(cand)
+                            existing_ids.add(f"yt_ch_{cid}")
+                            continue
+
+                    # 2. Parse Featured / Latest from Creator Shelves
+                    sr = item.get("shelfRenderer")
+                    if sr:
+                        shelf_items = sr.get("content", {}).get("verticalListRenderer", {}).get("items", [])
+                        for si in shelf_items:
+                            svr = si.get("videoRenderer")
+                            if svr:
+                                vid = svr.get("videoId")
+                                if vid and f"yt_{vid}" not in existing_ids:
+                                    t = "".join(r.get("text", "") for r in svr.get("title", {}).get("runs", [])) or svr.get("title", {}).get("simpleText", "Untitled")
+                                    u = "".join(r.get("text", "") for r in svr.get("ownerText", {}).get("runs", [])) or ""
+                                    dur = parse_duration_str(svr.get("lengthText", {}).get("simpleText", ""))
+                                    v_count = parse_view_count(svr.get("viewCountText", {}).get("simpleText", ""))
+                                    d = "".join(r.get("text", "") for r in svr.get("descriptionSnippet", {}).get("runs", []))
+                                    s_thumbs = svr.get("thumbnail", {}).get("thumbnails", [])
+                                    s_thumb = s_thumbs[-1].get("url") if s_thumbs else None
+                                    if s_thumb and s_thumb.startswith("//"):
+                                        s_thumb = f"https:{s_thumb}"
+
+                                    candidates.append(CandidateResult(
+                                        id=f"yt_{vid}",
+                                        title=t,
+                                        uploader=u,
+                                        description=d,
+                                        url=f"https://www.youtube.com/watch?v={vid}",
+                                        duration=dur,
+                                        thumbnail=s_thumb,
+                                        platform="youtube",
+                                        views=v_count,
+                                        is_music=False,
+                                        content_type="video",
+                                    ))
+                                    existing_ids.add(f"yt_{vid}")
+
+                    # 3. Parse Standard Video Results
                     vr = item.get("videoRenderer")
                     if not vr:
                         continue
                     vid = vr.get("videoId")
-                    if not vid:
+                    if not vid or f"yt_{vid}" in existing_ids:
                         continue
 
                     title = "".join(r.get("text", "") for r in vr.get("title", {}).get("runs", [])) or vr.get("title", {}).get("simpleText", "Untitled")
@@ -213,11 +287,15 @@ class YouTubeSearchProvider(SearchProvider):
                     views = parse_view_count(vr.get("viewCountText", {}).get("simpleText", ""))
                     thumbs = vr.get("thumbnail", {}).get("thumbnails", [])
                     thumb = thumbs[-1].get("url") if thumbs else None
+                    if thumb and thumb.startswith("//"):
+                        thumb = f"https:{thumb}"
+                    desc = "".join(r.get("text", "") for r in vr.get("descriptionSnippet", {}).get("runs", []))
 
                     cand = CandidateResult(
                         id=f"yt_{vid}",
                         title=title,
                         uploader=uploader,
+                        description=desc,
                         url=f"https://www.youtube.com/watch?v={vid}",
                         duration=duration,
                         thumbnail=thumb,
@@ -225,7 +303,8 @@ class YouTubeSearchProvider(SearchProvider):
                         views=views,
                     )
                     candidates.append(cand)
-                    if len(candidates) >= limit:
+                    existing_ids.add(f"yt_{vid}")
+                    if len(candidates) >= limit * 2:
                         return candidates
             return candidates
         except Exception as e:
@@ -290,6 +369,20 @@ class YouTubeSearchProvider(SearchProvider):
 
         # 1. Fast Innertube lookup (~1.2s)
         candidates = self._search_innertube(clean_query, limit=limit)
+
+        # If query has creator/video intent (e.g. "ELEVENZ video"), also query stripped creator term ("ELEVENZ")
+        creator_keywords = ("video", "videos", "youtuber", "channel", "vlog", "clip")
+        words = clean_query.lower().split()
+        if any(w in words for w in creator_keywords) and len(words) >= 2:
+            stripped = " ".join([w for w in clean_query.split() if w.lower() not in creator_keywords]).strip()
+            if stripped and stripped.lower() != clean_query.lower():
+                extra_cands = self._search_innertube(stripped, limit=limit)
+                existing_ids = {c.id for c in candidates}
+                for ec in extra_cands:
+                    if ec.id not in existing_ids:
+                        candidates.append(ec)
+                        existing_ids.add(ec.id)
+
         if candidates:
             return candidates
 

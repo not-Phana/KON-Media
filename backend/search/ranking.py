@@ -265,6 +265,36 @@ def rank_candidates(
             except Exception:
                 pass
 
+        # 10. YouTuber / Channel & Creator Boosting
+        creator_boost = 0.0
+        if getattr(cand, "is_channel", False):
+            norm_creator = normalize_text(getattr(query, "detected_creator", "") or query.raw_query)
+            norm_cand_title = normalize_text(cand.title)
+            if norm_creator in norm_cand_title or norm_cand_title in norm_creator:
+                creator_boost = 0.95
+                explanation.append("Verified YouTuber / Channel match")
+            else:
+                creator_boost = 0.50
+
+        uploader_boost = 0.0
+        norm_uploader = normalize_text(cand.uploader)
+        for term in (getattr(query, "detected_creator", None), query.raw_query):
+            if term:
+                norm_t = normalize_text(term)
+                if norm_t in norm_uploader or any(w in norm_uploader for w in norm_t.split() if len(w) >= 4):
+                    uploader_boost = 0.40
+                    explanation.append(f"Channel match: {cand.uploader}")
+                    break
+
+        desc_boost = 0.0
+        if getattr(cand, "description", None):
+            norm_desc = normalize_text(cand.description)
+            query_words = [w for w in norm_query.split() if len(w) >= 3 and w not in ("video", "videos", "youtuber", "channel")]
+            matching_desc_words = [w for w in query_words if w in norm_desc]
+            if len(matching_desc_words) >= 2:
+                desc_boost = 0.30 * (len(matching_desc_words) / max(len(query_words), 1))
+                explanation.append("Description keyword match")
+
         # Linear weighted composite score
         base_score = (
             cfg.weight_exact_title * exact_score
@@ -276,6 +306,9 @@ def rank_candidates(
             + assoc_boost
             + audio_affinity_boost
             + learned_boost
+            + creator_boost
+            + uploader_boost
+            + desc_boost
         )
 
         # Multiply by version modifier (e.g. 0.4 for parody, 1.25 for matching remix)

@@ -129,7 +129,12 @@ def rank_candidates(
                         original.is_cutscene = item.get("is_cutscene", False)
                     if item.get("is_music") is not None:
                         original.is_music = bool(item.get("is_music"))
-                    if item.get("content_type"):
+                    if getattr(original, "is_channel", False):
+                        original.content_type = "channel"
+                    elif getattr(query, "media_type", "") == "video":
+                        original.content_type = "video"
+                        original.is_music = False
+                    elif item.get("content_type"):
                         original.content_type = item.get("content_type")
                     if item.get("popularity") is not None:
                         original.popularity = float(item["popularity"])
@@ -224,7 +229,12 @@ def rank_candidates_flash(
                         original.is_cutscene = item.get("is_cutscene", False)
                     if item.get("is_music") is not None:
                         original.is_music = bool(item.get("is_music"))
-                    if item.get("content_type"):
+                    if getattr(original, "is_channel", False):
+                        original.content_type = "channel"
+                    elif getattr(query, "media_type", "") == "video":
+                        original.content_type = "video"
+                        original.is_music = False
+                    elif item.get("content_type"):
                         original.content_type = item.get("content_type")
                     if item.get("popularity") is not None:
                         original.popularity = float(item["popularity"])

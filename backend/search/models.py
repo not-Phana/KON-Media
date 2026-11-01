@@ -34,7 +34,13 @@ class CandidateResult:
     is_cluttered: bool = False
     is_cutscene: bool = False
     is_music: bool = True
-    content_type: str = "song"  # "song", "soundtrack", "video"
+    content_type: str = "song"  # "song", "soundtrack", "video", "channel"
+    description: str = ""
+    is_channel: bool = False
+    subscriber_count: Optional[str] = None
+    video_count: Optional[str] = None
+    channel_id: Optional[str] = None
+    channel_url: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -48,6 +54,12 @@ class CandidateResult:
             "is_cutscene": self.is_cutscene,
             "is_music": self.is_music,
             "content_type": self.content_type,
+            "description": self.description,
+            "is_channel": self.is_channel,
+            "subscriber_count": self.subscriber_count,
+            "video_count": self.video_count,
+            "channel_id": self.channel_id,
+            "channel_url": self.channel_url,
             "uploader": self.uploader,
             "url": self.url,
             "duration": self.duration,
@@ -84,6 +96,8 @@ class SearchQuery:
     expected_title: Optional[str] = None
     media_type: str = "all"  # "all", "audio", "video"
     exact_phrases: List[str] = field(default_factory=list)
+    is_video_intent: bool = False
+    detected_creator: Optional[str] = None
 
 
 @dataclass

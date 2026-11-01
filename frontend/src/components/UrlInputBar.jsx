@@ -36,7 +36,20 @@ export default function UrlInputBar({
   onEngineModeChange,
 }) {
   const [url, setUrl] = useState("");
-  const [searchMode, setSearchMode] = useState("audio"); // "audio", "video", "all"
+  const [searchMode, setSearchMode] = useState(() => {
+    try {
+      return localStorage.getItem("kon_search_mode") || "all";
+    } catch {
+      return "all";
+    }
+  });
+
+  const handleSearchModeChange = (mode) => {
+    try {
+      localStorage.setItem("kon_search_mode", mode);
+    } catch (_) {}
+    setSearchMode(mode);
+  };
   const [internalEngineMode, setInternalEngineMode] = useState(() => {
     try {
       return localStorage.getItem("kon_search_engine_mode") || "rei";
@@ -284,7 +297,7 @@ export default function UrlInputBar({
         <div className="neu-recessed p-1.5 flex items-center gap-1 rounded-2xl">
           <button
             type="button"
-            onClick={() => setSearchMode("audio")}
+            onClick={() => handleSearchModeChange("audio")}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               searchMode === "audio"
                 ? "neu-raised text-[#0084FF]"
@@ -297,7 +310,7 @@ export default function UrlInputBar({
 
           <button
             type="button"
-            onClick={() => setSearchMode("video")}
+            onClick={() => handleSearchModeChange("video")}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               searchMode === "video"
                 ? "neu-raised text-[#0084FF]"
@@ -310,7 +323,7 @@ export default function UrlInputBar({
 
           <button
             type="button"
-            onClick={() => setSearchMode("all")}
+            onClick={() => handleSearchModeChange("all")}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
               searchMode === "all"
                 ? "neu-raised text-[#0084FF]"
@@ -426,8 +439,16 @@ export default function UrlInputBar({
             value={url}
             onChange={(e) => {
               suppressSuggestionsRef.current = false;
-              setUrl(e.target.value);
+              const val = e.target.value;
+              setUrl(val);
               if (onClearError) onClearError();
+
+              // Auto-detect creator and video query intent
+              const lower = val.toLowerCase();
+              const videoCues = ["video", "videos", "youtuber", "channel", "vlog", "gameplay", "clip", "stream"];
+              if (videoCues.some((cue) => lower.split(/\s+/).includes(cue)) && searchMode === "audio") {
+                handleSearchModeChange("video");
+              }
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => {

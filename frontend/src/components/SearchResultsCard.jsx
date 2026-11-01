@@ -1,6 +1,7 @@
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 import React, { useState } from "react";
 import {
+  ExternalLink,
   Play,
   Pause,
   PlusCircle,
@@ -212,6 +213,7 @@ export default function SearchResultsCard({
   onAddToQueue,
   onToggleFavorite,
   favorites = [],
+  onSearch,
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());
   const [localPending, setLocalPending] = useState({});
@@ -557,6 +559,98 @@ export default function SearchResultsCard({
       {/* Candidate List */}
       <div className="space-y-3.5">
         {results.map((cand, idx) => {
+          if (cand.is_channel) {
+            return (
+              <div
+                key={cand.id}
+                style={{ animationDelay: `${Math.min(idx, 8) * 35}ms` }}
+                className="p-5 rounded-2xl neu-raised border-2 border-[#0084FF]/40 bg-gradient-to-r from-[#0084FF]/10 via-[#0084FF]/5 to-transparent flex flex-col md:flex-row items-start md:items-center justify-between gap-5 animate-fade-in group neu-stagger-item"
+              >
+                {/* Creator Profile */}
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full neu-recessed p-1 shrink-0 overflow-hidden flex items-center justify-center relative border-2 border-[#0084FF]/50 shadow-md">
+                    {cand.thumbnail ? (
+                      <img
+                        src={cand.thumbnail}
+                        alt={cand.title}
+                        className="w-full h-full object-cover rounded-full"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          const fallback = e.currentTarget.parentElement?.querySelector(".creator-avatar-fallback");
+                          if (fallback) fallback.classList.remove("hidden");
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className={`creator-avatar-fallback w-full h-full flex items-center justify-center ${
+                        cand.thumbnail ? "hidden" : ""
+                      }`}
+                    >
+                      <User className="w-8 h-8 text-[#0084FF]" />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      <span className="inline-flex items-center gap-1 neu-recessed px-2.5 py-0.5 rounded-full text-[11px] font-extrabold text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/15">
+                        <Sparkles className="w-3.5 h-3.5 text-[#0084FF]" />
+                        <span>YouTuber / Creator Channel</span>
+                      </span>
+                      {cand.subscriber_count && (
+                        <span className="neu-recessed px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8]">
+                          {cand.subscriber_count}
+                        </span>
+                      )}
+                      {cand.video_count && (
+                        <span className="neu-recessed px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8]">
+                          {cand.video_count}
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 className="text-base sm:text-lg font-extrabold text-[#1E293B] dark:text-[#F1F5F9] truncate m-0">
+                      {cand.title}
+                    </h4>
+
+                    {cand.description && (
+                      <p className="text-xs text-[#64748B] dark:text-[#94A3B8] line-clamp-2 mt-1 leading-relaxed font-normal">
+                        {cand.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Creator Actions */}
+                <div className="flex flex-wrap items-center gap-3 shrink-0 self-stretch sm:self-end md:self-center justify-end">
+                  {onSearch && (
+                    <button
+                      type="button"
+                      onClick={() => onSearch(`${cand.title} videos`)}
+                      className="neu-raised px-4 py-2.5 rounded-xl text-xs font-bold text-[#0084FF] hover:text-[#0074E0] cursor-pointer neu-btn-tactile flex items-center gap-2 border border-[#0084FF]/30"
+                      title={`Browse videos from ${cand.title}`}
+                    >
+                      <Film className="w-3.5 h-3.5" />
+                      <span>Search Channel Videos</span>
+                    </button>
+                  )}
+                  {cand.url && (
+                    <a
+                      href={cand.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="neu-raised px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0084FF] hover:bg-[#0074E0] cursor-pointer flex items-center gap-2 shadow-md neu-btn-tactile no-underline"
+                      title={`Visit YouTube Channel: ${cand.title}`}
+                    >
+                      <span>Visit Channel</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
           const isTopRanked = idx === 0;
           const isReported = reportedIds.has(cand.id);
 
@@ -764,6 +858,12 @@ export default function SearchResultsCard({
                     </p>
                   )}
 
+                  {cand.description && (
+                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] line-clamp-2 mt-1 leading-relaxed font-normal" title={cand.description}>
+                      {cand.description}
+                    </p>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-[#64748B] font-medium">
                     {cand.uploader && (
                       <span className="flex items-center gap-1">
@@ -866,7 +966,7 @@ export default function SearchResultsCard({
                   statusInfo={audioStatus}
                   onDownload={handleDownloadClick}
                   onOpenFile={onOpenFile}
-                  isPrimary={searchMode !== "video" && (cand.is_music !== false || searchMode === "audio")}
+                  isPrimary={searchMode !== "video" && cand.is_music !== false && cand.content_type !== "video"}
                 />
 
                 {/* Video Button with Live Feedback */}
@@ -876,7 +976,7 @@ export default function SearchResultsCard({
                   statusInfo={videoStatus}
                   onDownload={handleDownloadClick}
                   onOpenFile={onOpenFile}
-                  isPrimary={searchMode === "video" || (cand.is_music === false && searchMode === "all")}
+                  isPrimary={searchMode === "video" || cand.is_music === false || cand.content_type === "video"}
                 />
 
                 {/* Format Inspector */}

@@ -272,6 +272,32 @@ def detect_version_hint(text: str) -> Optional[str]:
     return None
 
 
+CREATOR_KEYWORDS = ("youtuber", "youtube", "creator", "channel", "streamer")
+VIDEO_KEYWORDS = ("video", "videos", "vlog", "gameplay", "clip", "clips", "episode", "stream", "trailer", "short", "shorts")
+
+def detect_creator_and_video_intent(query_str: str) -> tuple[bool, Optional[str], str]:
+    """Detect if query is searching for a creator or video, extract creator name and stripped core query."""
+    norm = normalize_text(query_str)
+    tokens = set(norm.split())
+    has_video_cue = any(k in tokens for k in VIDEO_KEYWORDS)
+    has_creator_cue = any(k in tokens for k in CREATOR_KEYWORDS)
+    is_video = has_video_cue or has_creator_cue
+
+    clean_text = query_str
+    detected_creator = None
+
+    for kw in (*CREATOR_KEYWORDS, *VIDEO_KEYWORDS):
+        pattern = r"\b" + re.escape(kw) + r"\b"
+        clean_text = re.sub(pattern, "", clean_text, flags=re.IGNORECASE).strip()
+
+    clean_text = re.sub(r"\s+", " ", clean_text).strip()
+
+    if is_video and clean_text and len(clean_text.split()) <= 3:
+        detected_creator = clean_text
+
+    return is_video, detected_creator, clean_text
+
+
 def parse_query_intent(
     query_str: str,
     expected_artist: Optional[str] = None,
@@ -365,6 +391,9 @@ def parse_query_intent(
             if not detected_title:
                 detected_title = core_text
 
+    is_video_intent, detected_creator, _ = detect_creator_and_video_intent(raw)
+    effective_media_type = "video" if (is_video_intent and media_type != "audio") else media_type
+
     return SearchQuery(
         raw_query=raw,
         normalized_query=norm_query,
@@ -376,8 +405,10 @@ def parse_query_intent(
         expected_duration=expected_duration,
         expected_artist=expected_artist,
         expected_title=expected_title,
-        media_type=media_type,
+        media_type=effective_media_type,
         exact_phrases=exact_phrases,
+        is_video_intent=is_video_intent,
+        detected_creator=detected_creator,
     )
 
 

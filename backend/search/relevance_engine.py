@@ -774,15 +774,37 @@ def rank_candidates(
 
     for cand in deduped:
         score, confidence, features, explanations = score_candidate(query, cand)
-        cand.score = score
+
+        # Creator / Channel Boost
+        if getattr(cand, "is_channel", False):
+            score += 0.85
+            confidence = "high"
+            explanations.append("Verified YouTuber / Channel match")
+        else:
+            norm_uploader = normalize_text(cand.uploader)
+            creator_term = getattr(query, "detected_creator", None) or query.raw_query
+            if creator_term and normalize_text(creator_term) in norm_uploader:
+                score += 0.35
+                explanations.append(f"Creator channel match: {cand.uploader}")
+
+            if getattr(cand, "description", None):
+                norm_desc = normalize_text(cand.description)
+                query_words = [w for w in normalize_text(query.raw_query).split() if len(w) >= 3 and w not in ("video", "videos", "youtuber", "channel")]
+                matching_desc = [w for w in query_words if w in norm_desc]
+                if len(matching_desc) >= 2:
+                    score += 0.25 * (len(matching_desc) / max(len(query_words), 1))
+                    explanations.append("Description keyword match")
+
+        cand.score = round(score, 4)
         cand.confidence = confidence
         cand.features = features
         cand.explanation = explanations
         scored_list.append(cand)
 
-    # Sort with deterministic tie-breaking
+    # Sort with deterministic tie-breaking (channels priority)
     scored_list.sort(
         key=lambda c: (
+            1 if getattr(c, "is_channel", False) else 0,
             c.score,
             c.features.get("exact_title", 0.0),
             c.features.get("popularity_score", 0.0),

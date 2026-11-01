@@ -1103,6 +1103,7 @@ export default function App() {
                 onAddToQueue={handleAddToQueue}
                 onToggleFavorite={handleToggleTrackFavorite}
                 favorites={favorites}
+                onSearch={(q) => handleAnalyze(q, "video", engineMode)}
               />
             )}
 
