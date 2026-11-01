@@ -282,7 +282,7 @@ export default function RightSidebar({
       </div>
 
       {/* 2. LIVE SYNCHRONIZED LYRICS CARD (Easy to find, right under spotlight!) */}
-      <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800">
+      <div className="neu-card p-4 space-y-3 border border-slate-200/60 dark:border-slate-800 flex-1 flex flex-col min-h-[280px]">
         <div className="flex items-center justify-between">
           <span className="text-xs font-black uppercase tracking-wider text-[#0084FF] flex items-center gap-1.5">
             <Mic2 className="w-3.5 h-3.5 text-[#0084FF]" />
@@ -305,22 +305,22 @@ export default function RightSidebar({
           )}
         </div>
 
-        {/* Lyrics Content Display - Stable fixed height h-64 sm:h-72 so the sidebar never shifts */}
+        {/* Lyrics Content Display - Stable fixed height flex-1 min-h-[220px] so the sidebar never shifts */}
         {isLoadingLyrics ? (
-          <div className="neu-recessed p-4 rounded-xl text-center space-y-2 h-64 sm:h-72 flex flex-col items-center justify-center">
+          <div className="neu-recessed p-4 rounded-xl text-center space-y-2 flex-1 min-h-[220px] flex flex-col items-center justify-center">
             <Loader2 className="w-4 h-4 text-[#0084FF] animate-spin mx-auto" />
             <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] m-0">
               Loading lyrics...
             </p>
           </div>
         ) : lyricsError ? (
-          <div className="neu-recessed p-3.5 rounded-xl text-center h-64 sm:h-72 flex items-center justify-center">
+          <div className="neu-recessed p-3.5 rounded-xl text-center flex-1 min-h-[220px] flex items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               {lyricsError}
             </p>
           </div>
         ) : !currentTrack ? (
-          <div className="neu-recessed p-3.5 rounded-xl text-center h-64 sm:h-72 flex items-center justify-center">
+          <div className="neu-recessed p-3.5 rounded-xl text-center flex-1 min-h-[220px] flex items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               Play a song to view live lyrics here.
             </p>
@@ -328,7 +328,7 @@ export default function RightSidebar({
         ) : isSynced ? (
           <div
             ref={lyricsContainerRef}
-            className="relative neu-recessed p-2.5 rounded-xl h-64 sm:h-72 overflow-y-auto space-y-1 neu-custom-scrollbar"
+            className="relative neu-recessed p-2.5 rounded-xl flex-1 min-h-[220px] overflow-y-auto space-y-1 neu-custom-scrollbar"
           >
             {lines.map((line, idx) => {
               const isActive = idx === activeLineIndex;
@@ -354,7 +354,7 @@ export default function RightSidebar({
             })}
           </div>
         ) : lyricsData?.plain_lyrics ? (
-          <div className="neu-recessed p-3 rounded-xl h-64 sm:h-72 overflow-y-auto neu-custom-scrollbar">
+          <div className="neu-recessed p-3 rounded-xl flex-1 min-h-[220px] overflow-y-auto neu-custom-scrollbar">
             <span className="text-[9px] font-bold uppercase tracking-wider text-[#F59E0B] block mb-1">
               Unsynchronized
             </span>
@@ -364,7 +364,7 @@ export default function RightSidebar({
             </p>
           </div>
         ) : (
-          <div className="neu-recessed p-3.5 rounded-xl text-center space-y-1 h-64 sm:h-72 flex flex-col items-center justify-center">
+          <div className="neu-recessed p-3.5 rounded-xl text-center space-y-1 flex-1 min-h-[220px] flex flex-col items-center justify-center">
             <p className="text-[11px] text-[#94A3B8] m-0">
               No lyrics found for this song.
             </p>
