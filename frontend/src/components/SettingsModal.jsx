@@ -15,6 +15,7 @@ import {
   Sun,
   Monitor,
   Globe,
+  Sparkles,
 } from "lucide-react";
 import { validateFFmpeg, getCustomBackendUrl, setCustomBackendUrl } from "../api";
 
@@ -26,11 +27,14 @@ export default function SettingsModal({
   onOpenFile,
   theme,
   onSelectTheme,
+  glassMode,
+  onToggleGlassMode,
 }) {
   const [downloadsDir, setDownloadsDir] = useState("");
   const [maxConcurrent, setMaxConcurrent] = useState(2);
   const [defaultMediaType, setDefaultMediaType] = useState("video");
   const [ffmpegPath, setFfmpegPath] = useState("");
+  const [glassModeEnabled, setGlassModeEnabled] = useState(false);
   const [backendUrl, setBackendUrlState] = useState(() => getCustomBackendUrl());
   const [isSaved, setIsSaved] = useState(false);
   const [isOpeningFolder, setIsOpeningFolder] = useState(false);
@@ -46,11 +50,19 @@ export default function SettingsModal({
       setMaxConcurrent(currentSettings.max_concurrent_downloads || 2);
       setDefaultMediaType(currentSettings.default_media_type || "video");
       setFfmpegPath(currentSettings.ffmpeg_path || "");
+      setGlassModeEnabled(Boolean(currentSettings.glass_mode ?? glassMode));
       setValidationResult(null);
     }
-  }, [currentSettings, isOpen]);
+  }, [currentSettings, isOpen, glassMode]);
 
   if (!isOpen) return null;
+
+  const handleToggleGlass = (enabled) => {
+    setGlassModeEnabled(enabled);
+    if (onToggleGlassMode) {
+      onToggleGlassMode(enabled);
+    }
+  };
 
   const handleOpenFolder = async () => {
     if (!onOpenFile) return;
@@ -86,6 +98,7 @@ export default function SettingsModal({
       max_concurrent_downloads: Number(maxConcurrent),
       default_media_type: defaultMediaType,
       ffmpeg_path: ffmpegPath.trim(),
+      glass_mode: glassModeEnabled,
     });
     setIsSaved(true);
     setTimeout(() => {
@@ -158,6 +171,46 @@ export default function SettingsModal({
             </div>
             <p className="text-[11px] text-[#64748B] font-medium m-0">
               Cool Dark features deep obsidian surfaces, cyber luminescence, and tactile neumorphic shadows.
+            </p>
+          </div>
+
+          {/* Glass Mode Appearance Toggle */}
+          <div className="p-3.5 rounded-2xl neu-raised space-y-2 border border-slate-200/60 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className={`w-4 h-4 ${glassModeEnabled ? "text-[#F59E0B]" : "text-[#64748B]"}`} />
+                <div>
+                  <span className="text-xs font-bold text-[#1E293B] dark:text-[#F8FAFC] block">
+                    Glass Mode
+                  </span>
+                  <span className="text-[10px] text-[#64748B] dark:text-[#94A3B8]">
+                    Frosted charcoal glass surfaces &amp; warm gold highlights
+                  </span>
+                </div>
+              </div>
+
+              {/* Tactile Toggle Switch */}
+              <button
+                type="button"
+                onClick={() => handleToggleGlass(!glassModeEnabled)}
+                className={`relative w-11 h-6 rounded-full transition-colors duration-250 cursor-pointer focus:outline-none p-0.5 ${
+                  glassModeEnabled
+                    ? "bg-[#D97706] shadow-[0_0_12px_rgba(217,119,6,0.4)]"
+                    : "neu-recessed bg-slate-300 dark:bg-slate-800"
+                }`}
+                role="switch"
+                aria-checked={glassModeEnabled}
+                title={glassModeEnabled ? "Turn Glass Mode OFF" : "Turn Glass Mode ON"}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ${
+                    glassModeEnabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-medium m-0 leading-relaxed">
+              Enables native translucent depth, soft natural light reflections, realistic background blur, and ambient artwork reflections without reloading the application.
             </p>
           </div>
 

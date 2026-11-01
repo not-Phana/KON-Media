@@ -53,6 +53,7 @@ export default function RightSidebar({
   isLoadingLyrics = false,
   lyricsError = null,
   onOpenFullscreenLyrics,
+  glassMode = false,
 }) {
   const isFlash =
     currentTrack?.engine_mode === "flash" ||
@@ -338,7 +339,9 @@ export default function RightSidebar({
                   onClick={() => handleLineClick(line.time)}
                   className={`text-xs rounded-lg px-2.5 py-1.5 transition-all duration-300 cursor-pointer ${
                     isActive
-                      ? "text-[#0084FF] font-bold opacity-100 bg-[#0084FF]/10 shadow-xs"
+                      ? glassMode
+                        ? "text-[#F59E0B] font-bold opacity-100 bg-[#D97706]/15 shadow-xs"
+                        : "text-[#0084FF] font-bold opacity-100 bg-[#0084FF]/10 shadow-xs"
                       : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC] font-medium opacity-50 hover:opacity-90"
                   }`}
                   title={`Jump to ${formatDuration(line.time)}`}

@@ -38,6 +38,7 @@ export default function LyricsModal({
   lyricsData: initialLyricsData,
   isLoadingLyrics: initialLoading,
   lyricsError: initialError,
+  glassMode = false,
 }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -321,15 +322,29 @@ export default function LyricsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#090D14]/95 backdrop-blur-2xl text-[#F8FAFC] flex flex-col justify-between p-4 sm:p-8 md:p-10 select-none neu-popup-backdrop animate-in fade-in duration-200"
+      className={`fixed inset-0 z-50 text-[#F8FAFC] flex flex-col justify-between p-4 sm:p-8 md:p-10 select-none neu-popup-backdrop animate-in fade-in duration-200 overflow-hidden ${
+        glassMode ? "bg-[#090D14]/85 backdrop-blur-3xl" : "bg-[#090D14]/95 backdrop-blur-2xl"
+      }`}
       role="dialog"
       aria-modal="true"
       aria-label="Full-screen Lyrics Theater"
     >
-      {/* Ambient Radial Aura */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
-        <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-[#0084FF]/20 via-[#6366F1]/10 to-transparent blur-3xl rounded-full" />
-      </div>
+      {/* Ambient Artwork Reflection Backdrop for Glass Mode Theater */}
+      {glassMode && currentTrack?.thumbnail ? (
+        <div
+          className="absolute inset-0 pointer-events-none opacity-25 filter blur-3xl scale-110"
+          style={{
+            backgroundImage: `url(${JSON.stringify(currentTrack.thumbnail)})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          aria-hidden="true"
+        />
+      ) : (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
+          <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-[#0084FF]/20 via-[#6366F1]/10 to-transparent blur-3xl rounded-full" />
+        </div>
+      )}
 
       {/* TOP BAR: Song Meta, Sync Badge, Search Toggle & Close Controls */}
       <header className="relative z-10 flex items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
@@ -445,8 +460,8 @@ export default function LyricsModal({
           </div>
         ) : errorMsg && !lyricsData?.lines?.length && !lyricsData?.plain_lyrics ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4 py-16 max-w-md mx-auto">
-            <div className="w-14 h-14 rounded-2xl neu-recessed flex items-center justify-center text-[#EF4444] border border-[#EF4444]/30 shadow-inner">
-              <AlertCircle className="w-7 h-7" />
+            <div className="w-14 h-14 rounded-2xl neu-recessed flex items-center justify-center text-[#94A3B8] border border-slate-700/60 shadow-inner">
+              <Mic2 className="w-7 h-7 opacity-70" />
             </div>
 
             <div className="space-y-1">
@@ -454,7 +469,7 @@ export default function LyricsModal({
                 {errorMsg}
               </h3>
               <p className="text-xs text-[#94A3B8] m-0">
-                Try searching with artist name or refining the title below.
+                You can search with the artist name or refine the title below.
               </p>
             </div>
 
@@ -490,7 +505,9 @@ export default function LyricsModal({
                   onClick={() => handleLineClick(line.time)}
                   className={`transition-all duration-500 ease-out cursor-pointer rounded-2xl px-4 py-3 leading-relaxed tracking-tight select-none text-2xl sm:text-3xl md:text-4xl ${
                     isActive
-                      ? "text-white font-black opacity-100 drop-shadow-[0_2px_24px_rgba(255,255,255,0.45)]"
+                      ? glassMode
+                        ? "text-[#FDE68A] font-black opacity-100 drop-shadow-[0_2px_28px_rgba(245,158,11,0.45)]"
+                        : "text-white font-black opacity-100 drop-shadow-[0_2px_24px_rgba(255,255,255,0.45)]"
                       : isPast
                       ? "text-slate-400 font-bold opacity-30 hover:opacity-75"
                       : "text-slate-300 font-bold opacity-45 hover:opacity-85"
@@ -549,14 +566,22 @@ export default function LyricsModal({
           <button
             type="button"
             onClick={scrollToActiveLine}
-            className="px-5 py-2.5 rounded-full bg-slate-900/60 dark:bg-black/50 backdrop-blur-2xl border border-white/20 hover:border-[#38BDF8]/70 text-white shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(56,189,248,0.25)] hover:shadow-[0_12px_44px_rgba(56,189,248,0.45)] transition-all duration-300 cursor-pointer neu-btn-elastic flex items-center gap-2.5 font-bold text-xs sm:text-sm select-none group"
+            className={`px-5 py-2.5 rounded-full bg-slate-900/60 dark:bg-black/50 backdrop-blur-2xl border text-white transition-all duration-300 cursor-pointer neu-btn-elastic flex items-center gap-2.5 font-bold text-xs sm:text-sm select-none group ${
+              glassMode
+                ? "border-white/20 hover:border-[#F59E0B]/70 shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(217,119,6,0.25)] hover:shadow-[0_12px_44px_rgba(245,158,11,0.45)]"
+                : "border-white/20 hover:border-[#38BDF8]/70 shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(56,189,248,0.25)] hover:shadow-[0_12px_44px_rgba(56,189,248,0.45)]"
+            }`}
             title="Jump to currently playing lyric line"
           >
             <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981] animate-pulse shrink-0" />
             {scrollDirection === "down" ? (
-              <ArrowDown className="w-4 h-4 text-[#38BDF8] transition-transform duration-300 group-hover:translate-y-0.5 shrink-0" />
+              <ArrowDown className={`w-4 h-4 transition-transform duration-300 group-hover:translate-y-0.5 shrink-0 ${
+                glassMode ? "text-[#F59E0B]" : "text-[#38BDF8]"
+              }`} />
             ) : (
-              <ArrowUp className="w-4 h-4 text-[#38BDF8] transition-transform duration-300 group-hover:-translate-y-0.5 shrink-0" />
+              <ArrowUp className={`w-4 h-4 transition-transform duration-300 group-hover:-translate-y-0.5 shrink-0 ${
+                glassMode ? "text-[#F59E0B]" : "text-[#38BDF8]"
+              }`} />
             )}
             <span className="tracking-wide">Jump to playing</span>
           </button>
@@ -578,7 +603,9 @@ export default function LyricsModal({
             }}
           >
             <div
-              className="h-full bg-[#0084FF] transition-all duration-150 rounded-full"
+              className={`h-full transition-all duration-150 rounded-full ${
+                glassMode ? "bg-[#F59E0B]" : "bg-[#0084FF]"
+              }`}
               style={{ width: `${Math.min(100, Math.max(0, (currentTime / (duration || 1)) * 100))}%` }}
             />
           </div>

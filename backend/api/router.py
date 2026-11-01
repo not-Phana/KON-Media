@@ -89,6 +89,7 @@ class SettingsUpdateRequest(BaseModel):
     max_concurrent_downloads: Optional[int] = None
     default_media_type: Optional[str] = None
     ffmpeg_path: Optional[str] = None
+    glass_mode: Optional[bool] = None
 
 
 class ValidateFFmpegRequest(BaseModel):

@@ -56,8 +56,11 @@ def test_settings_store(tmp_path):
     current = settings.get_settings()
     assert "downloads_dir" in current
     assert current["max_concurrent_downloads"] == 2
+    assert current["glass_mode"] is False
 
     # Update settings
-    updated = settings.update_settings({"max_concurrent_downloads": 4})
+    updated = settings.update_settings({"max_concurrent_downloads": 4, "glass_mode": True})
     assert updated["max_concurrent_downloads"] == 4
+    assert updated["glass_mode"] is True
     assert settings.get_settings()["max_concurrent_downloads"] == 4
+    assert settings.get_settings()["glass_mode"] is True

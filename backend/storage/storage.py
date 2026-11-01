@@ -96,16 +96,19 @@ class SettingsStore:
     """Manages persistent user settings."""
 
     def __init__(self, state_dir: Path = STATE_DIR):
-        default_settings = {
+        self.default_settings = {
             "downloads_dir": str(DOWNLOADS_DIR),
             "max_concurrent_downloads": 2,
             "default_media_type": "video",
             "ffmpeg_path": "",
+            "glass_mode": False,
         }
-        self.store = AtomicJsonStore(state_dir / "settings.json", default_value=default_settings)
+        self.store = AtomicJsonStore(state_dir / "settings.json", default_value=self.default_settings)
 
     def get_settings(self) -> Dict[str, Any]:
-        return self.store.load()
+        merged = dict(self.default_settings)
+        merged.update(self.store.load())
+        return merged
 
     def update_settings(self, updates: Dict[str, Any]) -> Dict[str, Any]:
         current = self.get_settings()

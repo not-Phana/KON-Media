@@ -57,6 +57,14 @@ export default function App() {
     }
   });
 
+  const [glassMode, setGlassMode] = useState(() => {
+    try {
+      return localStorage.getItem("kon_glass_mode") === "true";
+    } catch (_) {
+      return false;
+    }
+  });
+
   const [health, setHealth] = useState(null);
   const [settings, setSettings] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -399,7 +407,15 @@ export default function App() {
         fetchHistory().catch(() => []),
       ]);
       if (h) setHealth(h);
-      if (s) setSettings(s);
+      if (s) {
+        setSettings(s);
+        if (typeof s.glass_mode === "boolean") {
+          setGlassMode(s.glass_mode);
+          try {
+            localStorage.setItem("kon_glass_mode", String(s.glass_mode));
+          } catch (_) {}
+        }
+      }
       if (t) setActiveTasks(t);
       if (hist) setHistory(hist);
     } catch (_) {}
@@ -505,6 +521,26 @@ export default function App() {
 
   const handleToggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
+  // Synchronize Glass Mode class on documentElement
+  useEffect(() => {
+    try {
+      if (glassMode) {
+        document.documentElement.classList.add("theme-glass");
+      } else {
+        document.documentElement.classList.remove("theme-glass");
+      }
+      localStorage.setItem("kon_glass_mode", String(glassMode));
+    } catch (_) {}
+  }, [glassMode]);
+
+  const handleToggleGlassMode = (enabled) => {
+    setGlassMode(enabled);
+    try {
+      localStorage.setItem("kon_glass_mode", String(enabled));
+    } catch (_) {}
+    saveSettings({ glass_mode: enabled }).catch(() => {});
   };
 
   // Handle URL analysis or keyword discovery
@@ -812,6 +848,12 @@ export default function App() {
   // Handle settings update
   const handleSaveSettings = async (newSettings) => {
     try {
+      if (typeof newSettings.glass_mode === "boolean") {
+        setGlassMode(newSettings.glass_mode);
+        try {
+          localStorage.setItem("kon_glass_mode", String(newSettings.glass_mode));
+        } catch (_) {}
+      }
       const updated = await saveSettings(newSettings);
       setSettings(updated);
       const h = await fetchHealth().catch(() => null);
@@ -822,8 +864,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between">
-      <div className={`max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-6 ${currentTrack ? "pb-28" : ""}`}>
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-primary)] transition-colors duration-250 flex flex-col justify-between relative overflow-x-hidden">
+      {/* Living Ambient Artwork Reflection Backdrop for Glass Mode */}
+      {glassMode && currentTrack?.thumbnail && (
+        <div
+          className="kon-glass-ambient-backdrop"
+          style={{
+            backgroundImage: `url(${JSON.stringify(currentTrack.thumbnail)})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          aria-hidden="true"
+        />
+      )}
+      <div className={`relative z-10 max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-6 ${currentTrack ? "pb-28" : ""}`}>
         {/* 3-Column Workstation Layout */}
         <div className="flex items-start gap-6">
           {/* Left Sidebar: Navigation, Engine Switcher & Autonomous Learning */}
@@ -1015,6 +1069,7 @@ export default function App() {
             isLoadingLyrics={isLoadingLyrics}
             lyricsError={lyricsError}
             onOpenFullscreenLyrics={() => setIsLyricsModalOpen(true)}
+            glassMode={glassMode}
           />
         </div>
       </div>
@@ -1035,6 +1090,8 @@ export default function App() {
         onOpenFile={handleOpenFile}
         theme={theme}
         onSelectTheme={setTheme}
+        glassMode={glassMode}
+        onToggleGlassMode={handleToggleGlassMode}
       />
 
       {/* KON Search 1.2 Rei Model Spotlight Modal */}
@@ -1102,6 +1159,7 @@ export default function App() {
         lyricsData={lyricsData}
         isLoadingLyrics={isLoadingLyrics}
         lyricsError={lyricsError}
+        glassMode={glassMode}
       />
 
       {/* Interactive Toast Notification with Pop-Up Physics */}
