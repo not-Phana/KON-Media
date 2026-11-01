@@ -1,6 +1,6 @@
 ---
 title: KON Media
-emoji: 🎵
+emoji: 
 colorFrom: blue
 colorTo: indigo
 sdk: docker

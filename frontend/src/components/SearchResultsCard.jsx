@@ -3,9 +3,8 @@ import React, { useState } from "react";
 import {
   Play,
   Pause,
-  Heart,
+  PlusCircle,
   ListPlus,
-  Flame,
   TrendingUp,
   Search,
   Sparkles,
@@ -701,7 +700,7 @@ export default function SearchResultsCard({
 
                     {isGlobalHit && (
                       <span className="inline-flex items-center gap-1 neu-recessed px-2 py-0.5 rounded-full text-[10px] font-bold text-[#F59E0B] border border-[#F59E0B]/30 bg-[#F59E0B]/10">
-                        <Flame className="w-3 h-3 text-[#F59E0B]" />
+                        <TrendingUp className="w-3 h-3 text-[#0084FF]" />
                         <span>Global Hit</span>
                       </span>
                     )}
@@ -789,19 +788,23 @@ export default function SearchResultsCard({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-stretch sm:self-end md:self-center justify-end">
-                {/* Favorite (Heart) Button */}
+                {/* Save to Liked Songs Button */}
                 {onToggleFavorite && (
                   <button
                     type="button"
                     onClick={() => onToggleFavorite(cand)}
-                    className={`p-2.5 rounded-xl cursor-pointer neu-heart-pop ${
+                    className={`p-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
                       isFavorited
-                        ? "neu-recessed text-[#EF4444]"
-                        : "neu-raised text-[#94A3B8] hover:text-[#EF4444]"
+                        ? "neu-recessed text-[#10B981]"
+                        : "neu-raised text-[#94A3B8] hover:text-[#0084FF] dark:hover:text-white"
                     }`}
-                    title={isFavorited ? "Remove from favorites" : "Save to favorites"}
+                    title={isFavorited ? "Saved to Liked Songs (Click to remove)" : "Save to Liked Songs"}
                   >
-                    <Heart className={`w-3.5 h-3.5 ${isFavorited ? "fill-current" : ""}`} />
+                    {isFavorited ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+                    ) : (
+                      <PlusCircle className="w-3.5 h-3.5 text-[#94A3B8]" />
+                    )}
                   </button>
                 )}
 

@@ -17,7 +17,7 @@ import {
   FolderOpen,
   X,
   Music,
-  Heart,
+  PlusCircle,
   ListMusic,
   Mic2,
 } from "lucide-react";
@@ -597,19 +597,23 @@ export default function BottomMusicPlayer({
             </p>
           </div>
 
-          {/* Favorite Button */}
+          {/* Spotify-Style Save / Liked Button */}
           {onToggleFavorite && (
             <button
               type="button"
               onClick={() => onToggleFavorite(currentTrack)}
-              className={`p-1.5 rounded-lg cursor-pointer neu-heart-pop shrink-0 ${
+              className={`p-1.5 rounded-lg cursor-pointer transition-all duration-200 shrink-0 ${
                 isFavorite
-                  ? "text-[#EF4444] neu-recessed"
-                  : "text-[#94A3B8] hover:text-[#EF4444]"
+                  ? "text-[#10B981] neu-recessed shadow-sm"
+                  : "text-[#94A3B8] hover:text-white"
               }`}
-              title={isFavorite ? "Remove from favorites" : "Save to favorites"}
+              title={isFavorite ? "Saved to Liked Songs (Click to remove)" : "Save to Liked Songs"}
             >
-              <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+              {isFavorite ? (
+                <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+              ) : (
+                <PlusCircle className="w-4 h-4 text-[#94A3B8] hover:text-white" />
+              )}
             </button>
           )}
         </div>

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import {
-  Heart,
+  Bookmark,
+  PlusCircle,
+  CheckCircle2,
   Clock,
   Play,
   Pause,
@@ -58,12 +60,12 @@ export default function LibraryWorkspace({
             onClick={() => onTabChange && onTabChange("favorites")}
             className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-2 ${
               isFavorites
-                ? "neu-recessed text-[#EF4444] border border-[#EF4444]/30 bg-[#EF4444]/10 shadow-xs"
+                ? "neu-recessed text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10 shadow-xs"
                 : "neu-raised text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
             }`}
           >
-            <Heart className={`w-4 h-4 ${isFavorites ? "fill-current" : ""}`} />
-            <span>Favorites</span>
+            <Bookmark className={`w-4 h-4 ${isFavorites ? "fill-current" : ""}`} />
+            <span>Liked Songs</span>
             <span className="neu-recessed px-1.5 py-0.2 rounded text-[10px] font-mono">
               {favorites.length}
             </span>
@@ -127,12 +129,12 @@ export default function LibraryWorkspace({
         <div className="neu-recessed p-10 rounded-2xl text-center space-y-3">
           {isFavorites ? (
             <>
-              <Heart className="w-10 h-10 text-[#EF4444]/40 mx-auto" />
+              <Bookmark className="w-10 h-10 text-[#0084FF]/40 mx-auto" />
               <h4 className="text-sm font-bold text-[#1E293B] dark:text-[#E2E8F0] m-0">
-                No favorite songs saved yet
+                No liked songs saved yet
               </h4>
               <p className="text-xs text-[#64748B] dark:text-[#94A3B8] m-0 max-w-sm mx-auto">
-                Click the heart icon on any song in search results or the bottom player to save it to your private offline favorites shelf.
+                Click the save (+) button on any song in search results or the bottom player to add it to your private offline collection.
               </p>
             </>
           ) : (
@@ -265,19 +267,23 @@ export default function LibraryWorkspace({
                     )}
                   </button>
 
-                  {/* Favorite Toggle Button */}
+                  {/* Save / Liked Toggle Button */}
                   {onToggleFavorite && (
                     <button
                       type="button"
                       onClick={() => onToggleFavorite(track)}
-                      className={`p-2 rounded-xl cursor-pointer neu-heart-pop transition-all ${
+                      className={`p-2 rounded-xl cursor-pointer transition-all duration-200 ${
                         isFavorites
-                          ? "neu-recessed text-[#EF4444]"
-                          : "neu-raised text-[#94A3B8] hover:text-[#EF4444]"
+                          ? "neu-recessed text-[#10B981]"
+                          : "neu-raised text-[#94A3B8] hover:text-[#0084FF] dark:hover:text-white"
                       }`}
-                      title={isFavorites ? "Remove from favorites" : "Add to favorites"}
+                      title={isFavorites ? "Saved to Liked Songs (Click to remove)" : "Save to Liked Songs"}
                     >
-                      <Heart className={`w-4 h-4 ${isFavorites ? "fill-current" : ""}`} />
+                      {isFavorites ? (
+                        <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+                      ) : (
+                        <PlusCircle className="w-4 h-4 text-[#94A3B8]" />
+                      )}
                     </button>
                   )}
 

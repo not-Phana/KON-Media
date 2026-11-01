@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Heart, Clock, Download, HardDrive, Brain } from "lucide-react";
+import { Search, Bookmark, Clock, Download, HardDrive, Brain } from "lucide-react";
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 
 export default function NavigationTabBar({
@@ -41,17 +41,17 @@ export default function NavigationTabBar({
           onClick={() => onViewChange("favorites")}
           className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer neu-btn-tactile flex items-center gap-2 ${
             activeView === "favorites"
-              ? "neu-recessed text-[#EF4444] border border-[#EF4444]/30 bg-[#EF4444]/10 shadow-xs"
+              ? "neu-recessed text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10 shadow-xs"
               : "neu-raised text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
           }`}
         >
-          <Heart className={`w-4 h-4 ${activeView === "favorites" ? "fill-current" : ""}`} />
-          <span>Favorites</span>
+          <Bookmark className={`w-4 h-4 ${activeView === "favorites" ? "fill-current" : ""}`} />
+          <span>Liked Songs</span>
           {favoritesCount > 0 && (
             <span
               className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
                 activeView === "favorites"
-                  ? "bg-[#EF4444]/20 text-[#EF4444]"
+                  ? "bg-[#0084FF]/20 text-[#0084FF]"
                   : "neu-recessed text-[#64748B]"
               }`}
             >

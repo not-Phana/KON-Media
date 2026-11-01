@@ -3,14 +3,14 @@ import {
   Music,
   Play,
   Pause,
-  Heart,
+  PlusCircle,
+  CheckCircle2,
   Download,
   ListMusic,
   Clock,
   FolderOpen,
   Loader2,
-  CheckCircle2,
-  AlertCircle,
+    AlertCircle,
   X,
   Volume2,
   Film,
@@ -340,16 +340,20 @@ export default function RightSidebar({
                   )}
                 </button>
 
-                {/* Favorite Toggle */}
+                {/* Save / Liked Toggle */}
                 <button
                   type="button"
                   onClick={onToggleFavorite}
                   className={`neu-raised p-2 rounded-xl text-xs cursor-pointer neu-btn-tactile ${
-                    isFavorite ? "text-[#EF4444]" : "text-[#64748B] hover:text-[#EF4444]"
+                    isFavorite ? "neu-recessed text-[#10B981]" : "text-[#64748B] dark:text-[#94A3B8] hover:text-[#0084FF] dark:hover:text-white"
                   }`}
-                  title={isFavorite ? "Remove from Favorites" : "Save to Favorites"}
+                  title={isFavorite ? "Saved to Liked Songs (Click to remove)" : "Save to Liked Songs"}
                 >
-                  <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                  {isFavorite ? (
+                    <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+                  ) : (
+                    <PlusCircle className="w-4 h-4 text-[#64748B] dark:text-[#94A3B8]" />
+                  )}
                 </button>
               </div>
 

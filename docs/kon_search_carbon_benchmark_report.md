@@ -39,7 +39,7 @@ The following table presents empirical benchmark evaluations across all 4 genera
 
 | Benchmark Evaluation Metric | Model 1: KON 0.9 Legacy | Model 2: KON 1.0 Rei | Model 3: KON 1.1 Rei | Model 4: KON 1.2 Rei | 1.2 Rei vs 0.9 Legacy | Status |
 |---|---|---|---|---|---|---|
-| **Precision @ 1 (P@1)** | `16.7%` | `94.4%` | `98.2%` | **`100.0%`** | **+83.3%** | ★ Perfect Rank |
+| **Precision @ 1 (P@1)** | `16.7%` | `94.4%` | `98.2%` | **`100.0%`** | **+83.3%** | * Perfect Rank |
 | **Mean Reciprocal Rank (MRR)** | `0.509` | `0.965` | `0.991` | **`1.000`** | **+0.491** | Optimal Order |
 | **Song Discovery Recall (Partial Clues)** | `8.3%` | `35.0%` | `96.5%` | **`99.4%`** | **+91.1%** | Clue Recovery |
 | **Typo Invariance (Damerau-Levenshtein)** | `12.5%` | `82.0%` | `95.0%` | **`99.1%`** | **+86.6%** | Noise Immune |

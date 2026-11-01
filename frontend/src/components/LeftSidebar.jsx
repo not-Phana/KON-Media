@@ -1,7 +1,7 @@
 import React from "react";
 import {
   Search,
-  Heart,
+  Bookmark,
   Clock,
   Download,
   Settings,
@@ -117,18 +117,18 @@ export default function LeftSidebar({
             onClick={() => onViewChange("favorites")}
             className={`w-full px-4 py-3 rounded-lg text-sm font-bold cursor-pointer neu-btn-tactile flex items-center justify-between transition-all ${
               activeView === "favorites"
-                ? "neu-recessed text-[#EF4444] border border-[#EF4444]/30 bg-[#EF4444]/10"
+                ? "neu-recessed text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10 shadow-sm"
                 : "neu-raised text-[#64748B] dark:text-[#94A3B8] hover:text-[#1E293B] dark:hover:text-[#F8FAFC]"
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Heart className={`w-5 h-5 shrink-0 ${activeView === "favorites" ? "fill-current" : ""}`} />
-              <span>Favorites</span>
+              <Bookmark className={`w-5 h-5 shrink-0 ${activeView === "favorites" ? "fill-current" : ""}`} />
+              <span>Liked Songs</span>
             </div>
             {favoritesCount > 0 && (
               <span
                 className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold ${
-                  activeView === "favorites" ? "bg-[#EF4444]/20 text-[#EF4444]" : "neu-recessed text-[#64748B]"
+                  activeView === "favorites" ? "bg-[#0084FF]/20 text-[#0084FF]" : "neu-recessed text-[#64748B]"
                 }`}
               >
                 {favoritesCount}
