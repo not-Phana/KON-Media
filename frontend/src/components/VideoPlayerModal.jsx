@@ -40,17 +40,16 @@ function formatTime(seconds) {
   return `${mins}:${padSecs}`;
 }
 
-function extractYouTubeId(video) {
-  if (!video) return null;
-  if (video.id && /^[a-zA-Z0-9_-]{11}$/.test(video.id)) {
-    return video.id;
+function extractYouTubeId(video, resolvedInfo = null) {
+  const target = video || resolvedInfo;
+  if (!target) return null;
+  const candidateId = target.id || resolvedInfo?.id || target.candidate_id || resolvedInfo?.candidate_id;
+  if (candidateId && typeof candidateId === "string" && /^[a-zA-Z0-9_-]{11}$/.test(candidateId)) {
+    return candidateId;
   }
-  const url = video.webpage_url || video.url || "";
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  const url = target.webpage_url || target.url || resolvedInfo?.webpage_url || resolvedInfo?.url || "";
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?.*v=|embed\/|v\/|shorts\/))([a-zA-Z0-9_-]{11})/);
   if (match) return match[1];
-  if (video.candidate_id && /^[a-zA-Z0-9_-]{11}$/.test(video.candidate_id)) {
-    return video.candidate_id;
-  }
   return null;
 }
 
@@ -105,7 +104,7 @@ export default function VideoPlayerModal({
   const [hoverPosition, setHoverPosition] = useState(0);
 
   // Player engine state (Ad-Free Embed vs Native Player)
-  const youtubeId = extractYouTubeId(video);
+  const youtubeId = extractYouTubeId(video, resolvedInfo);
   const isLocal = !!(resolvedInfo?.is_local || video?.is_local);
 
   const [playerEngine, setPlayerEngine] = useState(() => {
@@ -529,10 +528,11 @@ export default function VideoPlayerModal({
         <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden group">
           {effectiveEngine === "embed" && youtubeId ? (
             <iframe
-              src={`https://piped.video/embed/${youtubeId}?autoplay=1`}
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1`}
               title={videoTitle}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
               allowFullScreen
             />
           ) : isLoadingStream ? (
@@ -700,26 +700,28 @@ export default function VideoPlayerModal({
                 <button
                   type="button"
                   onClick={() => handleEngineChange("embed")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     effectiveEngine === "embed"
-                      ? "neu-raised text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10 shadow-xs"
+                      ? "neu-raised text-[#EF4444] border border-[#EF4444]/40 bg-[#EF4444]/15 shadow-xs"
                       : "text-slate-400 hover:text-white"
                   }`}
-                  title="Ad-Free YouTube Embed Player: 4K/1080p, captions, zero ads"
+                  title="Official YouTube Embed Player (4K/1080p, captions, speed, scrubbing)"
                 >
-                  Ad-Free Embed
+                  <Film className="w-3.5 h-3.5 text-[#EF4444]" />
+                  <span>YouTube Embed Player</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleEngineChange("native")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                     effectiveEngine === "native"
-                      ? "neu-raised text-[#10B981] border border-[#10B981]/30 bg-[#10B981]/10 shadow-xs"
+                      ? "neu-raised text-[#10B981] border border-[#10B981]/40 bg-[#10B981]/15 shadow-xs"
                       : "text-slate-400 hover:text-white"
                   }`}
-                  title="Native In-App Player: Direct stream"
+                  title="Native KON Player (Direct stream)"
                 >
-                  Native Player
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" />
+                  <span>Native Player</span>
                 </button>
               </div>
             )}
@@ -763,10 +765,11 @@ export default function VideoPlayerModal({
         <div className="relative aspect-video w-full bg-black flex items-center justify-center overflow-hidden">
           {effectiveEngine === "embed" && youtubeId ? (
             <iframe
-              src={`https://piped.video/embed/${youtubeId}?autoplay=1`}
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1`}
               title={videoTitle}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
               allowFullScreen
             />
           ) : isLoadingStream ? (
