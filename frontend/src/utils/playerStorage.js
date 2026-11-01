@@ -124,6 +124,49 @@ export function clearRecentlyPlayed() {
 }
 
 /**
+ * Helper to test if a query string contains awkward or legacy test terms
+ */
+function isAwkwardQuery(str) {
+  if (!str) return false;
+  const lower = str.toLowerCase();
+  return (
+    lower.includes("basement") ||
+    lower.includes("elevenz") ||
+    lower.includes("ex-girlfriend")
+  );
+}
+
+// Proactively purge awkward legacy test queries from localStorage on load
+if (typeof window !== "undefined") {
+  try {
+    const rawHist = localStorage.getItem(SEARCH_HISTORY_KEY);
+    if (rawHist) {
+      const parsed = JSON.parse(rawHist);
+      if (Array.isArray(parsed)) {
+        const cleanHist = parsed.filter(
+          (item) => item && item.query && !isAwkwardQuery(item.query)
+        );
+        if (cleanHist.length !== parsed.length) {
+          localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(cleanHist));
+        }
+      }
+    }
+
+    const savedQuery = localStorage.getItem("kon_search_query") || "";
+    if (isAwkwardQuery(savedQuery)) {
+      localStorage.removeItem("kon_search_query");
+    }
+
+    const rawResults = localStorage.getItem("kon_search_results");
+    if (rawResults && isAwkwardQuery(rawResults)) {
+      localStorage.removeItem("kon_search_results");
+      localStorage.removeItem("kon_search_meta");
+      localStorage.removeItem("kon_search_state");
+    }
+  } catch (_) {}
+}
+
+/**
  * 3. SEARCH QUERY HISTORY
  */
 export function getSearchQueryHistory() {
@@ -133,7 +176,7 @@ export function getSearchQueryHistory() {
     const parsed = raw ? JSON.parse(raw) : [];
     // Sanitize and filter out test or awkward queries
     const sanitized = parsed.filter(
-      (item) => item && item.query && !item.query.toLowerCase().includes("basement")
+      (item) => item && item.query && !isAwkwardQuery(item.query)
     );
     if (sanitized.length !== parsed.length) {
       localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(sanitized));
@@ -148,7 +191,7 @@ export function getSearchQueryHistory() {
 export function addSearchQueryHistory(query, engineMode = "rei") {
   const clean = (query || "").trim();
   if (!clean || clean.startsWith("http://") || clean.startsWith("https://")) return;
-  if (clean.toLowerCase().includes("basement")) return;
+  if (isAwkwardQuery(clean)) return;
 
   const list = getSearchQueryHistory();
   const filtered = list.filter((item) => item.query.toLowerCase() !== clean.toLowerCase());

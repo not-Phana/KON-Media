@@ -40,6 +40,20 @@ function formatTime(seconds) {
   return `${mins}:${padSecs}`;
 }
 
+function extractYouTubeId(video) {
+  if (!video) return null;
+  if (video.id && /^[a-zA-Z0-9_-]{11}$/.test(video.id)) {
+    return video.id;
+  }
+  const url = video.webpage_url || video.url || "";
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+  if (match) return match[1];
+  if (video.candidate_id && /^[a-zA-Z0-9_-]{11}$/.test(video.candidate_id)) {
+    return video.candidate_id;
+  }
+  return null;
+}
+
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
 /**
@@ -89,6 +103,27 @@ export default function VideoPlayerModal({
   // Hover timestamp preview
   const [hoverTime, setHoverTime] = useState(null);
   const [hoverPosition, setHoverPosition] = useState(0);
+
+  // Player engine state (Ad-Free Embed vs Native Player)
+  const youtubeId = extractYouTubeId(video);
+  const isLocal = !!(resolvedInfo?.is_local || video?.is_local);
+
+  const [playerEngine, setPlayerEngine] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kon_video_player_engine");
+      if (saved) return saved;
+    } catch (_) {}
+    return "embed";
+  });
+
+  const handleEngineChange = (engine) => {
+    setPlayerEngine(engine);
+    try {
+      localStorage.setItem("kon_video_player_engine", engine);
+    } catch (_) {}
+  };
+
+  const effectiveEngine = (youtubeId && !isLocal) ? playerEngine : "native";
 
   // Save volume preference
   useEffect(() => {
@@ -447,7 +482,6 @@ export default function VideoPlayerModal({
   const playableSrc = currentStreamRaw ? getVideoStreamUrl(currentStreamRaw) : null;
   const videoTitle = resolvedInfo?.title || video.title || "Video";
   const videoUploader = resolvedInfo?.uploader || video.uploader || video.artist || "Unknown Creator";
-  const isLocal = !!(resolvedInfo?.is_local || video.is_local);
   const resolution = resolvedInfo?.resolution || video.resolution || (isLocal ? "Local File" : "1080p Full HD");
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -493,7 +527,15 @@ export default function VideoPlayerModal({
 
         {/* Video Canvas Container */}
         <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden group">
-          {isLoadingStream ? (
+          {effectiveEngine === "embed" && youtubeId ? (
+            <iframe
+              src={`https://piped.video/embed/${youtubeId}?autoplay=1`}
+              title={videoTitle}
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : isLoadingStream ? (
             <div className="flex flex-col items-center gap-2 text-slate-400 p-4 text-center">
               <Loader2 className="w-7 h-7 animate-spin text-[#0084FF]" />
               <span className="text-xs font-medium">Connecting ad-free stream...</span>
@@ -652,6 +694,36 @@ export default function VideoPlayerModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Engine Switcher */}
+            {youtubeId && !isLocal && (
+              <div className="hidden sm:flex items-center gap-1 neu-recessed p-1 rounded-xl text-xs mr-1">
+                <button
+                  type="button"
+                  onClick={() => handleEngineChange("embed")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    effectiveEngine === "embed"
+                      ? "neu-raised text-[#0084FF] border border-[#0084FF]/30 bg-[#0084FF]/10 shadow-xs"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                  title="Ad-Free YouTube Embed Player: 4K/1080p, captions, zero ads"
+                >
+                  Ad-Free Embed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleEngineChange("native")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    effectiveEngine === "native"
+                      ? "neu-raised text-[#10B981] border border-[#10B981]/30 bg-[#10B981]/10 shadow-xs"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                  title="Native In-App Player: Direct stream"
+                >
+                  Native Player
+                </button>
+              </div>
+            )}
+
             {/* Download Button */}
             {onDownload && (
               <button
@@ -689,7 +761,15 @@ export default function VideoPlayerModal({
 
         {/* High-Resolution Video Player Canvas */}
         <div className="relative aspect-video w-full bg-black flex items-center justify-center overflow-hidden">
-          {isLoadingStream ? (
+          {effectiveEngine === "embed" && youtubeId ? (
+            <iframe
+              src={`https://piped.video/embed/${youtubeId}?autoplay=1`}
+              title={videoTitle}
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : isLoadingStream ? (
             <div className="flex flex-col items-center gap-3 text-slate-400 p-8 text-center">
               <Loader2 className="w-10 h-10 animate-spin text-[#0084FF]" />
               <div className="text-sm font-semibold text-white">Connecting Ad-Free Video Stream</div>
@@ -757,6 +837,7 @@ export default function VideoPlayerModal({
         </div>
 
         {/* Bottom Control Bar Overlay */}
+        {effectiveEngine === "native" && (
         <div
           className={`absolute bottom-0 left-0 right-0 z-30 p-4 sm:p-5 bg-gradient-to-t from-black/95 via-black/70 to-transparent transition-opacity duration-300 flex flex-col gap-3 ${
             areControlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -913,6 +994,7 @@ export default function VideoPlayerModal({
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

@@ -40,7 +40,13 @@ export default function UrlInputBar({
 }) {
   const [url, setUrl] = useState(() => {
     try {
-      return initialQuery || localStorage.getItem("kon_search_query") || "";
+      const saved = initialQuery || localStorage.getItem("kon_search_query") || "";
+      const lower = saved.toLowerCase();
+      if (lower.includes("basement") || lower.includes("elevenz") || lower.includes("ex-girlfriend")) {
+        localStorage.removeItem("kon_search_query");
+        return "";
+      }
+      return saved;
     } catch {
       return initialQuery || "";
     }

@@ -92,6 +92,10 @@ export default function App() {
   const [searchResults, setSearchResults] = useState(() => {
     try {
       const saved = localStorage.getItem("kon_search_results");
+      if (saved && (saved.toLowerCase().includes("basement") || saved.toLowerCase().includes("elevenz"))) {
+        localStorage.removeItem("kon_search_results");
+        return null;
+      }
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -100,7 +104,13 @@ export default function App() {
 
   const [searchQuery, setSearchQuery] = useState(() => {
     try {
-      return localStorage.getItem("kon_search_query") || "";
+      const q = localStorage.getItem("kon_search_query") || "";
+      const lower = q.toLowerCase();
+      if (lower.includes("basement") || lower.includes("elevenz") || lower.includes("ex-girlfriend")) {
+        localStorage.removeItem("kon_search_query");
+        return "";
+      }
+      return q;
     } catch {
       return "";
     }

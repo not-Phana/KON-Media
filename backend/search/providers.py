@@ -370,7 +370,7 @@ class YouTubeSearchProvider(SearchProvider):
         # 1. Fast Innertube lookup (~1.2s)
         candidates = self._search_innertube(clean_query, limit=limit)
 
-        # If query has creator/video intent (e.g. "ELEVENZ video"), also query stripped creator term ("ELEVENZ")
+        # If query has creator/video intent (e.g. "MrBeast video"), also query stripped creator term ("MrBeast")
         creator_keywords = ("video", "videos", "youtuber", "channel", "vlog", "clip")
         words = clean_query.lower().split()
         if any(w in words for w in creator_keywords) and len(words) >= 2:
