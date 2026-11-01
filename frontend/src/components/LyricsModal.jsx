@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   X,
   Minimize2,
@@ -16,6 +16,9 @@ import {
   Sparkles,
   Search,
   RotateCcw,
+  LocateFixed,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import { fetchLyrics } from "../api";
 
@@ -44,6 +47,8 @@ export default function LyricsModal({
   const userScrolledRef = useRef(false);
   const userScrollTimeoutRef = useRef(null);
   const animFrameIdRef = useRef(null);
+  const [isScrolledAway, setIsScrolledAway] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState("down");
 
   // Local override state for instant in-modal search & retries
   const [lyricsData, setLyricsData] = useState(initialLyricsData);
@@ -134,39 +139,14 @@ export default function LyricsModal({
     setActiveLineIndex(foundIdx);
   }, [currentTime, lines, isSynced]);
 
-  // Detect physical user manual scrolling (wheel/touch) so we do not fight user input
-  useEffect(() => {
+  // Smooth glide to the currently active lyric line
+  const scrollToActiveLine = useCallback(() => {
+    userScrolledRef.current = false;
+    setIsScrolledAway(false);
+    if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
+
     const container = containerRef.current;
-    if (!container) return;
-
-    const onUserInteraction = () => {
-      userScrolledRef.current = true;
-      if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
-      userScrollTimeoutRef.current = setTimeout(() => {
-        userScrolledRef.current = false;
-      }, 3500);
-
-      if (animFrameIdRef.current) {
-        cancelAnimationFrame(animFrameIdRef.current);
-        animFrameIdRef.current = null;
-      }
-    };
-
-    container.addEventListener("wheel", onUserInteraction, { passive: true });
-    container.addEventListener("touchstart", onUserInteraction, { passive: true });
-    container.addEventListener("pointerdown", onUserInteraction, { passive: true });
-
-    return () => {
-      container.removeEventListener("wheel", onUserInteraction);
-      container.removeEventListener("touchstart", onUserInteraction);
-      container.removeEventListener("pointerdown", onUserInteraction);
-    };
-  }, []);
-
-  // Silky-smooth continuous glide with ease-out-cubic (Apple Music / Spotify feel)
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || activeLineIndex < 0 || userScrolledRef.current) return;
+    if (!container || activeLineIndex < 0) return;
 
     const lineElements = container.querySelectorAll("[data-theater-line]");
     const activeEl = lineElements[activeLineIndex];
@@ -184,7 +164,6 @@ export default function LyricsModal({
     const startY = container.scrollTop;
     const distance = targetScroll - startY;
 
-    // Skip tiny sub-pixel jitters
     if (Math.abs(distance) < 2) return;
 
     const duration = 750; // 750ms gentle, slow cinematic glide
@@ -192,7 +171,6 @@ export default function LyricsModal({
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
     const step = (now) => {
-      if (userScrolledRef.current) return;
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOutCubic(progress);
@@ -203,20 +181,99 @@ export default function LyricsModal({
         animFrameIdRef.current = requestAnimationFrame(step);
       } else {
         animFrameIdRef.current = null;
+        setIsScrolledAway(false);
       }
     };
 
     animFrameIdRef.current = requestAnimationFrame(step);
+  }, [activeLineIndex]);
 
-    return () => {
+  // Detect physical user manual scrolling (wheel/touch) so we do not fight user input
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onUserInteraction = () => {
+      userScrolledRef.current = true;
+      if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
+      // Give the user 10s to read lyrics before resuming auto-follow
+      userScrollTimeoutRef.current = setTimeout(() => {
+        userScrolledRef.current = false;
+        scrollToActiveLine();
+      }, 10000);
+
       if (animFrameIdRef.current) {
         cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
       }
     };
+
+    container.addEventListener("wheel", onUserInteraction, { passive: true });
+    container.addEventListener("touchstart", onUserInteraction, { passive: true });
+    container.addEventListener("pointerdown", onUserInteraction, { passive: true });
+
+    return () => {
+      container.removeEventListener("wheel", onUserInteraction);
+      container.removeEventListener("touchstart", onUserInteraction);
+      container.removeEventListener("pointerdown", onUserInteraction);
+    };
+  }, [scrollToActiveLine]);
+
+  // Check scroll position to determine if user has scrolled away from the active line
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const checkScrollPosition = () => {
+      if (activeLineIndex < 0) {
+        setIsScrolledAway(false);
+        return;
+      }
+
+      const lineElements = container.querySelectorAll("[data-theater-line]");
+      const activeEl = lineElements[activeLineIndex];
+      if (!activeEl) return;
+
+      const containerHeight = container.clientHeight;
+      const elOffsetTop = activeEl.offsetTop;
+      const elHeight = activeEl.clientHeight;
+      const targetScroll = Math.max(0, elOffsetTop - (containerHeight / 2) + (elHeight / 2));
+
+      const diff = targetScroll - container.scrollTop;
+      // If user is more than 80px away from the center of the playing line
+      if (Math.abs(diff) > 80) {
+        setIsScrolledAway(true);
+        setScrollDirection(diff > 0 ? "down" : "up");
+      } else if (!userScrolledRef.current) {
+        setIsScrolledAway(false);
+      }
+    };
+
+    container.addEventListener("scroll", checkScrollPosition, { passive: true });
+    return () => container.removeEventListener("scroll", checkScrollPosition);
   }, [activeLineIndex]);
+
+  // Silky-smooth continuous glide when line updates and user is not manually reading elsewhere
+  useEffect(() => {
+    if (!userScrolledRef.current && activeLineIndex >= 0) {
+      scrollToActiveLine();
+    }
+  }, [activeLineIndex, scrollToActiveLine]);
+
+  // Reset scroll state on modal open
+  useEffect(() => {
+    if (isOpen) {
+      userScrolledRef.current = false;
+      setIsScrolledAway(false);
+      setTimeout(() => {
+        scrollToActiveLine();
+      }, 100);
+    }
+  }, [isOpen, scrollToActiveLine]);
 
   const handleLineClick = (lineTime) => {
     userScrolledRef.current = false;
+    setIsScrolledAway(false);
     if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
     window.dispatchEvent(new CustomEvent("kon_audio_seek", { detail: { time: lineTime } }));
   };
@@ -488,6 +545,26 @@ export default function LyricsModal({
         )}
       </main>
 
+      {/* FLOATING "JUMP TO CURRENT" PILL BUTTON (Visible when user scrolls away) */}
+      {isSynced && isScrolledAway && (
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <button
+            type="button"
+            onClick={scrollToActiveLine}
+            className="neu-raised px-4 py-2 rounded-full bg-slate-900/95 backdrop-blur-md border border-[#0084FF]/60 text-[#38BDF8] hover:text-white hover:bg-[#0084FF] transition-all duration-200 cursor-pointer neu-btn-elastic flex items-center gap-2 shadow-[0_4px_24px_rgba(0,132,255,0.4)] font-bold text-xs group"
+            title="Jump to currently playing lyric line"
+          >
+            {scrollDirection === "down" ? (
+              <ArrowDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
+            ) : (
+              <ArrowUp className="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+            )}
+            <span>Jump to playing</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+          </button>
+        </div>
+      )}
+
       {/* BOTTOM COMPACT TRANSPORT BAR */}
       <footer className="relative z-10 pt-4 border-t border-slate-800/80 max-w-4xl mx-auto w-full space-y-2">
         {/* Scrubber row */}
@@ -516,7 +593,22 @@ export default function LyricsModal({
             Tip: Click any lyric line to jump to that moment · [Space] Play/Pause · [Esc] Close
           </p>
 
-          <div className="flex items-center gap-3 mx-auto sm:mx-0">
+          <div className="flex items-center gap-2.5 mx-auto sm:mx-0">
+            {isSynced && (
+              <button
+                type="button"
+                onClick={scrollToActiveLine}
+                className={`p-2.5 rounded-xl transition-all cursor-pointer neu-btn-elastic border ${
+                  isScrolledAway
+                    ? "neu-recessed text-[#0084FF] border-[#0084FF]/60 bg-[#0084FF]/10 shadow-[0_0_16px_rgba(0,132,255,0.3)] animate-pulse"
+                    : "neu-raised text-[#94A3B8] hover:text-[#0084FF] border-slate-700/60"
+                }`}
+                title="Jump to currently playing lyric"
+              >
+                <LocateFixed className="w-4 h-4" />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onTogglePlay}

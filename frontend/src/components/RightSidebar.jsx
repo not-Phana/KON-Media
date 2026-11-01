@@ -17,6 +17,7 @@ import {
   Sparkles,
   Mic2,
   Maximize2,
+  LocateFixed,
 } from "lucide-react";
 import { KonFlashIcon, KonPrecisionIcon } from "./KonIcons";
 
@@ -102,7 +103,7 @@ export default function RightSidebar({
   const isSynced = lyricsData?.synced && lines.length > 0;
 
   // Silky-smooth continuous glide for sidebar lyrics - gentle ease-out, isolated to container
-  useEffect(() => {
+  const scrollToActiveLine = () => {
     const container = lyricsContainerRef.current;
     if (!container || activeLineIndex < 0) return;
 
@@ -140,7 +141,10 @@ export default function RightSidebar({
     };
 
     animFrameIdRef.current = requestAnimationFrame(step);
+  };
 
+  useEffect(() => {
+    scrollToActiveLine();
     return () => {
       if (animFrameIdRef.current) {
         cancelAnimationFrame(animFrameIdRef.current);
@@ -306,17 +310,30 @@ export default function RightSidebar({
             )}
           </span>
 
-          {currentTrack && onOpenFullscreenLyrics && (
-            <button
-              type="button"
-              onClick={onOpenFullscreenLyrics}
-              className="neu-raised px-2 py-1 rounded-lg text-[10px] font-bold text-[#0084FF] hover:text-white hover:bg-[#0084FF] transition-all cursor-pointer flex items-center gap-1 neu-btn-tactile"
-              title="Expand Lyrics to Full Screen"
-            >
-              <Maximize2 className="w-3 h-3" />
-              <span>Full Screen</span>
-            </button>
-          )}
+          <div className="flex items-center gap-1.5">
+            {isSynced && (
+              <button
+                type="button"
+                onClick={scrollToActiveLine}
+                className="neu-raised p-1 rounded-lg text-[#0084FF] hover:bg-[#0084FF] hover:text-white transition-all cursor-pointer neu-btn-tactile"
+                title="Jump to playing lyric line"
+              >
+                <LocateFixed className="w-3 h-3" />
+              </button>
+            )}
+
+            {currentTrack && onOpenFullscreenLyrics && (
+              <button
+                type="button"
+                onClick={onOpenFullscreenLyrics}
+                className="neu-raised px-2 py-1 rounded-lg text-[10px] font-bold text-[#0084FF] hover:text-white hover:bg-[#0084FF] transition-all cursor-pointer flex items-center gap-1 neu-btn-tactile"
+                title="Expand Lyrics to Full Screen"
+              >
+                <Maximize2 className="w-3 h-3" />
+                <span>Full Screen</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Lyrics Content Display */}
