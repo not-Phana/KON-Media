@@ -95,7 +95,13 @@ export default function VideoPlayerModal({
   const [isLoadingStream, setIsLoadingStream] = useState(false);
   const [streamError, setStreamError] = useState(null);
   const [resolvedInfo, setResolvedInfo] = useState(null);
-  const [playerEngine, setPlayerEngine] = useState("smart"); // "smart" (instant + audio) | "direct" (native proxy)
+  const [playerEngine, setPlayerEngine] = useState(() => {
+    const isDirectLocal = !!(video?.is_local || video?.file_path || video?.stream_url?.startsWith("/api/stream/"));
+    if (isDirectLocal) return "direct";
+    const directYt = getYouTubeVideoId(video?.id || video?.candidate_id || video?.webpage_url || video?.url);
+    if (directYt) return "smart";
+    return "direct";
+  });
 
   // Hover timestamp preview
   const [hoverTime, setHoverTime] = useState(null);
@@ -378,7 +384,7 @@ export default function VideoPlayerModal({
   const detectedYtId =
     resolvedInfo?.youtube_id ||
     getYouTubeVideoId(video?.id || video?.candidate_id || video?.webpage_url || video?.url);
-  const useEmbedPlayer = !isLocal && !!detectedYtId && playerEngine === "smart";
+  const useEmbedPlayer = !!detectedYtId && playerEngine === "smart";
   const resolution = resolvedInfo?.resolution || video.resolution || (isLocal ? "Local File" : "HD Stream");
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -455,6 +461,7 @@ export default function VideoPlayerModal({
                 if (onPauseAudio) onPauseAudio();
               }}
               onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
               onClick={togglePlay}
               className="w-full h-full object-contain cursor-pointer"
             />
@@ -583,16 +590,20 @@ export default function VideoPlayerModal({
 
           <div className="flex items-center gap-2 shrink-0">
             {/* Player Engine Switcher */}
-            {detectedYtId && !isLocal && (
+            {detectedYtId && (
               <button
                 type="button"
                 onClick={() => setPlayerEngine((prev) => (prev === "smart" ? "direct" : "smart"))}
                 className="neu-raised px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:border-[#0084FF]/40 flex items-center gap-1.5 transition-all cursor-pointer"
-                title={playerEngine === "smart" ? "Switch to Direct Stream Proxy" : "Switch to Smart Player (Instant Playback & Full Sound)"}
+                title={
+                  playerEngine === "smart"
+                    ? (isLocal ? "Switch to Local Downloaded File" : "Switch to Direct Proxy Stream")
+                    : "Switch to Smart Player (Instant YouTube Embed and Full Audio)"
+                }
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#0084FF]" />
                 <span className="hidden sm:inline">
-                  {playerEngine === "smart" ? "Smart Player" : "Direct Proxy"}
+                  {playerEngine === "smart" ? "Smart Player" : (isLocal ? "Local Video" : "Direct Proxy")}
                 </span>
               </button>
             )}
@@ -680,6 +691,7 @@ export default function VideoPlayerModal({
                 if (onPauseAudio) onPauseAudio();
               }}
               onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
               onClick={togglePlay}
               className="w-full h-full object-contain cursor-pointer"
             />

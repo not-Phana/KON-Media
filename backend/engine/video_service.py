@@ -389,7 +389,8 @@ async def stream_video_proxy(url: str, request: Optional[Request] = None) -> Str
         upstream_headers["Range"] = range_header
 
     try:
-        client = httpx.AsyncClient(follow_redirects=True, timeout=30.0)
+        stream_timeout = httpx.Timeout(connect=15.0, read=None, write=30.0, pool=30.0)
+        client = httpx.AsyncClient(follow_redirects=True, timeout=stream_timeout)
         req = client.build_request("GET", target_url, headers=upstream_headers)
         upstream_res = await client.send(req, stream=True)
     except Exception as e:

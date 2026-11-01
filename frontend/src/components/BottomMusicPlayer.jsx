@@ -353,13 +353,47 @@ export default function BottomMusicPlayer({
         msg = "Audio format not supported by browser";
       } else if (mediaErr.code === 2) {
         msg = "Network interruption during playback";
+        // Automatic seamless resume on network blip
+        const cur = audioRef.current?.currentTime || 0;
+        if (audioRef.current && audioSrc && cur > 0) {
+          setTimeout(() => {
+            if (audioRef.current && isPlaying) {
+              audioRef.current.src = audioSrc;
+              audioRef.current.currentTime = cur;
+              audioRef.current.play().catch(() => {});
+            }
+          }, 800);
+          return;
+        }
       }
     }
     setPlayerError(msg);
     console.warn("Audio element error:", mediaErr || e);
-  }, []);
+  }, [audioSrc, isPlaying]);
 
   const handleEnded = useCallback(() => {
+    const cur = audioRef.current?.currentTime || 0;
+    const dur = duration || currentTrack?.duration || 0;
+
+    // Detect premature stream drop (e.g. socket closure or CDN timeout before track finished)
+    if (dur > 10 && cur > 0 && cur < dur - 3) {
+      console.warn(`Audio stream disconnected prematurely at ${cur.toFixed(1)}s / ${dur.toFixed(1)}s. Auto-reconnecting...`);
+      if (audioRef.current && audioSrc) {
+        const resumePos = cur;
+        setIsBuffering(true);
+        audioRef.current.src = audioSrc;
+        audioRef.current.currentTime = resumePos;
+        audioRef.current
+          .play()
+          .then(() => {
+            setIsBuffering(false);
+            setPlayerError(null);
+          })
+          .catch(() => setIsBuffering(false));
+      }
+      return;
+    }
+
     if (onTrackListen && currentTrack) {
       onTrackListen(currentTrack, audioRef.current?.currentTime || duration, true);
     }
@@ -373,7 +407,7 @@ export default function BottomMusicPlayer({
     } else if (onPause) {
       onPause();
     }
-  }, [repeatMode, onNext, isShuffle, onPause, onTrackListen, currentTrack, duration]);
+  }, [repeatMode, onNext, isShuffle, onPause, onTrackListen, currentTrack, duration, audioSrc]);
 
   // Transport toggle with direct element play for instant gesture recognition
   const handleTransportToggle = () => {
