@@ -41,7 +41,14 @@ export default function LyricsModal({
   lyricsError: initialError,
   glassMode = false,
 }) {
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(() => {
+    try {
+      const saved = parseFloat(localStorage.getItem("kon_player_current_time") || "0");
+      return saved > 0 ? saved : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [duration, setDuration] = useState(0);
   const [syncOffset, setSyncOffset] = useState(0);
   const [activeLineIndex, setActiveLineIndex] = useState(-1);

@@ -79,13 +79,57 @@ export default function App() {
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
   const [isLearningDashboardOpen, setIsLearningDashboardOpen] = useState(false);
 
-  const [analyzedMedia, setAnalyzedMedia] = useState(null);
-  const [searchResults, setSearchResults] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentSearchMode, setCurrentSearchMode] = useState("audio");
-  const [searchState, setSearchState] = useState("idle"); // 'idle' | 'searching' | 'updating' | 'complete' | 'no_results' | 'partial' | 'error'
+  const [analyzedMedia, setAnalyzedMedia] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kon_analyzed_media");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [searchResults, setSearchResults] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kon_search_results");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [searchQuery, setSearchQuery] = useState(() => {
+    try {
+      return localStorage.getItem("kon_search_query") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const [currentSearchMode, setCurrentSearchMode] = useState(() => {
+    try {
+      return localStorage.getItem("kon_search_mode") || "all";
+    } catch {
+      return "all";
+    }
+  });
+
+  const [searchState, setSearchState] = useState(() => {
+    try {
+      return localStorage.getItem("kon_search_state") || "idle";
+    } catch {
+      return "idle";
+    }
+  });
+
   const [searchStage, setSearchStage] = useState(null);
-  const [searchMeta, setSearchMeta] = useState(null);
+  const [searchMeta, setSearchMeta] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kon_search_meta");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState(null);
 
@@ -112,20 +156,65 @@ export default function App() {
   const [toast, setToast] = useState(null);
 
   // Persistent Built-in Audio Player State
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kon_player_current_track");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isPlaying, setIsPlaying] = useState(() => {
+    try {
+      return localStorage.getItem("kon_player_is_playing") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [audioError, setAudioError] = useState(null);
-  const [playbackQueue, setPlaybackQueue] = useState([]);
-  const [queueIndex, setQueueIndex] = useState(-1);
-  const [isLyricsModalOpen, setIsLyricsModalOpen] = useState(false);
+  const [playbackQueue, setPlaybackQueue] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kon_player_queue");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [queueIndex, setQueueIndex] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kon_player_queue_index");
+      return saved !== null ? parseInt(saved, 10) : -1;
+    } catch {
+      return -1;
+    }
+  });
+  const [isLyricsModalOpen, setIsLyricsModalOpen] = useState(() => {
+    try {
+      return localStorage.getItem("kon_lyrics_modal_open") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [lyricsData, setLyricsData] = useState(null);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [lyricsError, setLyricsError] = useState(null);
 
   // Workspace Navigation & Drawer State
-  const [activeView, setActiveView] = useState("search"); // "search" | "favorites" | "recent" | "downloads"
-  const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [activeView, setActiveView] = useState(() => {
+    try {
+      return localStorage.getItem("kon_active_view") || "search";
+    } catch {
+      return "search";
+    }
+  });
+  const [isQueueOpen, setIsQueueOpen] = useState(() => {
+    try {
+      return localStorage.getItem("kon_queue_drawer_open") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [favorites, setFavorites] = useState(() => getFavorites());
   const [recentlyPlayed, setRecentlyPlayed] = useState(() => getRecentlyPlayed());
 
@@ -168,6 +257,71 @@ export default function App() {
       localStorage.setItem("kon_active_view", activeView);
     } catch (_) {}
   }, [activeView]);
+
+  useEffect(() => {
+    try {
+      if (searchQuery) {
+        localStorage.setItem("kon_search_query", searchQuery);
+      } else {
+        localStorage.removeItem("kon_search_query");
+      }
+    } catch (_) {}
+  }, [searchQuery]);
+
+  useEffect(() => {
+    try {
+      if (searchResults && searchResults.length > 0) {
+        localStorage.setItem("kon_search_results", JSON.stringify(searchResults));
+      } else if (searchResults === null) {
+        localStorage.removeItem("kon_search_results");
+      }
+    } catch (_) {}
+  }, [searchResults]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_search_state", searchState);
+    } catch (_) {}
+  }, [searchState]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_search_mode", currentSearchMode);
+    } catch (_) {}
+  }, [currentSearchMode]);
+
+  useEffect(() => {
+    try {
+      if (searchMeta) {
+        localStorage.setItem("kon_search_meta", JSON.stringify(searchMeta));
+      } else {
+        localStorage.removeItem("kon_search_meta");
+      }
+    } catch (_) {}
+  }, [searchMeta]);
+
+  useEffect(() => {
+    try {
+      if (analyzedMedia) {
+        localStorage.setItem("kon_analyzed_media", JSON.stringify(analyzedMedia));
+      } else {
+        localStorage.removeItem("kon_analyzed_media");
+      }
+    } catch (_) {}
+  }, [analyzedMedia]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_queue_drawer_open", String(isQueueOpen));
+    } catch (_) {}
+  }, [isQueueOpen]);
+
+  // On initial mount, if track has no stream URL, re-resolve cleanly
+  useEffect(() => {
+    if (currentTrack && !currentTrack.stream_url && !currentTrack.direct_url && currentTrack.url) {
+      handlePlayCandidate(currentTrack);
+    }
+  }, []);
 
   // Reactive listeners for local storage state changes
   useEffect(() => {
@@ -1062,6 +1216,7 @@ export default function App() {
             {/* URL Input & Ingress Bar */}
             {activeView === "search" && (
               <UrlInputBar
+                initialQuery={searchQuery}
                 onAnalyze={handleAnalyze}
                 isLoading={isAnalyzing}
                 error={analyzeError}
@@ -1092,6 +1247,13 @@ export default function App() {
                   setSearchResults(null);
                   setSearchState("idle");
                   setSearchMeta(null);
+                  setSearchQuery("");
+                  try {
+                    localStorage.removeItem("kon_search_results");
+                    localStorage.removeItem("kon_search_state");
+                    localStorage.removeItem("kon_search_meta");
+                    localStorage.removeItem("kon_search_query");
+                  } catch (_) {}
                 }}
                 onFeedback={(fb) => submitSearchFeedback(fb).catch(() => {})}
                 onOpenModelModal={() => setIsModelModalOpen(true)}

@@ -98,10 +98,46 @@ export default function BottomMusicPlayer({
       return 0.85;
     }
   });
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => {
+    try {
+      return localStorage.getItem("kon_player_muted") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [prevVolume, setPrevVolume] = useState(0.85);
-  const [isShuffle, setIsShuffle] = useState(false);
-  const [repeatMode, setRepeatMode] = useState("none"); // 'none' | 'all' | 'one'
+  const [isShuffle, setIsShuffle] = useState(() => {
+    try {
+      return localStorage.getItem("kon_player_shuffle") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [repeatMode, setRepeatMode] = useState(() => {
+    try {
+      return localStorage.getItem("kon_player_repeat") || "none";
+    } catch {
+      return "none";
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_player_muted", String(isMuted));
+    } catch (_) {}
+  }, [isMuted]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_player_shuffle", String(isShuffle));
+    } catch (_) {}
+  }, [isShuffle]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_player_repeat", repeatMode);
+    } catch (_) {}
+  }, [repeatMode]);
   const [isSeeking, setIsSeeking] = useState(false);
 
   // Sync volume with audio element
@@ -162,7 +198,7 @@ export default function BottomMusicPlayer({
       el.src = audioSrc;
       el.load();
 
-      if (isPlaying) {
+      if (isPlaying && (!isInitialMountRef.current || initialSeekTimeRef.current <= 0)) {
         setIsBuffering(true);
         const playPromise = el.play();
         if (playPromise !== undefined) {
@@ -266,9 +302,22 @@ export default function BottomMusicPlayer({
       setCurrentTime(targetTime);
       initialSeekTimeRef.current = 0;
       isInitialMountRef.current = false;
+      if (isPlaying) {
+        audioRef.current.play().catch((err) => {
+          if (err.name === "NotAllowedError") {
+            const startOnGesture = () => {
+              audioRef.current?.play().catch(() => {});
+              window.removeEventListener("pointerdown", startOnGesture);
+              window.removeEventListener("keydown", startOnGesture);
+            };
+            window.addEventListener("pointerdown", startOnGesture, { once: true });
+            window.addEventListener("keydown", startOnGesture, { once: true });
+          }
+        });
+      }
     }
     setIsBuffering(false);
-  }, [currentTrack]);
+  }, [currentTrack, isPlaying]);
 
   const handleCanPlay = useCallback(() => {
     setIsBuffering(false);

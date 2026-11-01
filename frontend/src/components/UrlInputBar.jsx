@@ -34,8 +34,21 @@ export default function UrlInputBar({
   onOpenModelModal,
   engineMode: propEngineMode,
   onEngineModeChange,
+  initialQuery = "",
 }) {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(() => {
+    try {
+      return initialQuery || localStorage.getItem("kon_search_query") || "";
+    } catch {
+      return initialQuery || "";
+    }
+  });
+
+  useEffect(() => {
+    if (initialQuery !== undefined && initialQuery !== null && initialQuery !== url) {
+      setUrl(initialQuery);
+    }
+  }, [initialQuery]);
   const [searchMode, setSearchMode] = useState(() => {
     try {
       return localStorage.getItem("kon_search_mode") || "all";
@@ -224,6 +237,9 @@ export default function UrlInputBar({
   const handleClear = () => {
     dismissSuggestions();
     setUrl("");
+    try {
+      localStorage.removeItem("kon_search_query");
+    } catch (_) {}
     if (onClearError) onClearError();
   };
 
