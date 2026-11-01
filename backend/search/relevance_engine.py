@@ -688,6 +688,25 @@ def score_candidate(
     raw_relevance = max(0.0, (base_score + soundtrack_boost) * feat["version_compat"] * feat["non_music_penalty"] * duration_multiplier * cutscene_penalty * clutter_multiplier)
 
     norm_q = query.normalized_query or normalize_text(query.raw_query)
+    c_up = normalize_text(candidate.uploader or "")
+    c_ti = normalize_text(candidate.clean_title or candidate.title)
+    is_creator_match = False
+    if c_up and len(c_up) >= 3:
+        if norm_q.startswith(c_up):
+            rest = norm_q[len(c_up):].strip().lstrip(":-|/—– ")
+            if rest and (rest == c_ti or rest in c_ti or c_ti in rest):
+                is_creator_match = True
+        elif norm_q.endswith(c_up):
+            rest = norm_q[:-len(c_up)].strip().rstrip(":-|/—– ")
+            if rest and (rest == c_ti or rest in c_ti or c_ti in rest):
+                is_creator_match = True
+
+    if is_creator_match:
+        soundtrack_boost += 1.5
+        candidate.is_exact_match = True
+        if "Exact creator and video match" not in explanations:
+            explanations.insert(0, "Exact creator and video match")
+
     is_broad = is_broad_discovery_query(norm_q)
 
     if is_broad:

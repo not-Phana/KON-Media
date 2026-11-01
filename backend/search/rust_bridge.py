@@ -62,14 +62,17 @@ def rank_candidates(
     if _RUST_AVAILABLE and _RUST_MODULE is not None:
         try:
             # Serialize query
+            exp_artist = query.expected_artist or query.detected_artist or query.detected_creator
+            exp_title = query.expected_title or query.detected_title
+            media_type_rust = "video" if (query.is_video_intent or query.media_type == "video") else query.media_type
             query_dict = {
                 "raw_query": query.raw_query,
                 "normalized_query": query.normalized_query or (normalize_text(query.raw_query) if query.raw_query else ""),
-                "expected_artist": query.expected_artist,
-                "expected_title": query.expected_title,
+                "expected_artist": exp_artist,
+                "expected_title": exp_title,
                 "expected_duration": query.expected_duration,
                 "version_hint": query.version_hint,
-                "media_type": query.media_type,
+                "media_type": media_type_rust,
             }
             # Serialize candidates
             candidates_list = [
@@ -139,6 +142,30 @@ def rank_candidates(
                     if item.get("popularity") is not None:
                         original.popularity = float(item["popularity"])
                     ranked.append(original)
+
+            norm_q = query.normalized_query or normalize_text(query.raw_query)
+            for c in ranked:
+                c_up = normalize_text(c.uploader or "")
+                c_ti = normalize_text(c.clean_title or c.title)
+                is_creator_match = False
+                if c_up and len(c_up) >= 3:
+                    if norm_q.startswith(c_up):
+                        rest = norm_q[len(c_up):].strip().lstrip(":-|/—– ")
+                        if rest and (rest == c_ti or rest in c_ti or c_ti in rest):
+                            is_creator_match = True
+                    elif norm_q.endswith(c_up):
+                        rest = norm_q[:-len(c_up)].strip().rstrip(":-|/—– ")
+                        if rest and (rest == c_ti or rest in c_ti or c_ti in rest):
+                            is_creator_match = True
+
+                if is_creator_match:
+                    c.score += 2.0
+                    c.confidence = "high"
+                    c.is_exact_match = True
+                    if "Exact creator and video match" not in c.explanation:
+                        c.explanation.insert(0, "Exact creator and video match")
+
+            ranked.sort(key=lambda x: (x.score, getattr(x, "views", 0) or 0), reverse=True)
 
             if limit is not None:
                 return ranked[:limit]

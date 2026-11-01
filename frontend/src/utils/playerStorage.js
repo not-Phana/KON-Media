@@ -130,7 +130,15 @@ export function getSearchQueryHistory() {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(SEARCH_HISTORY_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    // Sanitize and filter out test or awkward queries
+    const sanitized = parsed.filter(
+      (item) => item && item.query && !item.query.toLowerCase().includes("basement")
+    );
+    if (sanitized.length !== parsed.length) {
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(sanitized));
+    }
+    return sanitized;
   } catch (e) {
     console.warn("Failed to load search query history:", e);
     return [];
@@ -140,6 +148,7 @@ export function getSearchQueryHistory() {
 export function addSearchQueryHistory(query, engineMode = "rei") {
   const clean = (query || "").trim();
   if (!clean || clean.startsWith("http://") || clean.startsWith("https://")) return;
+  if (clean.toLowerCase().includes("basement")) return;
 
   const list = getSearchQueryHistory();
   const filtered = list.filter((item) => item.query.toLowerCase() !== clean.toLowerCase());
@@ -156,6 +165,20 @@ export function addSearchQueryHistory(query, engineMode = "rei") {
   } catch (e) {
     console.warn("Failed to save search history:", e);
   }
+}
+
+export function removeSearchQueryHistory(query) {
+  if (typeof window === "undefined") return [];
+  const clean = (query || "").trim().toLowerCase();
+  const list = getSearchQueryHistory();
+  const updated = list.filter((item) => item.query.toLowerCase() !== clean);
+  try {
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("kon_search_history_changed", { detail: updated }));
+  } catch (e) {
+    console.warn("Failed to remove search history item:", e);
+  }
+  return updated;
 }
 
 export function clearSearchQueryHistory() {

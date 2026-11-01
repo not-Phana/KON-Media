@@ -565,39 +565,61 @@ html.dark .border-\[\#FCA5A5\] {
   height: 0 !important;
 }
 
-/* Global Scrollbar Customization: strictly remove legacy Windows arrow buttons */
-::-webkit-scrollbar-button {
+/* Universal Scrollbar Elimination of Windows Arrow Buttons & Sleek Vector Styling */
+*::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button:single-button,
+*::-webkit-scrollbar-button:vertical:decrement,
+*::-webkit-scrollbar-button:vertical:increment,
+*::-webkit-scrollbar-button:horizontal:decrement,
+*::-webkit-scrollbar-button:horizontal:increment {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
+  background: transparent !important;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+*::-webkit-scrollbar-corner {
+  display: none !important;
+  background: transparent !important;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+*::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
-  border-radius: 9999px;
+*::-webkit-scrollbar-track {
+  background: transparent !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.45);
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25) !important;
+  border-radius: 9999px !important;
 }
 
-html[data-theme="dark"] ::-webkit-scrollbar-thumb,
-html.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45) !important;
 }
 
-html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
-html.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+html[data-theme="dark"] *::-webkit-scrollbar-thumb,
+html.dark *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+html[data-theme="dark"] *::-webkit-scrollbar-thumb:hover,
+html.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32) !important;
+}
+
+/* Standard W3C / Firefox thin scrollbar definition */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+
+html[data-theme="dark"] *,
+html.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
 }
 
 /* ==========================================================================

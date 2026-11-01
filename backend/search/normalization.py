@@ -329,16 +329,23 @@ def parse_query_intent(
             # Strip trailing tag to isolate core artist and song
             core_text = core_text[:paren_match.start()].strip()
 
-    # 2. Check explicit delimiters: " - ", " – ", " — ", " / ", " by "
+    # 2. Check explicit delimiters: " : ", ":", " | ", " - ", " – ", " — ", " / ", " by "
     if not detected_artist or not detected_title:
         delimiter_matched = False
-        for sep in (" - ", " – ", " — ", " / "):
+        for sep in (" : ", " | ", " - ", " – ", " — ", " / "):
             if sep in core_text:
                 parts = core_text.split(sep, 1)
                 detected_artist = parts[0].strip()
                 detected_title = parts[1].strip()
                 delimiter_matched = True
                 break
+
+        if not delimiter_matched and ":" in core_text and not core_text.startswith("http://") and not core_text.startswith("https://"):
+            parts = core_text.split(":", 1)
+            if len(parts[0].strip()) >= 2 and len(parts[1].strip()) >= 2:
+                detected_artist = parts[0].strip()
+                detected_title = parts[1].strip()
+                delimiter_matched = True
 
         if not delimiter_matched and " by " in core_text.lower():
             parts = re.split(r"\s+by\s+", core_text, flags=re.IGNORECASE, maxsplit=1)
@@ -392,6 +399,18 @@ def parse_query_intent(
                 detected_title = core_text
 
     is_video_intent, detected_creator, _ = detect_creator_and_video_intent(raw)
+    if not is_video_intent:
+        video_indicators = (
+            ":", "|", "brain chip", "neuralink", "what you think", "how to", "how it",
+            "explained", "tutorial", "documentary", "interview", "podcast", "challenge",
+            "reaction", "trapped in", "speedrun", "unboxing", "review", "vlog", "deep dive"
+        )
+        if any(vi in norm_query or vi in raw for vi in video_indicators):
+            is_video_intent = True
+
+    if is_video_intent and detected_artist and not detected_creator:
+        detected_creator = detected_artist
+
     effective_media_type = "video" if (is_video_intent and media_type != "audio") else media_type
 
     return SearchQuery(

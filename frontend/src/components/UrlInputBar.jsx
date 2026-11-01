@@ -23,6 +23,7 @@ import { fetchSearchSuggestions } from "../api";
 import {
   getSearchQueryHistory,
   addSearchQueryHistory,
+  removeSearchQueryHistory,
   clearSearchQueryHistory,
 } from "../utils/playerStorage";
 import { History, Clock } from "lucide-react";
@@ -578,8 +579,11 @@ export default function UrlInputBar({
 
               // Auto-detect creator and video query intent
               const lower = val.toLowerCase();
-              const videoCues = ["video", "videos", "youtuber", "channel", "vlog", "gameplay", "clip", "stream"];
-              if (videoCues.some((cue) => lower.split(/\s+/).includes(cue)) && searchMode === "audio") {
+              const videoCues = [
+                "video", "videos", "youtuber", "channel", "vlog", "gameplay", "clip", "stream",
+                ":", "|", "how it works", "brain chip", "neuralink", "what you think", "documentary", "challenge"
+              ];
+              if (videoCues.some((cue) => lower.includes(cue)) && searchMode === "audio") {
                 handleSearchModeChange("video");
               }
             }}
@@ -660,26 +664,42 @@ export default function UrlInputBar({
           </span>
           <div className="flex flex-wrap items-center gap-1.5 flex-1">
             {recentSearches.slice(0, 6).map((item, idx) => (
-              <button
+              <div
                 key={idx}
-                type="button"
-                onClick={() => {
-                  setUrl(item.query);
-                  if (item.engine_mode && onEngineModeChange) {
-                    onEngineModeChange(item.engine_mode);
-                  }
-                  onAnalyze(item.query, searchMode, item.engine_mode || activeEngineMode);
-                }}
-                className="neu-raised neu-btn-tactile px-2.5 py-1 rounded-lg text-xs text-[#334155] dark:text-[#CBD5E1] hover:text-[#0084FF] cursor-pointer flex items-center gap-1"
-                title={`Search "${item.query}"`}
+                className="inline-flex items-center gap-1.5 neu-raised neu-btn-tactile px-2.5 py-1 rounded-lg text-xs text-[#334155] dark:text-[#CBD5E1] border border-slate-200/40 dark:border-slate-700/40 group hover:border-[#0084FF]/40 transition-colors"
               >
-                <span>{item.query}</span>
-                {item.engine_mode === "flash" ? (
-                  <KonFlashIcon className="w-2.5 h-2.5 text-[#F59E0B]" />
-                ) : (
-                  <KonPrecisionIcon className="w-2.5 h-2.5 text-[#0084FF]" />
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUrl(item.query);
+                    if (item.engine_mode && onEngineModeChange) {
+                      onEngineModeChange(item.engine_mode);
+                    }
+                    onAnalyze(item.query, searchMode, item.engine_mode || activeEngineMode);
+                  }}
+                  className="flex items-center gap-1 cursor-pointer hover:text-[#0084FF] transition-colors"
+                  title={`Search "${item.query}"`}
+                >
+                  <span>{item.query}</span>
+                  {item.engine_mode === "flash" ? (
+                    <KonFlashIcon className="w-2.5 h-2.5 text-[#F59E0B]" />
+                  ) : (
+                    <KonPrecisionIcon className="w-2.5 h-2.5 text-[#0084FF]" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const updated = removeSearchQueryHistory(item.query);
+                    setRecentSearches(updated);
+                  }}
+                  className="p-0.5 text-[#94A3B8] hover:text-[#EF4444] cursor-pointer rounded transition-colors"
+                  title={`Remove "${item.query}" from recent searches`}
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
             ))}
             <button
               type="button"
