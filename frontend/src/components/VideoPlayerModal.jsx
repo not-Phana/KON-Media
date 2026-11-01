@@ -48,6 +48,16 @@ const PLAYBACK_SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
  * Supports Theater Modal Mode and Floating Mini-Player (Picture-in-Picture) Mode.
  * Seamlessly plays videos from YouTube, Vimeo, direct URLs, and downloaded local files.
  */
+export function getYouTubeVideoId(urlOrId) {
+  if (!urlOrId) return null;
+  const str = String(urlOrId).trim();
+  if (str.startsWith("yt_")) return str.slice(3).replace(/^ch_/, "");
+  const m = str.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/i);
+  if (m) return m[1];
+  if (/^[a-zA-Z0-9_-]{11}$/.test(str)) return str;
+  return null;
+}
+
 export default function VideoPlayerModal({
   video,
   isOpen,
@@ -81,10 +91,11 @@ export default function VideoPlayerModal({
   const [areControlsVisible, setAreControlsVisible] = useState(true);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
-  // Stream resolution state
+  // Stream resolution & playback engine state
   const [isLoadingStream, setIsLoadingStream] = useState(false);
   const [streamError, setStreamError] = useState(null);
   const [resolvedInfo, setResolvedInfo] = useState(null);
+  const [playerEngine, setPlayerEngine] = useState("smart"); // "smart" (instant + audio) | "direct" (native proxy)
 
   // Hover timestamp preview
   const [hoverTime, setHoverTime] = useState(null);
@@ -104,6 +115,9 @@ export default function VideoPlayerModal({
     let isMounted = true;
     const abortController = new AbortController();
 
+    // Immediate detection of YouTube ID for zero-latency instant start
+    const directYtId = getYouTubeVideoId(video.id || video.candidate_id || video.webpage_url || video.url);
+
     // If stream URL is already resolved and matches this video
     if (video.stream_url) {
       setResolvedInfo({
@@ -111,18 +125,34 @@ export default function VideoPlayerModal({
         title: video.title,
         uploader: video.uploader || video.artist,
         is_local: !!video.is_local,
-        resolution: video.resolution || "Direct Stream",
+        resolution: video.resolution || (video.is_local ? "Local Video" : "Direct Stream"),
+        youtube_id: directYtId,
       });
       setIsLoadingStream(false);
       setStreamError(null);
       return;
     }
 
-    // Resolve stream through backend
-    async function resolve() {
+    // For YouTube videos, initialize immediately so playback starts instantly without waiting for backend
+    if (directYtId && !video.is_local) {
+      setResolvedInfo((prev) => ({
+        ...prev,
+        youtube_id: directYtId,
+        title: video.title,
+        uploader: video.uploader || video.artist,
+        is_local: false,
+        resolution: video.resolution || "HD Stream",
+        thumbnail: video.thumbnail,
+      }));
+      setIsLoadingStream(false);
+      setStreamError(null);
+    } else {
       setIsLoadingStream(true);
       setStreamError(null);
+    }
 
+    // Resolve stream & full metadata in background
+    async function resolve() {
       try {
         const data = await resolveVideoStream(video.webpage_url || video.url, {
           title: video.title,
@@ -133,12 +163,18 @@ export default function VideoPlayerModal({
 
         if (!isMounted) return;
 
-        setResolvedInfo(data);
+        setResolvedInfo((prev) => ({
+          ...prev,
+          ...data,
+          youtube_id: data.youtube_id || directYtId,
+        }));
         setIsLoadingStream(false);
       } catch (err) {
         if (!isMounted || err.name === "AbortError") return;
-        setStreamError(err.message || "Unable to resolve playable video stream");
-        setIsLoadingStream(false);
+        if (!directYtId) {
+          setStreamError(err.message || "Unable to resolve playable video stream");
+          setIsLoadingStream(false);
+        }
       }
     }
 
@@ -339,7 +375,11 @@ export default function VideoPlayerModal({
   const videoTitle = resolvedInfo?.title || video.title || "Video";
   const videoUploader = resolvedInfo?.uploader || video.uploader || video.artist || "Unknown Creator";
   const isLocal = !!(resolvedInfo?.is_local || video.is_local);
-  const resolution = resolvedInfo?.resolution || video.resolution || (isLocal ? "Local File" : "Stream");
+  const detectedYtId =
+    resolvedInfo?.youtube_id ||
+    getYouTubeVideoId(video?.id || video?.candidate_id || video?.webpage_url || video?.url);
+  const useEmbedPlayer = !isLocal && !!detectedYtId && playerEngine === "smart";
+  const resolution = resolvedInfo?.resolution || video.resolution || (isLocal ? "Local File" : "HD Stream");
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferPercent = duration > 0 ? (bufferedEnd / duration) * 100 : 0;
@@ -384,7 +424,15 @@ export default function VideoPlayerModal({
 
         {/* Video Canvas Container */}
         <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden group">
-          {isLoadingStream ? (
+          {useEmbedPlayer ? (
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${detectedYtId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`}
+              title={videoTitle}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="w-full h-full border-0"
+            />
+          ) : isLoadingStream ? (
             <div className="flex flex-col items-center gap-2 text-slate-400 p-4 text-center">
               <Loader2 className="w-7 h-7 animate-spin text-[#0084FF]" />
               <span className="text-xs font-medium">Resolving stream...</span>
@@ -414,8 +462,8 @@ export default function VideoPlayerModal({
             <div className="text-xs text-slate-400">Stream unavailable</div>
           )}
 
-          {/* Mini Play/Pause overlay */}
-          {!isLoadingStream && !streamError && playableSrc && (
+          {/* Mini Play/Pause overlay (only for native video) */}
+          {!useEmbedPlayer && !isLoadingStream && !streamError && playableSrc && (
             <button
               type="button"
               onClick={togglePlay}
@@ -429,21 +477,23 @@ export default function VideoPlayerModal({
             </button>
           )}
 
-          {/* Mini Scrub bar at bottom of video */}
-          <div
-            ref={progressBarRef}
-            onClick={handleSeekClick}
-            className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 hover:h-2 transition-all cursor-pointer group/bar"
-          >
+          {/* Mini Scrub bar at bottom of video (only for native video) */}
+          {!useEmbedPlayer && (
             <div
-              className="absolute top-0 bottom-0 left-0 bg-white/30"
-              style={{ width: `${bufferPercent}%` }}
-            />
-            <div
-              className="absolute top-0 bottom-0 left-0 bg-[#0084FF]"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+              ref={progressBarRef}
+              onClick={handleSeekClick}
+              className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 hover:h-2 transition-all cursor-pointer group/bar"
+            >
+              <div
+                className="absolute top-0 bottom-0 left-0 bg-white/30"
+                style={{ width: `${bufferPercent}%` }}
+              />
+              <div
+                className="absolute top-0 bottom-0 left-0 bg-[#0084FF]"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Mini Bottom Controls Bar */}
@@ -532,6 +582,21 @@ export default function VideoPlayerModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Player Engine Switcher */}
+            {detectedYtId && !isLocal && (
+              <button
+                type="button"
+                onClick={() => setPlayerEngine((prev) => (prev === "smart" ? "direct" : "smart"))}
+                className="neu-raised px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:border-[#0084FF]/40 flex items-center gap-1.5 transition-all cursor-pointer"
+                title={playerEngine === "smart" ? "Switch to Direct Stream Proxy" : "Switch to Smart Player (Instant Playback & Full Sound)"}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#0084FF]" />
+                <span className="hidden sm:inline">
+                  {playerEngine === "smart" ? "Smart Player" : "Direct Proxy"}
+                </span>
+              </button>
+            )}
+
             {/* Download Button */}
             {onDownload && (
               <button
@@ -569,7 +634,15 @@ export default function VideoPlayerModal({
 
         {/* High-Resolution Video Player Canvas */}
         <div className="relative aspect-video w-full bg-black flex items-center justify-center overflow-hidden">
-          {isLoadingStream ? (
+          {useEmbedPlayer ? (
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${detectedYtId}?autoplay=1&enablejsapi=1&rel=0&modestbranding=1`}
+              title={videoTitle}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="w-full h-full border-0"
+            />
+          ) : isLoadingStream ? (
             <div className="flex flex-col items-center gap-3 text-slate-400 p-8 text-center">
               <Loader2 className="w-10 h-10 animate-spin text-[#0084FF]" />
               <div className="text-sm font-semibold text-white">Preparing Video Stream</div>
@@ -614,8 +687,8 @@ export default function VideoPlayerModal({
             <div className="text-sm text-slate-400">Stream unavailable</div>
           )}
 
-          {/* Big Center Play/Pause Indicator on click / pause */}
-          {!isLoadingStream && !streamError && playableSrc && !isPlaying && (
+          {/* Big Center Play/Pause Indicator on click / pause (for native video) */}
+          {!useEmbedPlayer && !isLoadingStream && !streamError && playableSrc && !isPlaying && (
             <button
               type="button"
               onClick={togglePlay}
@@ -628,7 +701,8 @@ export default function VideoPlayerModal({
           )}
         </div>
 
-        {/* Bottom Control Bar Overlay */}
+        {/* Bottom Control Bar Overlay (active for native video) */}
+        {!useEmbedPlayer && (
         <div
           className={`absolute bottom-0 left-0 right-0 z-30 p-4 sm:p-5 bg-gradient-to-t from-black/95 via-black/70 to-transparent transition-opacity duration-300 flex flex-col gap-3 ${
             areControlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -792,6 +866,7 @@ export default function VideoPlayerModal({
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

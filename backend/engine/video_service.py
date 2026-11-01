@@ -143,6 +143,25 @@ def find_local_downloaded_video(
     return None
 
 
+def extract_youtube_id(url: str, info: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """Extract 11-char YouTube video ID for instant iframe embedding."""
+    if info:
+        ext = (info.get("extractor_key") or info.get("extractor") or "").lower()
+        if "youtube" in ext and info.get("id"):
+            return str(info["id"])
+    if not url:
+        return None
+    import re
+    clean = str(url).strip()
+    if clean.startswith("yt_"):
+        return clean[3:].replace("ch_", "")
+    m = re.search(r"(?:youtu\.be/|youtube\.com/(?:embed/|v/|watch\?v=|watch\?.+&v=))([\w-]{11})", clean)
+    if m:
+        return m.group(1)
+    if re.match(r"^[\w-]{11}$", clean):
+        return clean
+    return None
+
 async def resolve_video_stream(
     url: str,
     title: Optional[str] = None,
@@ -243,28 +262,36 @@ async def resolve_video_stream(
                 return {"playable": False, "error": "Could not extract video stream info"}
 
             formats = info.get("formats", [])
-            # Find progressive formats that have both video and audio
-            prog_formats = [
+            # Priority 1: Formats that have BOTH video and audio (guarantees sound)
+            audio_video_fmts = [
                 f for f in formats
-                if f.get("vcodec") != "none" and f.get("acodec") != "none" and f.get("url")
+                if f.get("vcodec") not in (None, "none")
+                and f.get("acodec") not in (None, "none")
+                and f.get("url")
             ]
 
             direct_video_url = None
             chosen_format = {}
 
-            if prog_formats:
-                # Sort by height ascending so last is highest resolution
-                prog_formats.sort(key=lambda f: f.get("height") or 0)
-                chosen_format = prog_formats[-1]
+            if audio_video_fmts:
+                # Sort by height ascending so last is highest resolution with audio
+                audio_video_fmts.sort(key=lambda f: (f.get("height") or 0, f.get("tbr") or 0))
+                chosen_format = audio_video_fmts[-1]
                 direct_video_url = chosen_format.get("url")
-            elif info.get("url"):
+            elif info.get("url") and info.get("acodec") not in (None, "none"):
                 direct_video_url = info.get("url")
                 chosen_format = info
             else:
-                # Try any format with a valid URL
-                valid_fmts = [f for f in formats if f.get("url")]
+                # Try any format with a valid URL, preferring 720p/1080p for fast buffer startup
+                valid_fmts = [f for f in formats if f.get("url") and f.get("vcodec") not in (None, "none")]
                 if valid_fmts:
-                    chosen_format = valid_fmts[-1]
+                    # Cap direct proxy streaming at 1080p to prevent massive 4K buffering delay
+                    fast_tier = [f for f in valid_fmts if 360 <= (f.get("height") or 0) <= 1080]
+                    if fast_tier:
+                        fast_tier.sort(key=lambda f: f.get("height") or 0)
+                        chosen_format = fast_tier[-1]
+                    else:
+                        chosen_format = valid_fmts[-1]
                     direct_video_url = chosen_format.get("url")
 
             if not direct_video_url:
@@ -300,9 +327,12 @@ async def resolve_video_stream(
             if not available_resolutions and height:
                 available_resolutions.append(f"{height}p")
 
+            yt_id = extract_youtube_id(validated_url, info)
             res = {
                 "playable": True,
                 "source_type": "remote",
+                "youtube_id": yt_id,
+                "embed_url": f"https://www.youtube-nocookie.com/embed/{yt_id}?autoplay=1&enablejsapi=1&rel=0" if yt_id else None,
                 "direct_url": direct_video_url,
                 "stream_url": f"/api/video/stream?url={quote(direct_video_url, safe='')}",
                 "title": video_title,
@@ -390,7 +420,7 @@ async def stream_video_proxy(url: str, request: Optional[Request] = None) -> Str
 
     async def content_iterator():
         try:
-            async for chunk in upstream_res.aiter_bytes(chunk_size=131072):
+            async for chunk in upstream_res.aiter_bytes(chunk_size=262144):
                 yield chunk
         finally:
             await upstream_res.aclose()
