@@ -94,7 +94,13 @@ export default function RightSidebar({
     setSyncOffset(rounded);
     const key = `kon_lyric_offset_${currentTrack?.id || currentTrack?.url}`;
     try {
-      if (key) localStorage.setItem(key, String(rounded));
+      if (key) {
+        if (rounded === 0) {
+          localStorage.removeItem(key);
+        } else {
+          localStorage.setItem(key, String(rounded));
+        }
+      }
     } catch (_) {}
     if (currentTrack) {
       saveLyricsOffset({
