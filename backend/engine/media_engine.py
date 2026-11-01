@@ -418,11 +418,7 @@ def extract_media_info(
         "quiet": True,
         "no_warnings": True,
         "no_color": True,
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["android", "ios", "web"]
-            }
-        },
+
     }
 
     if shutil.which("node"):
@@ -497,19 +493,35 @@ def extract_media_info(
                     # Quick-select video_options (one per resolution height)
                     if height and height not in seen_resolutions:
                         seen_resolutions.add(height)
+                        if height >= 2160:
+                            tier = "4K Ultra HD"
+                        elif height >= 1440:
+                            tier = "2K Quad HD"
+                        elif height >= 1080:
+                            tier = "Full HD"
+                        elif height >= 720:
+                            tier = "HD"
+                        elif height >= 480:
+                            tier = "Standard"
+                        else:
+                            tier = "Data Saver"
+
+                        fps_tag = f" {fps}fps" if fps and fps > 30 else ""
+
                         if not has_a:
                             format_selector = f"{format_id}+bestaudio/best"
                             requires_ffmpeg = True
-                            label = f"{height}p MP4"
+                            label = f"{height}p{fps_tag} MP4 ({tier})"
                         else:
                             format_selector = str(format_id)
                             requires_ffmpeg = False
-                            label = f"{height}p MP4 (Direct)"
+                            label = f"{height}p{fps_tag} MP4 ({tier}) (Direct)"
 
                         video_options.append({
                             "format_id": format_selector,
                             "label": label,
                             "height": height,
+                            "tier": tier,
                             "ext": "mp4",
                             "filesize": filesize,
                             "type": "video",
@@ -536,6 +548,9 @@ def extract_media_info(
                         "stream_type": "audio_only",
                         "requires_ffmpeg": False,
                     })
+
+            if video_options:
+                video_options[0]["is_best"] = True
 
             # If no parsed resolutions (e.g. direct media URL), provide original quality fallback
             if not video_options:
@@ -911,11 +926,7 @@ def execute_download(
         "quiet": True,
         "no_warnings": True,
         "no_color": True,
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["android", "ios", "web"]
-            }
-        },
+
     }
 
     if shutil.which("node"):

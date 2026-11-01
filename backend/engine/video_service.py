@@ -233,14 +233,9 @@ async def resolve_video_stream(
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
-            "format": "best[ext=mp4]/best[vcodec!=none][acodec!=none]/best",
+            "format": "best[ext=mp4]/best[vcodec!=none][acodec!=none]/bestvideo[ext=mp4]+bestaudio/bestvideo+bestaudio/best",
             "extract_flat": False,
             "socket_timeout": 15,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["android", "ios", "web"]
-                }
-            },
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(validated_url, download=False)
@@ -284,12 +279,23 @@ async def resolve_video_stream(
             res_label = f"{height}p" if height else "HD"
 
             available_resolutions = []
-            for f in prog_formats:
-                h = f.get("height")
-                if h:
-                    label = f"{h}p"
-                    if label not in available_resolutions:
-                        available_resolutions.append(label)
+            all_heights = sorted(
+                list(set(f.get("height") for f in formats if f.get("height") and f.get("vcodec") != "none")),
+                reverse=True,
+            )
+            for h in all_heights:
+                if h >= 2160:
+                    lbl = f"{h}p (4K Ultra HD)"
+                elif h >= 1440:
+                    lbl = f"{h}p (2K Quad HD)"
+                elif h >= 1080:
+                    lbl = f"{h}p (Full HD)"
+                elif h >= 720:
+                    lbl = f"{h}p (HD)"
+                else:
+                    lbl = f"{h}p"
+                if lbl not in available_resolutions:
+                    available_resolutions.append(lbl)
 
             if not available_resolutions and height:
                 available_resolutions.append(f"{height}p")

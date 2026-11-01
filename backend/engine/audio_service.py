@@ -199,11 +199,6 @@ async def resolve_audio_stream(
             "format": "bestaudio[ext=m4a]/bestaudio/best",
             "extract_flat": False,
             "socket_timeout": 15,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["android", "ios", "web"]
-                }
-            },
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(validated_url, download=False)

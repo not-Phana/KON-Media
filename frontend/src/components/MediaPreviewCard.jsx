@@ -50,6 +50,7 @@ export default function MediaPreviewCard({
       activeInfo?.supported === false);
 
   const defaultVideoFormat =
+    (ffmpegAvailable ? activeInfo?.video_formats?.[0] : null) ||
     activeInfo?.video_formats?.find((f) => !f.requires_ffmpeg) ||
     activeInfo?.video_formats?.[0];
 
@@ -519,7 +520,7 @@ export default function MediaPreviewCard({
             </label>
 
             {mediaType === "video" ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {activeInfo.video_formats && activeInfo.video_formats.length > 0 ? (
                   activeInfo.video_formats.map((fmt) => {
                     const isSelected = selectedFormatId === fmt.format_id;
@@ -533,19 +534,35 @@ export default function MediaPreviewCard({
                         onClick={() => setSelectedFormatId(fmt.format_id)}
                         className={`flex flex-col items-start p-3 rounded-2xl text-left cursor-pointer transition-all ${
                           isSelected
-                            ? "neu-pressed text-[#0084FF] border border-[#0084FF]/30"
-                            : "neu-raised text-[#334155] hover:text-[#0084FF]"
+                            ? "neu-pressed text-[#0084FF] border border-[#0084FF]/40 shadow-xs"
+                            : "neu-raised text-[#334155] dark:text-[#E2E8F0] hover:text-[#0084FF]"
                         }`}
                       >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xs font-bold">{fmt.label}</span>
+                        <div className="flex items-center justify-between w-full gap-1.5">
+                          <span className="text-xs font-bold truncate">{fmt.label}</span>
+                          {fmt.is_best ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/40 shrink-0">
+                              Top Quality
+                            </span>
+                          ) : fmt.tier ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold neu-recessed text-[#0084FF] shrink-0">
+                              {fmt.tier}
+                            </span>
+                          ) : null}
                           {needsFFmpeg && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded neu-recessed text-[#F59E0B] font-mono">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded neu-recessed text-[#F59E0B] font-mono shrink-0">
                               FFmpeg
                             </span>
                           )}
                         </div>
-                        {sizeMb && <span className="text-[11px] text-[#64748B] font-mono mt-1">~{sizeMb}</span>}
+                        <div className="flex items-center gap-2 mt-1">
+                          {sizeMb && <span className="text-[11px] text-[#64748B] font-mono">~{sizeMb}</span>}
+                          {fmt.height && (
+                            <span className="text-[10px] text-[#94A3B8] font-mono">
+                              {fmt.height}p · {fmt.ext?.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
                       </button>
                     );
                   })
