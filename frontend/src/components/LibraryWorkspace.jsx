@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Film,
   Bookmark,
   PlusCircle,
   CheckCircle2,
@@ -36,6 +37,7 @@ export default function LibraryWorkspace({
   onOpenFile,
   history = [],
   onNavigateToSearch,
+  onPlayVideo,
 }) {
   const isFavorites = activeTab === "favorites";
   const items = isFavorites ? favorites : recentlyPlayed;
@@ -266,6 +268,18 @@ export default function LibraryWorkspace({
                       <Play className="w-4 h-4 fill-current ml-0.5" />
                     )}
                   </button>
+
+                  {/* Watch Video Button for video items or music videos */}
+                  {onPlayVideo && (
+                    <button
+                      type="button"
+                      onClick={() => onPlayVideo(track)}
+                      className="p-2 rounded-xl neu-raised text-[#64748B] hover:text-[#EF4444] hover:border-[#EF4444]/30 cursor-pointer transition-all"
+                      title="Watch video"
+                    >
+                      <Film className="w-4 h-4" />
+                    </button>
+                  )}
 
                   {/* Save / Liked Toggle Button */}
                   {onToggleFavorite && (

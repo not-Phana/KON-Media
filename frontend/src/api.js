@@ -520,6 +520,33 @@ export function getAudioStreamUrl(rawUrl) {
   return `${base}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
 }
 
+export async function resolveVideoStream(url, { title, id, uploader, signal } = {}) {
+  const params = new URLSearchParams({ url });
+  if (title) params.append("title", title);
+  if (id) params.append("id", id);
+  if (uploader) params.append("uploader", uploader);
+
+  const res = await fetch(`${API_BASE}/video/resolve?${params.toString()}`, { signal });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || data.error || "Failed to resolve video stream");
+  }
+  return data;
+}
+
+export function getVideoStreamUrl(rawUrl) {
+  if (!rawUrl) return "";
+  if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+    return rawUrl;
+  }
+  const base = getApiBase();
+  if (rawUrl.startsWith("/api/")) {
+    const root = base.replace(/\/api$/, "");
+    return `${root}${rawUrl}`;
+  }
+  return `${base}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+}
+
 // Autonomous Continuous Learning Endpoints
 export async function fetchLearningTelemetry() {
   const res = await fetch(`${API_BASE}/learning/telemetry`);

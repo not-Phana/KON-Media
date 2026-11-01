@@ -13,6 +13,7 @@ import BottomMusicPlayer from "./components/BottomMusicPlayer";
 import NavigationTabBar from "./components/NavigationTabBar";
 import PlaybackQueueDrawer from "./components/PlaybackQueueDrawer";
 import LyricsModal from "./components/LyricsModal";
+import VideoPlayerModal from "./components/VideoPlayerModal";
 import LeftSidebar from "./components/LeftSidebar";
 import RightSidebar from "./components/RightSidebar";
 import LibraryWorkspace from "./components/LibraryWorkspace";
@@ -200,6 +201,30 @@ export default function App() {
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
   const [lyricsError, setLyricsError] = useState(null);
 
+  // Universal Video Player State
+  const [currentVideo, setCurrentVideo] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kon_current_video");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(() => {
+    try {
+      return localStorage.getItem("kon_video_player_open") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [videoPlayerMode, setVideoPlayerMode] = useState(() => {
+    try {
+      return localStorage.getItem("kon_video_player_mode") || "theater";
+    } catch {
+      return "theater";
+    }
+  });
+
   // Workspace Navigation & Drawer State
   const [activeView, setActiveView] = useState(() => {
     try {
@@ -251,6 +276,28 @@ export default function App() {
       localStorage.setItem("kon_lyrics_modal_open", String(isLyricsModalOpen));
     } catch (_) {}
   }, [isLyricsModalOpen]);
+
+  useEffect(() => {
+    try {
+      if (currentVideo) {
+        localStorage.setItem("kon_current_video", JSON.stringify(currentVideo));
+      } else {
+        localStorage.removeItem("kon_current_video");
+      }
+    } catch (_) {}
+  }, [currentVideo]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_video_player_open", String(isVideoPlayerOpen));
+    } catch (_) {}
+  }, [isVideoPlayerOpen]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kon_video_player_mode", videoPlayerMode);
+    } catch (_) {}
+  }, [videoPlayerMode]);
 
   useEffect(() => {
     try {
@@ -578,6 +625,18 @@ export default function App() {
     if (prevIdx >= 0) {
       handlePlayCandidate(playbackQueue[prevIdx]);
     }
+  };
+
+  const handlePlayVideo = (videoItem) => {
+    if (!videoItem) return;
+    // Auto-pause background audio so audio streams do not clash
+    setIsPlaying(false);
+    setCurrentVideo(videoItem);
+    setIsVideoPlayerOpen(true);
+  };
+
+  const handleCloseVideoPlayer = () => {
+    setIsVideoPlayerOpen(false);
   };
 
   const handleClosePlayer = () => {
@@ -1210,6 +1269,7 @@ export default function App() {
                 onOpenFile={handleOpenFile}
                 history={history}
                 onNavigateToSearch={() => setActiveView("search")}
+                onPlayVideo={handlePlayVideo}
               />
             )}
 
@@ -1266,6 +1326,7 @@ export default function App() {
                 onToggleFavorite={handleToggleTrackFavorite}
                 favorites={favorites}
                 onSearch={(q) => handleAnalyze(q, "video", engineMode)}
+                onPlayVideo={handlePlayVideo}
               />
             )}
 
@@ -1276,6 +1337,7 @@ export default function App() {
                 onStartDownload={handleStartDownload}
                 onDismiss={() => setAnalyzedMedia(null)}
                 onUpdateMediaInfo={setAnalyzedMedia}
+                onPlayVideo={handlePlayVideo}
               />
             )}
 
@@ -1312,6 +1374,7 @@ export default function App() {
                 onOpenFile={handleOpenFile}
                 onDeleteItem={handleDeleteHistoryItem}
                 onClearAll={handleClearHistory}
+                onPlayVideo={handlePlayVideo}
               />
             )}
           </main>
@@ -1429,6 +1492,17 @@ export default function App() {
         isLoadingLyrics={isLoadingLyrics}
         lyricsError={lyricsError}
         glassMode={glassMode}
+      />
+
+      {/* Universal In-Browser Video Player (Theater & Mini-Player Modes) */}
+      <VideoPlayerModal
+        video={currentVideo}
+        isOpen={isVideoPlayerOpen}
+        mode={videoPlayerMode}
+        onClose={handleCloseVideoPlayer}
+        onModeChange={(newMode) => setVideoPlayerMode(newMode)}
+        onDownload={(vid) => handleDirectDownload(vid, "video")}
+        onPauseAudio={() => setIsPlaying(false)}
       />
 
       {/* Interactive Toast Notification with Pop-Up Physics */}

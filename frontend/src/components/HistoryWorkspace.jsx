@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { History, FolderOpen, Trash2, Video, Music, Calendar, HardDrive, Download } from "lucide-react";
+import { History, Film, FolderOpen, Trash2, Video, Music, Calendar, HardDrive, Download } from "lucide-react";
 import { getDownloadUrl } from "../api";
 
-export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, onClearAll }) {
+export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, onClearAll, onPlayVideo }) {
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [openingItemId, setOpeningItemId] = useState(null);
 
@@ -153,6 +153,26 @@ export default function HistoryWorkspace({ history, onOpenFile, onDeleteItem, on
               </div>
 
               <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                {onPlayVideo && (item.media_type === "video" || item.has_video || (item.filename && (item.filename.endsWith(".mp4") || item.filename.endsWith(".webm") || item.filename.endsWith(".mkv") || item.filename.endsWith(".mov")))) && (
+                  <button
+                    type="button"
+                    onClick={() => onPlayVideo({
+                      url: item.url || item.webpage_url,
+                      title: item.title,
+                      uploader: item.uploader || item.artist,
+                      thumbnail: item.thumbnail,
+                      file_path: item.file_path,
+                      is_local: true,
+                      resolution: "Local File",
+                    })}
+                    className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#EF4444] hover:bg-[#EF4444]/10 hover:border-[#EF4444]/40 cursor-pointer rounded-xl transition-all"
+                    title="Watch downloaded video"
+                  >
+                    <Film className="w-3.5 h-3.5" />
+                    <span>Watch</span>
+                  </button>
+                )}
+
                 {item.filename && (
                   <a
                     href={getDownloadUrl(item.filename)}

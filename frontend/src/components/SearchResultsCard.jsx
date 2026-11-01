@@ -214,6 +214,7 @@ export default function SearchResultsCard({
   onToggleFavorite,
   favorites = [],
   onSearch,
+  onPlayVideo,
 }) {
   const [reportedIds, setReportedIds] = useState(new Set());
   const [localPending, setLocalPending] = useState({});
@@ -747,13 +748,22 @@ export default function SearchResultsCard({
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        onPlayCandidate && onPlayCandidate(cand);
+                        if (cand.content_type === "video" || cand.is_music === false || searchMode === "video") {
+                          if (onPlayVideo) onPlayVideo(cand);
+                          else if (onPlayCandidate) onPlayCandidate(cand);
+                        } else {
+                          onPlayCandidate && onPlayCandidate(cand);
+                        }
                       }}
                       className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center rounded-lg cursor-pointer"
-                      title="Play preview"
+                      title={cand.content_type === "video" || cand.is_music === false || searchMode === "video" ? "Watch video" : "Play preview"}
                     >
                       <div className="w-7 h-7 rounded-full bg-[#0084FF] text-white flex items-center justify-center shadow-md neu-btn-tactile">
-                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                        {cand.content_type === "video" || cand.is_music === false || searchMode === "video" ? (
+                          <Film className="w-3.5 h-3.5 text-white" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                        )}
                       </div>
                     </div>
                   )}
@@ -927,11 +937,19 @@ export default function SearchResultsCard({
                   </button>
                 )}
 
-                {/* Built-in Audio Play / Preview Button */}
-                {(() => {
-                  const isSong = cand.is_music !== false && cand.content_type !== "video";
-
-                  return (
+                {/* Built-in Video Play / Audio Play Action Buttons */}
+                {cand.content_type === "video" || cand.is_music === false || searchMode === "video" ? (
+                  <button
+                    type="button"
+                    onClick={() => onPlayVideo && onPlayVideo(cand)}
+                    className="px-3.5 py-2.5 flex items-center gap-2 text-xs font-bold rounded-xl cursor-pointer neu-btn-tactile neu-raised text-[#EF4444] hover:bg-[#EF4444]/10 hover:border-[#EF4444]/40 transition-all"
+                    title="Watch video in in-browser player"
+                  >
+                    <Film className="w-3.5 h-3.5 text-[#EF4444]" />
+                    <span>Watch Video</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => onPlayCandidate && onPlayCandidate(cand)}
@@ -943,9 +961,7 @@ export default function SearchResultsCard({
                       title={
                         isThisPlaying && isPlaying
                           ? "Pause preview playback"
-                          : isSong
-                          ? "Listen to song preview before downloading"
-                          : "Preview audio playback"
+                          : "Listen to song preview before downloading"
                       }
                     >
                       {isThisLoading ? (
@@ -963,8 +979,19 @@ export default function SearchResultsCard({
                           : "Preview"}
                       </span>
                     </button>
-                  );
-                })()}
+
+                    {onPlayVideo && (
+                      <button
+                        type="button"
+                        onClick={() => onPlayVideo(cand)}
+                        className="p-2.5 rounded-xl neu-raised text-[#64748B] hover:text-[#EF4444] hover:border-[#EF4444]/30 cursor-pointer neu-btn-tactile transition-all"
+                        title="Watch music video in player"
+                      >
+                        <Film className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Download Audio / Song Button with Live Feedback */}
                 <DownloadActionButton

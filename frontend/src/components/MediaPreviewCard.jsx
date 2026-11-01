@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+  Play,
   Video,
   Music,
   Download,
@@ -27,6 +28,7 @@ export default function MediaPreviewCard({
   onStartDownload,
   onDismiss,
   onUpdateMediaInfo,
+  onPlayVideo,
 }) {
   const [localMatch, setLocalMatch] = useState(null);
   const [isMatching, setIsMatching] = useState(false);
@@ -450,7 +452,18 @@ export default function MediaPreviewCard({
       <div className="flex flex-col md:flex-row gap-5">
         {/* Thumbnail Container */}
         {activeInfo.thumbnail && (
-          <div className="relative w-full md:w-56 h-36 rounded-2xl overflow-hidden neu-recessed p-1 shrink-0">
+          <div
+            className={`relative w-full md:w-56 h-36 rounded-2xl overflow-hidden neu-recessed p-1 shrink-0 ${
+              onPlayVideo ? "group cursor-pointer" : ""
+            }`}
+            onClick={() => onPlayVideo && onPlayVideo({
+              url: activeInfo.webpage_url,
+              title: activeInfo.original_spotify_title || activeInfo.title,
+              uploader: activeInfo.uploader || activeInfo.channel,
+              thumbnail: activeInfo.thumbnail,
+              duration: activeInfo.duration,
+            })}
+          >
             <img
               src={activeInfo.thumbnail}
               alt={activeInfo.title}
@@ -461,6 +474,13 @@ export default function MediaPreviewCard({
             {activeInfo.duration_formatted && (
               <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/75 text-[10px] font-mono text-white">
                 {activeInfo.duration_formatted}
+              </div>
+            )}
+            {onPlayVideo && (
+              <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-[#0084FF] text-white flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
+                  <Play className="w-5 h-5 fill-current ml-0.5" />
+                </div>
               </div>
             )}
           </div>
@@ -800,7 +820,25 @@ export default function MediaPreviewCard({
           )}
 
           {/* Action Trigger */}
-          <div className="pt-2 flex justify-end">
+          <div className="pt-2 flex items-center justify-end gap-3">
+            {onPlayVideo && (
+              <button
+                type="button"
+                onClick={() => onPlayVideo({
+                  url: activeInfo.webpage_url,
+                  title: activeInfo.original_spotify_title || activeInfo.title,
+                  uploader: activeInfo.uploader || activeInfo.channel,
+                  thumbnail: activeInfo.thumbnail,
+                  duration: activeInfo.duration,
+                })}
+                className="neu-raised px-5 py-3 flex items-center gap-2 text-xs font-bold text-[#EF4444] hover:bg-[#EF4444]/10 hover:border-[#EF4444]/40 cursor-pointer rounded-xl transition-all neu-btn-tactile"
+                title="Watch video in in-browser player"
+              >
+                <Film className="w-4 h-4 text-[#EF4444]" />
+                <span>Watch Video</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleDownload}

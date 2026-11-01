@@ -924,6 +924,45 @@ async def stream_audio_proxy_endpoint(
 
 
 
+@router.get("/video/resolve")
+async def resolve_video_endpoint(
+    url: str = Query(..., description="Media or video URL to resolve for playback"),
+    title: Optional[str] = Query(None, description="Known video title"),
+    id: Optional[str] = Query(None, description="Candidate ID"),
+    uploader: Optional[str] = Query(None, description="Known creator or uploader"),
+):
+    """Resolve a playable video stream URL from YouTube, Vimeo, direct URLs, or local files."""
+    try:
+        validated_url = validate_media_url(url)
+    except SecurityValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    from backend.engine.video_service import resolve_video_stream
+    from backend.config import DOWNLOADS_DIR
+
+    configured_dir = Path(settings_store.get_settings().get("downloads_dir", str(DOWNLOADS_DIR)))
+    result = await resolve_video_stream(
+        url=validated_url,
+        title=title,
+        candidate_id=id,
+        downloads_dir=configured_dir,
+        history_store=history_store,
+        uploader=uploader,
+    )
+    return result
+
+
+@router.get("/video/stream")
+async def stream_video_proxy_endpoint(
+    url: str = Query(..., description="Direct upstream video stream URL"),
+    request: Request = None,
+):
+    """Proxy remote video stream with byte-range HTTP 206 for in-browser video playback."""
+    from backend.engine.video_service import stream_video_proxy
+    return await stream_video_proxy(url=url, request=request)
+
+
+
 @router.get("/lyrics")
 async def get_lyrics_endpoint(
     title: str = Query(..., description="Track or song title"),
