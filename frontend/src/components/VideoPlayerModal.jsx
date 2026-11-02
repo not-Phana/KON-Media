@@ -248,7 +248,7 @@ export default function VideoPlayerModal({
         <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
           {youtubeId ? (
             <iframe
-              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
+              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=0&rel=0&iv_load_policy=3&playsinline=1&enablejsapi=1`}
               title={videoTitle}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -358,7 +358,7 @@ export default function VideoPlayerModal({
         <div className="relative aspect-video w-full bg-black flex items-center justify-center overflow-hidden">
           {youtubeId ? (
             <iframe
-              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
+              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=0&rel=0&iv_load_policy=3&playsinline=1&enablejsapi=1`}
               title={videoTitle}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
