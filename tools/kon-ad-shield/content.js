@@ -1,14 +1,32 @@
 /**
  * KON Ad-Shield for YouTube Embed Player
- * Intercepts video ads inside YouTube embed iframes and skips them instantaneously.
+ * 1. Blocks & auto-skips video advertisements instantaneously.
+ * 2. Completely suppresses stuck pause/play central bezel icons (.ytp-bezel).
+ * 3. Removes promotional overlays and banner ads.
  */
 
 (function () {
   "use strict";
 
-  // Hide ad banner styling dynamically
+  // Hide ad banner styling & stuck center pause/play bezels
   const style = document.createElement("style");
   style.textContent = `
+    /* Kill stuck center pause/play/volume bezel animation */
+    .ytp-bezel,
+    .ytp-bezel-icon,
+    .ytp-bezel-text,
+    .ytp-seek-overlay,
+    .ytp-pause-overlay,
+    .player-control-play-pause-icon {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      animation: none !important;
+      transition: none !important;
+    }
+
+    /* Kill video ads, banners, and promotional cards */
     .ytp-ad-overlay-container,
     .ytp-ad-message-container,
     .ytp-ad-action-interstitial,
@@ -26,6 +44,17 @@
   (document.head || document.documentElement).appendChild(style);
 
   let isFastForwarding = false;
+
+  function removeStuckBezel() {
+    const bezels = document.querySelectorAll(
+      ".ytp-bezel, .ytp-bezel-icon, .ytp-bezel-text, .ytp-seek-overlay, .ytp-pause-overlay"
+    );
+    for (const b of bezels) {
+      try {
+        b.remove();
+      } catch (_) {}
+    }
+  }
 
   function clickSkipButtons() {
     const selectors = [
@@ -48,6 +77,8 @@
   }
 
   function handleVideoAds() {
+    removeStuckBezel();
+
     const player = document.querySelector(".html5-video-player");
     const video = document.querySelector("video");
     if (!video) return;
@@ -87,6 +118,7 @@
   const observer = new MutationObserver(() => {
     handleVideoAds();
     clickSkipButtons();
+    removeStuckBezel();
   });
 
   observer.observe(document.documentElement, {
