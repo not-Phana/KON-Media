@@ -248,7 +248,7 @@ export default function VideoPlayerModal({
         <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
           {youtubeId ? (
             <iframe
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
+              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
               title={videoTitle}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -310,6 +310,10 @@ export default function VideoPlayerModal({
                   <Film className="w-3 h-3 text-[#EF4444]" />
                   <span>{youtubeId ? "YouTube Embed Player" : "Local Video Player"}</span>
                 </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/20 text-emerald-400 border-emerald-500/30 inline-flex items-center gap-1" title="Ad-Shield Protection: Blocking ad trackers and popup overlays">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  <span>Ad-Shield</span>
+                </span>
               </div>
             </div>
           </div>
@@ -354,7 +358,7 @@ export default function VideoPlayerModal({
         <div className="relative aspect-video w-full bg-black flex items-center justify-center overflow-hidden">
           {youtubeId ? (
             <iframe
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
+              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`}
               title={videoTitle}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
