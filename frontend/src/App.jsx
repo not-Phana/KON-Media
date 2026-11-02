@@ -373,95 +373,6 @@ export default function App() {
     } catch (_) {}
   }, [isQueueOpen]);
 
-  // On initial mount, if track has no stream URL, re-resolve cleanly
-  useEffect(() => {
-    if (currentTrack && !currentTrack.stream_url && !currentTrack.direct_url && currentTrack.url) {
-      handlePlayCandidate(currentTrack);
-    }
-  }, []);
-
-  // Reactive listeners for local storage state changes
-  useEffect(() => {
-    const handleFavChange = (e) => setFavorites(e.detail || getFavorites());
-    const handleRecentChange = (e) => setRecentlyPlayed(e.detail || getRecentlyPlayed());
-    window.addEventListener("kon_favorites_changed", handleFavChange);
-    window.addEventListener("kon_recently_played_changed", handleRecentChange);
-    return () => {
-      window.removeEventListener("kon_favorites_changed", handleFavChange);
-      window.removeEventListener("kon_recently_played_changed", handleRecentChange);
-    };
-  }, []);
-
-  // Reactive lyrics fetcher when current track changes
-  useEffect(() => {
-    if (!currentTrack) {
-      setLyricsData(null);
-      setLyricsError(null);
-      setIsLoadingLyrics(false);
-      return;
-    }
-
-    let isMounted = true;
-    const abortCtrl = new AbortController();
-    setIsLoadingLyrics(true);
-    setLyricsError(null);
-
-    fetchLyrics({
-      title: currentTrack.song_title || currentTrack.clean_title || currentTrack.title,
-      artist: currentTrack.artist || currentTrack.uploader || "",
-      duration: currentTrack.duration,
-      filePath: currentTrack.file_path,
-      signal: abortCtrl.signal,
-    })
-      .then((data) => {
-        if (!isMounted) return;
-        setIsLoadingLyrics(false);
-        if (data && data.found) {
-          setLyricsData(data);
-        } else {
-          setLyricsData(null);
-          setLyricsError(data?.error || "No lyrics found for this track");
-        }
-      })
-      .catch((err) => {
-        if (!isMounted || err.name === "AbortError") return;
-        setIsLoadingLyrics(false);
-        setLyricsError(err.message || "Failed to load lyrics");
-      });
-
-    return () => {
-      isMounted = false;
-      abortCtrl.abort();
-    };
-  }, [currentTrack?.id, currentTrack?.url, currentTrack?.title, currentTrack?.artist]);
-
-  // Global Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const tag = e.target.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || e.target.isContentEditable) {
-        return;
-      }
-      if (e.code === "Space" && currentTrack) {
-        e.preventDefault();
-        handleTogglePlay();
-      }
-      if (e.key === "Escape") {
-        setIsQueueOpen(false);
-        setIsSettingsOpen(false);
-        setIsModelModalOpen(false);
-        setIsLearningDashboardOpen(false);
-        setIsLyricsModalOpen(false);
-      }
-      if ((e.key === "l" || e.key === "L") && currentTrack) {
-        e.preventDefault();
-        setIsLyricsModalOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentTrack, isQueueOpen, isSettingsOpen, isModelModalOpen, isLearningDashboardOpen]);
-
   // Queue and Favorite Actions
   const handleAddToQueue = (cand) => {
     if (!cand) return;
@@ -636,6 +547,95 @@ export default function App() {
       handlePlayCandidate(playbackQueue[prevIdx]);
     }
   };
+
+  // On initial mount, if track has no stream URL, re-resolve cleanly
+  useEffect(() => {
+    if (currentTrack && !currentTrack.stream_url && !currentTrack.direct_url && currentTrack.url) {
+      handlePlayCandidate(currentTrack);
+    }
+  }, []);
+
+  // Reactive listeners for local storage state changes
+  useEffect(() => {
+    const handleFavChange = (e) => setFavorites(e.detail || getFavorites());
+    const handleRecentChange = (e) => setRecentlyPlayed(e.detail || getRecentlyPlayed());
+    window.addEventListener("kon_favorites_changed", handleFavChange);
+    window.addEventListener("kon_recently_played_changed", handleRecentChange);
+    return () => {
+      window.removeEventListener("kon_favorites_changed", handleFavChange);
+      window.removeEventListener("kon_recently_played_changed", handleRecentChange);
+    };
+  }, []);
+
+  // Reactive lyrics fetcher when current track changes
+  useEffect(() => {
+    if (!currentTrack) {
+      setLyricsData(null);
+      setLyricsError(null);
+      setIsLoadingLyrics(false);
+      return;
+    }
+
+    let isMounted = true;
+    const abortCtrl = new AbortController();
+    setIsLoadingLyrics(true);
+    setLyricsError(null);
+
+    fetchLyrics({
+      title: currentTrack.song_title || currentTrack.clean_title || currentTrack.title,
+      artist: currentTrack.artist || currentTrack.uploader || "",
+      duration: currentTrack.duration,
+      filePath: currentTrack.file_path,
+      signal: abortCtrl.signal,
+    })
+      .then((data) => {
+        if (!isMounted) return;
+        setIsLoadingLyrics(false);
+        if (data && data.found) {
+          setLyricsData(data);
+        } else {
+          setLyricsData(null);
+          setLyricsError(data?.error || "No lyrics found for this track");
+        }
+      })
+      .catch((err) => {
+        if (!isMounted || err.name === "AbortError") return;
+        setIsLoadingLyrics(false);
+        setLyricsError(err.message || "Failed to load lyrics");
+      });
+
+    return () => {
+      isMounted = false;
+      abortCtrl.abort();
+    };
+  }, [currentTrack?.id, currentTrack?.url, currentTrack?.title, currentTrack?.artist]);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || e.target.isContentEditable) {
+        return;
+      }
+      if (e.code === "Space" && currentTrack) {
+        e.preventDefault();
+        handleTogglePlay();
+      }
+      if (e.key === "Escape") {
+        setIsQueueOpen(false);
+        setIsSettingsOpen(false);
+        setIsModelModalOpen(false);
+        setIsLearningDashboardOpen(false);
+        setIsLyricsModalOpen(false);
+      }
+      if ((e.key === "l" || e.key === "L") && currentTrack) {
+        e.preventDefault();
+        setIsLyricsModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentTrack, isQueueOpen, isSettingsOpen, isModelModalOpen, isLearningDashboardOpen]);
 
   const handlePlayVideo = (videoItem) => {
     if (!videoItem) return;

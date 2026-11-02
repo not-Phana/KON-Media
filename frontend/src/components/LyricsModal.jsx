@@ -235,13 +235,13 @@ export default function LyricsModal({
       return;
     }
 
-    const duration = 750; // 750ms gentle, slow cinematic glide
+    const animDuration = 750; // 750ms gentle, slow cinematic glide
     const startTime = performance.now();
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
     const step = (now) => {
       const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
+      const progress = Math.min(elapsed / animDuration, 1);
       const eased = easeOutCubic(progress);
 
       container.scrollTop = startY + distance * eased;

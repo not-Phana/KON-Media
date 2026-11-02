@@ -116,8 +116,9 @@ export function KonTrainingIcon({ className = "w-3.5 h-3.5", ...props }) {
   );
 }
 
-export default {
+const KonIcons = {
   KonFlashIcon,
   KonPrecisionIcon,
   KonTrainingIcon,
 };
+export default KonIcons;

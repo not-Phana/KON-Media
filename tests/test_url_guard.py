@@ -76,3 +76,10 @@ def test_reject_command_injection_and_control_chars():
     for url in malicious:
         with pytest.raises(SecurityValidationError, match="control characters"):
             validate_media_url(url)
+
+
+def test_normalize_youtube_candidate_ids():
+    assert validate_media_url("yt_YE7VzlLtp-4") == "https://www.youtube.com/watch?v=YE7VzlLtp-4"
+    assert validate_media_url("YE7VzlLtp-4") == "https://www.youtube.com/watch?v=YE7VzlLtp-4"
+    assert validate_media_url("  yt_aqz-KE-bpKQ  ") == "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+

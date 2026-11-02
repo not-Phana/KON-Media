@@ -165,7 +165,7 @@ class LyricsCache:
             log.error(f"Failed to initialize lyrics cache DB: {e}")
 
     def _make_key(self, title: str, artist: str) -> str:
-        clean_t = re.sub(r"[^\w\s]", "", title.lower()).strip()
+        clean_t = re.sub(r"[^\w\s]", "", title.lower()).strip() or title.lower().strip()
         clean_a = re.sub(r"[^\w\s]", "", artist.lower()).strip() if artist else ""
         return f"{clean_a}::{clean_t}"
 

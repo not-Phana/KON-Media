@@ -54,6 +54,15 @@ def validate_media_url(url: str) -> str:
 
     cleaned_url = url.strip()
 
+    # Normalize candidate IDs or 11-char YouTube video IDs to canonical HTTPS URLs
+    import re
+    if cleaned_url.startswith("yt_"):
+        raw_id = cleaned_url[3:].strip()
+        if re.match(r"^[\w-]{11}$", raw_id):
+            cleaned_url = f"https://www.youtube.com/watch?v={raw_id}"
+    elif len(cleaned_url) == 11 and re.match(r"^[\w-]{11}$", cleaned_url):
+        cleaned_url = f"https://www.youtube.com/watch?v={cleaned_url}"
+
     # Reject URLs containing newline, carriage return, null bytes or backticks
     if any(c in cleaned_url for c in ("\r", "\n", "\0", "`")):
         raise SecurityValidationError("URL contains invalid control characters.")

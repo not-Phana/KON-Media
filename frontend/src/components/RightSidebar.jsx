@@ -67,7 +67,9 @@ export default function RightSidebar({
   const [activeLineIndex, setActiveLineIndex] = useState(-1);
   const lyricsContainerRef = useRef(null);
   const linesRef = useRef([]);
-  linesRef.current = lyricsData?.lines || [];
+  useEffect(() => {
+    linesRef.current = lyricsData?.lines || [];
+  }, [lyricsData?.lines]);
 
   const syncOffsetRef = useRef(0);
   useEffect(() => {

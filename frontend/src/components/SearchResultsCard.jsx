@@ -752,7 +752,7 @@ export default function SearchResultsCard({
                           if (onPlayVideo) onPlayVideo(cand);
                           else if (onPlayCandidate) onPlayCandidate(cand);
                         } else {
-                          onPlayCandidate && onPlayCandidate(cand);
+                          if (onPlayCandidate) onPlayCandidate(cand);
                         }
                       }}
                       className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center rounded-lg cursor-pointer"

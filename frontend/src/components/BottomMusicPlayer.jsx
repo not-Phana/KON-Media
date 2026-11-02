@@ -83,6 +83,10 @@ export default function BottomMusicPlayer({
   });
   const initialSeekTimeRef = useRef(currentTime);
   const isInitialMountRef = useRef(true);
+  const isPlayingRef = useRef(isPlaying);
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
   const [duration, setDuration] = useState(0);
   const [bufferedPercent, setBufferedPercent] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -198,7 +202,7 @@ export default function BottomMusicPlayer({
       el.src = audioSrc;
       el.load();
 
-      if (isPlaying && (!isInitialMountRef.current || initialSeekTimeRef.current <= 0)) {
+      if (isPlayingRef.current && (!isInitialMountRef.current || initialSeekTimeRef.current <= 0)) {
         setIsBuffering(true);
         const playPromise = el.play();
         if (playPromise !== undefined) {

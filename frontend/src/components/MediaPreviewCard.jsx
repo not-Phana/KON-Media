@@ -37,6 +37,7 @@ export default function MediaPreviewCard({
   const [isOpeningSpotify, setIsOpeningSpotify] = useState(false);
 
   const activeInfo = localMatch || mediaInfo;
+  const ffmpegAvailable = Boolean(activeInfo?.ffmpeg_available);
 
   useEffect(() => {
     setLocalMatch(null);
@@ -265,7 +266,7 @@ export default function MediaPreviewCard({
     ? activeInfo.audio_formats?.find((f) => f.bitrate === selectedAudioBitrate)
     : null;
 
-  const ffmpegAvailable = Boolean(activeInfo.ffmpeg_available);
+  // ffmpegAvailable declared at top of component
   const isBlockedByMissingFfmpeg =
     !ffmpegAvailable &&
     (isVideo ? selectedFormat?.requires_ffmpeg : selectedAudioFormat?.requires_ffmpeg);

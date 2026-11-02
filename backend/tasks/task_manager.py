@@ -285,13 +285,13 @@ class TaskManager:
             # Rename with retry loop to handle transient Windows file locks
             renamed = False
             import time
-            for attempt in range(5):
+            for attempt in range(10):
                 try:
                     source_file.rename(final_dest)
                     renamed = True
                     break
-                except PermissionError:
-                    time.sleep(0.2)
+                except (PermissionError, OSError):
+                    time.sleep(0.1 * (attempt + 1))
             if not renamed:
                 import shutil
                 shutil.copy2(source_file, final_dest)
