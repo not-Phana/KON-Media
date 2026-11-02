@@ -458,7 +458,9 @@ export default function MediaPreviewCard({
               onPlayVideo ? "group cursor-pointer" : ""
             }`}
             onClick={() => onPlayVideo && onPlayVideo({
-              url: activeInfo.webpage_url,
+              id: activeInfo.id || activeInfo.candidate_id || activeInfo.youtube_id,
+              url: activeInfo.match_youtube_url || activeInfo.youtube_url || activeInfo.webpage_url || activeInfo.url,
+              webpage_url: activeInfo.webpage_url || activeInfo.url,
               title: activeInfo.original_spotify_title || activeInfo.title,
               uploader: activeInfo.uploader || activeInfo.channel,
               thumbnail: activeInfo.thumbnail,
@@ -842,7 +844,9 @@ export default function MediaPreviewCard({
               <button
                 type="button"
                 onClick={() => onPlayVideo({
-                  url: activeInfo.webpage_url,
+                  id: activeInfo.id || activeInfo.candidate_id || activeInfo.youtube_id,
+                  url: activeInfo.match_youtube_url || activeInfo.youtube_url || activeInfo.webpage_url || activeInfo.url,
+                  webpage_url: activeInfo.webpage_url || activeInfo.url,
                   title: activeInfo.original_spotify_title || activeInfo.title,
                   uploader: activeInfo.uploader || activeInfo.channel,
                   thumbnail: activeInfo.thumbnail,
