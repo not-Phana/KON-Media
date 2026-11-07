@@ -5,7 +5,9 @@ import json
 import logging
 import shutil
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from urllib.parse import quote
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel, Field
@@ -687,8 +689,56 @@ async def sse_event_stream(request: Request):
 
 @router.get("/history")
 async def get_download_history():
-    """Retrieve persistent download history."""
-    return history_store.get_all()
+    """Retrieve persistent download history, verifying local file availability and streaming paths."""
+    configured_dir = Path(settings_store.get_settings().get("downloads_dir", str(DOWNLOADS_DIR)))
+    raw_entries = history_store.get_all()
+    entries = []
+    seen_filenames = set()
+
+    for item in raw_entries:
+        e = dict(item)
+        filename = e.get("filename")
+        if not filename and e.get("file_path"):
+            filename = Path(e["file_path"]).name
+            e["filename"] = filename
+        if filename:
+            seen_filenames.add(filename)
+            file_on_disk = (configured_dir / filename).is_file()
+            e["file_exists"] = file_on_disk
+            if file_on_disk:
+                e["stream_url"] = f"/api/stream/{quote(filename)}"
+                e["is_local"] = True
+        entries.append(e)
+
+    # Discover downloaded media files present in downloads_dir not yet indexed in history
+    if configured_dir.exists():
+        media_exts = {".mp3", ".m4a", ".opus", ".webm", ".wav", ".flac", ".aac", ".ogg", ".mp4", ".mkv", ".mov"}
+        try:
+            for item in sorted(configured_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+                if item.is_file() and item.name not in seen_filenames and item.suffix.lower() in media_exts:
+                    ext = item.suffix.lstrip(".").lower()
+                    is_audio = ext in {"mp3", "m4a", "opus", "wav", "flac", "aac", "ogg"}
+                    stat = item.stat()
+                    entries.append({
+                        "id": f"local_{item.name}",
+                        "title": item.stem,
+                        "filename": item.name,
+                        "file_path": str(item.resolve()),
+                        "filesize": stat.st_size,
+                        "ext": ext,
+                        "media_type": "audio" if is_audio else "video",
+                        "has_audio": True,
+                        "has_video": not is_audio,
+                        "status": "completed",
+                        "completed_at": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+                        "file_exists": True,
+                        "is_local": True,
+                        "stream_url": f"/api/stream/{quote(item.name)}",
+                    })
+        except Exception as scan_err:
+            log.warning("Could not scan downloads directory for extra files: %s", scan_err)
+
+    return entries
 
 
 @router.delete("/history")

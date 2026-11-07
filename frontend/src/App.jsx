@@ -47,6 +47,7 @@ import {
   resolveAudioStream,
   recordLearningInteraction,
   fetchLyrics,
+  getStreamUrl,
 } from "./api";
 
 export default function App() {
@@ -441,17 +442,54 @@ export default function App() {
     // If clicking currently active track, simply toggle play/pause
     if (
       currentTrack &&
-      (currentTrack.id === cand.id || currentTrack.url === cand.url)
+      ((currentTrack.id && cand.id && currentTrack.id === cand.id) ||
+        (currentTrack.filename && cand.filename && currentTrack.filename === cand.filename) ||
+        (currentTrack.file_path && cand.file_path && currentTrack.file_path === cand.file_path) ||
+        (currentTrack.url && cand.url && currentTrack.url === cand.url))
     ) {
       setIsPlaying((prev) => !prev);
       return;
     }
 
-    // Set up queue from search results if available
+    // Set up queue from search results or customQueue (such as downloads history)
     const queue = customQueue || (searchResults && searchResults.length > 0 ? searchResults : [cand]);
-    const idx = queue.findIndex((c) => (c.id || c.url) === (cand.id || cand.url));
+    const idx = queue.findIndex(
+      (c) =>
+        (c.id && cand.id && c.id === cand.id) ||
+        (c.filename && cand.filename && c.filename === cand.filename) ||
+        (c.url && cand.url && c.url === cand.url)
+    );
     setPlaybackQueue(queue);
     setQueueIndex(idx >= 0 ? idx : 0);
+
+    // If it is a locally downloaded media file (from history/downloads), play immediately from disk
+    const filename = cand.filename || (cand.file_path ? cand.file_path.replace(/\\/g, "/").split("/").pop() : "");
+    if (cand.is_local || cand.file_exists || cand.stream_url || filename || cand.file_path) {
+      const localStreamUrl = cand.stream_url || (filename ? getStreamUrl(filename) : "");
+      if (localStreamUrl) {
+        const localTrack = {
+          id: cand.id || filename,
+          title: cand.clean_title || cand.title || filename,
+          artist: cand.artist || cand.uploader || "",
+          thumbnail: cand.thumbnail,
+          duration: cand.duration,
+          url: cand.url || localStreamUrl,
+          stream_url: localStreamUrl,
+          direct_url: localStreamUrl,
+          is_local: true,
+          file_path: cand.file_path,
+          filename: filename,
+          ext: cand.ext,
+          media_type: cand.media_type || "audio",
+        };
+        setCurrentTrack(localTrack);
+        setIsPlaying(true);
+        setIsLoadingAudio(false);
+        setAudioError(null);
+        addRecentlyPlayed(localTrack);
+        return;
+      }
+    }
 
     const optimisticTrack = {
       id: cand.id,
@@ -1360,6 +1398,11 @@ export default function App() {
                 onDismissTask={handleDismissTask}
                 onRetryTask={handleRetryTask}
                 onClearFinished={handleClearFinished}
+                onPlayTrack={(task) => handlePlayCandidate(task, history)}
+                onPlayVideo={handlePlayVideo}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onTogglePlay={handleTogglePlay}
               />
             )}
 
@@ -1373,6 +1416,11 @@ export default function App() {
                   onDismissTask={handleDismissTask}
                   onRetryTask={handleRetryTask}
                   onClearFinished={handleClearFinished}
+                  onPlayTrack={(task) => handlePlayCandidate(task, history)}
+                  onPlayVideo={handlePlayVideo}
+                  currentTrack={currentTrack}
+                  isPlaying={isPlaying}
+                  onTogglePlay={handleTogglePlay}
                 />
               </div>
             )}
@@ -1385,6 +1433,12 @@ export default function App() {
                 onDeleteItem={handleDeleteHistoryItem}
                 onClearAll={handleClearHistory}
                 onPlayVideo={handlePlayVideo}
+                onPlayTrack={(track, queue) => {
+                  handlePlayCandidate(track, queue || history);
+                }}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onTogglePlay={handleTogglePlay}
               />
             )}
           </main>

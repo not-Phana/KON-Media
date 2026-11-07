@@ -15,6 +15,8 @@ import {
   Clock,
   Film,
   Music,
+  Play,
+  Pause,
 } from "lucide-react";
 import { getDownloadUrl } from "../api";
 
@@ -84,6 +86,11 @@ const TaskCard = React.memo(function TaskCard({
   onRetryTask,
   openingTaskId,
   onOpenFolderClick,
+  onPlayTrack,
+  onPlayVideo,
+  currentTrack,
+  isPlaying,
+  onTogglePlay,
 }) {
   const isOngoing =
     task.status === "downloading" ||
@@ -232,6 +239,49 @@ const TaskCard = React.memo(function TaskCard({
           {/* Completed file actions */}
           {task.status === "completed" && (
             <>
+              {onPlayTrack && (task.media_type === "audio" || task.has_audio || (task.filename && /\.(mp3|m4a|wav|flac|opus|webm|ogg|aac|mp4)$/i.test(task.filename))) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isThisItem = currentTrack && (
+                      (currentTrack.filename && currentTrack.filename === task.filename) ||
+                      (currentTrack.id && currentTrack.id === task.id) ||
+                      (currentTrack.url && currentTrack.url === task.url)
+                    );
+                    if (isThisItem && onTogglePlay) {
+                      onTogglePlay();
+                    } else {
+                      onPlayTrack(task);
+                    }
+                  }}
+                  className="neu-btn-tactile flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#0084FF] hover:bg-[#0084FF]/10 cursor-pointer rounded-xl transition-all"
+                  title="Play downloaded song in player"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                  <span>Play</span>
+                </button>
+              )}
+
+              {onPlayVideo && (task.media_type === "video" || task.has_video || (task.filename && /\.(mp4|webm|mkv|mov)$/i.test(task.filename))) && (
+                <button
+                  type="button"
+                  onClick={() => onPlayVideo({
+                    url: task.url,
+                    title: task.title,
+                    uploader: task.uploader || task.artist,
+                    thumbnail: task.thumbnail,
+                    file_path: task.file_path,
+                    is_local: true,
+                    resolution: "Local File",
+                  })}
+                  className="neu-raised flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#EF4444] hover:bg-[#EF4444]/10 cursor-pointer rounded-xl transition-all"
+                  title="Watch downloaded video"
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Watch</span>
+                </button>
+              )}
+
               {task.filename && (
                 <a
                   href={getDownloadUrl(task.filename)}
@@ -337,6 +387,11 @@ export default function ActiveTasksMonitor({
   onDismissTask,
   onRetryTask,
   onClearFinished,
+  onPlayTrack,
+  onPlayVideo,
+  currentTrack,
+  isPlaying,
+  onTogglePlay,
 }) {
   const [openingTaskId, setOpeningTaskId] = useState(null);
 
@@ -406,6 +461,11 @@ export default function ActiveTasksMonitor({
             onRetryTask={onRetryTask}
             openingTaskId={openingTaskId}
             onOpenFolderClick={handleOpenFolderClick}
+            onPlayTrack={onPlayTrack}
+            onPlayVideo={onPlayVideo}
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            onTogglePlay={onTogglePlay}
           />
         ))}
       </div>
