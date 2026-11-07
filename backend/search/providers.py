@@ -321,6 +321,11 @@ class YouTubeSearchProvider(SearchProvider):
             "no_warnings": True,
             "no_color": True,
             "socket_timeout": 6,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["visionos", "android"],
+                }
+            },
         }
         if shutil.which("node"):
             ydl_opts["js_runtimes"] = {"node": {}}

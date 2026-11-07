@@ -418,7 +418,11 @@ def extract_media_info(
         "quiet": True,
         "no_warnings": True,
         "no_color": True,
-
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["visionos", "android"],
+            }
+        },
     }
 
     if shutil.which("node"):
@@ -760,6 +764,11 @@ def find_spotify_match(
                 "quiet": True,
                 "no_warnings": True,
                 "no_color": True,
+                "extractor_args": {
+                    "youtube": {
+                        "player_client": ["visionos", "android"],
+                    }
+                },
             }
             if shutil.which("node"):
                 ydl_opts["js_runtimes"] = {"node": {}}
@@ -926,7 +935,11 @@ def execute_download(
         "quiet": True,
         "no_warnings": True,
         "no_color": True,
-
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["visionos", "android"],
+            }
+        },
     }
 
     if shutil.which("node"):

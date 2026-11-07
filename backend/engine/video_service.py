@@ -255,6 +255,11 @@ async def resolve_video_stream(
             "format": "best[ext=mp4]/best[vcodec!=none][acodec!=none]/bestvideo[ext=mp4]+bestaudio/bestvideo+bestaudio/best",
             "extract_flat": False,
             "socket_timeout": 15,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["visionos", "android"],
+                }
+            },
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(validated_url, download=False)
